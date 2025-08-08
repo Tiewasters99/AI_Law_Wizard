@@ -33,24 +33,7 @@ export default function ChatPage() {
     scrollToBottom()
   }, [messages])
 
-  // Initialize client-side state
-  useEffect(() => {
-    setIsClient(true)
-    setCurrentUsage(getCurrentUsage())
-    
-    // Check for initial message from consultation form
-    const initialMessage = localStorage.getItem('initialChatMessage')
-    if (initialMessage && messages.length === 0) {
-      // Clear the stored message
-      localStorage.removeItem('initialChatMessage')
-      // Auto-send the initial message
-      setInputMessage(initialMessage)
-      // Use setTimeout to ensure state is updated before sending
-      setTimeout(() => {
-        sendMessageWithText(initialMessage)
-      }, 100)
-    }
-  }, [messages.length])
+
 
   const sendMessageWithText = useCallback(async (messageText: string) => {
     if (!messageText.trim() || isLoading) return
@@ -138,6 +121,25 @@ export default function ChatPage() {
       setIsLoading(false)
     }
   }, [isLoading, setShowUpgradeModal, setCurrentUsage])
+
+  // Initialize client-side state
+  useEffect(() => {
+    setIsClient(true)
+    setCurrentUsage(getCurrentUsage())
+    
+    // Check for initial message from consultation form
+    const initialMessage = localStorage.getItem('initialChatMessage')
+    if (initialMessage && messages.length === 0) {
+      // Clear the stored message
+      localStorage.removeItem('initialChatMessage')
+      // Auto-send the initial message
+      setInputMessage(initialMessage)
+      // Use setTimeout to ensure state is updated before sending
+      setTimeout(() => {
+        sendMessageWithText(initialMessage)
+      }, 100)
+    }
+  }, [messages.length, sendMessageWithText])
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Image, Video, Send, FileText } from "lucide-react";
+import { Image as ImageIcon, Video, Send, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StreamlinedConsultationProps {
@@ -77,7 +77,7 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
                     size="sm"
                     className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 h-auto"
                   >
-                    <Image className="w-4 h-4" />
+                    <ImageIcon className="w-4 h-4" />
                   </Button>
                   <Button
                     type="button"
