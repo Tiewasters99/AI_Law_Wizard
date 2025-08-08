@@ -14,15 +14,12 @@ interface AnalysisResult {
   disclaimer: string;
 }
 
-interface ConsultationData {
-  user_issue: string;
-  analysis: AnalysisResult;
-}
+
 
 export default function Home() {
   const [currentView, setCurrentView] = useState("consultation");
   const [isLoading, setIsLoading] = useState(false);
-  const [currentConsultation, setCurrentConsultation] = useState<any>(null);
+  const [currentConsultation, setCurrentConsultation] = useState<{ user_issue: string; analysis?: AnalysisResult } | null>(null);
 
   const handleSubmitIssue = async (userIssue: string) => {
     setIsLoading(true);
@@ -55,7 +52,7 @@ export default function Home() {
           throw new Error(responseData.error || "The backend function call failed.");
       }
 
-      let analysisResult: any;
+      let analysisResult: AnalysisResult;
       
       if (responseData.success && responseData.content) {
         console.log("Raw AI Response:", responseData.content);
@@ -63,7 +60,7 @@ export default function Home() {
         try {
           // First, try to parse the entire response as JSON
           analysisResult = JSON.parse(responseData.content);
-        } catch (e) {
+        } catch {
           // If that fails, try to extract JSON from the response
           try {
             const jsonMatch = responseData.content.match(/\{[\s\S]*\}/);
@@ -92,8 +89,13 @@ export default function Home() {
         }
         
         // Validate that we have all required fields
-        const requiredFields = ['summary', 'key_points', 'recommendations', 'legal_areas', 'urgency_level', 'disclaimer'];
-        const missingFields = requiredFields.filter(field => !analysisResult[field]);
+        const missingFields: string[] = [];
+        if (!analysisResult.summary) missingFields.push('summary');
+        if (!analysisResult.key_points) missingFields.push('key_points');
+        if (!analysisResult.recommendations) missingFields.push('recommendations');
+        if (!analysisResult.legal_areas) missingFields.push('legal_areas');
+        if (!analysisResult.urgency_level) missingFields.push('urgency_level');
+        if (!analysisResult.disclaimer) missingFields.push('disclaimer');
         
         if (missingFields.length > 0) {
           console.warn("Missing fields in AI response:", missingFields);
@@ -130,7 +132,13 @@ export default function Home() {
         status: "completed"
       });
 
-      setCurrentConsultation(updatedConsultation);
+      setCurrentConsultation({
+        user_issue: updatedConsultation.user_issue,
+        analysis: {
+          ...analysisResult,
+          urgency_level: analysisResult.urgency_level as 'low' | 'medium' | 'high' | 'urgent'
+        }
+      });
       setCurrentView("results");
     } catch (error) {
       console.error("Error processing consultation:", error);
@@ -141,7 +149,7 @@ export default function Home() {
           key_points: [(error as Error).message],
           recommendations: ["This is a technical error. Please provide the details above to your developer. Check the API key, model access, and API endpoint in your Grok/X.ai account."],
           legal_areas: ["API Communication Error"],
-          urgency_level: "high",
+          urgency_level: "high" as const,
           disclaimer: "The connection to the AI service failed. Technical details are provided for debugging purposes."
         }
       };

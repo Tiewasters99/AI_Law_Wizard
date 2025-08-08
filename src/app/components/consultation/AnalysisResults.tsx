@@ -16,7 +16,7 @@ interface AnalysisResult {
 
 interface ConsultationData {
   user_issue: string;
-  analysis: AnalysisResult;
+  analysis?: AnalysisResult;
 }
 
 interface AnalysisResultsProps {
@@ -24,7 +24,7 @@ interface AnalysisResultsProps {
   onNewConsultation: () => void;
 }
 
-const urgencyConfig: Record<string, { color: string; icon: React.ComponentType<any> }> = {
+const urgencyConfig: Record<string, { color: string; icon: React.ComponentType<{ className?: string }> }> = {
   low: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
   medium: { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
   high: { color: "bg-orange-100 text-orange-800 border-orange-200", icon: AlertTriangle },
@@ -33,18 +33,41 @@ const urgencyConfig: Record<string, { color: string; icon: React.ComponentType<a
 
 export default function AnalysisResults({ consultation, onNewConsultation }: AnalysisResultsProps) {
   const { analysis } = consultation;
+  
+  // Handle case where analysis is undefined
+  if (!analysis) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-20">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-slate-900 mb-4">No Analysis Available</h1>
+            <p className="text-slate-600 mb-8">The analysis data is not available.</p>
+            <Button
+              variant="outline"
+              onClick={onNewConsultation}
+              className="border-slate-300 hover:bg-slate-50"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              New Consultation
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   const urgencyInfo = urgencyConfig[analysis.urgency_level] || urgencyConfig.medium;
   const UrgencyIcon = urgencyInfo.icon;
 
   // Helper function to safely render arrays
-  const renderArray = (array: any, fallback = ["No data provided"]) => {
+  const renderArray = (array: unknown, fallback: string[] = ["No data provided"]): string[] => {
     if (!array || !Array.isArray(array)) return fallback;
-    return array.length > 0 ? array : fallback;
+    return array.length > 0 ? array as string[] : fallback;
   };
 
   // Helper function to safely render text
-  const renderText = (text: any, fallback = "No data provided") => {
-    return text || fallback;
+  const renderText = (text: unknown, fallback = "No data provided"): string => {
+    return (text as string) || fallback;
   };
 
   return (

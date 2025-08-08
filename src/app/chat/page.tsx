@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
@@ -52,7 +52,7 @@ export default function ChatPage() {
     }
   }, [messages.length])
 
-  const sendMessageWithText = async (messageText: string) => {
+  const sendMessageWithText = useCallback(async (messageText: string) => {
     if (!messageText.trim() || isLoading) return
 
     // Check if user can still chat
@@ -137,7 +137,7 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [isLoading, setShowUpgradeModal, setCurrentUsage])
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return
@@ -213,7 +213,7 @@ export default function ChatPage() {
             <Bot className="w-16 h-16 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Start a conversation</h3>
             <p className="text-gray-600 max-w-md">
-              Ask me about legal issues, get advice, or discuss any legal matters. I'm here to help!
+              Ask me about legal issues, get advice, or discuss any legal matters. I&apos;m here to help!
             </p>
           </div>
         ) : (

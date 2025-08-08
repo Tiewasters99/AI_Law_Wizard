@@ -19,7 +19,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { name: 'Chat', href: '/chat', icon: MessageCircle },
   ]
 
-  const currentPage = navigation.find(item => item.href === pathname) || navigation[0]
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">

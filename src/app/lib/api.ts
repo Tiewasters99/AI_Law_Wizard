@@ -17,7 +17,7 @@ interface Consultation {
 }
 
 // Mock consultation data storage (in a real app, this would be a database)
-let consultations: Consultation[] = [];
+const consultations: Consultation[] = [];
 let consultationId = 1;
 
 export const Consultation = {

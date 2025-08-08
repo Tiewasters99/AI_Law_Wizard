@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 interface ChatRequest {
   message: string
 }

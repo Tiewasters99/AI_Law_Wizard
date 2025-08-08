@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Plus, Image, Video, Send, Paperclip, FileText } from "lucide-react";
+import { Image, Video, Send, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StreamlinedConsultationProps {
@@ -24,7 +24,7 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e as any);
+      handleSubmit(e as React.FormEvent);
     }
   };
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { X, Check, Crown, Zap, Star } from 'lucide-react'
-import { pricingTiers, PricingTier } from '@/lib/pricing'
+import { pricingTiers } from '@/lib/pricing'
 
 interface UpgradeModalProps {
   isOpen: boolean
@@ -46,7 +46,7 @@ export default function UpgradeModal({ isOpen, onClose, currentUsage }: UpgradeM
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Upgrade to Pro</h2>
             <p className="text-gray-600 mt-1">
-              You've used {currentUsage} of 4 free chats. Upgrade to continue chatting with Grok!
+              You&apos;ve used {currentUsage} of 4 free chats. Upgrade to continue chatting with Grok!
             </p>
           </div>
           <Button
