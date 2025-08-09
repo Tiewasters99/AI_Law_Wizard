@@ -69,7 +69,7 @@ export const pricingTiers: PricingTier[] = [
   }
 ]
 
-export const FREE_CHAT_LIMIT = 4
+export const FREE_CHAT_LIMIT = 2
 
 
 
@@ -90,6 +90,13 @@ export function incrementChatCount(): number {
 
 
 
+import { isSubscriptionActive } from './subscription'
+
 export function canUserChat(): boolean {
+  // If user has active subscription, they can always chat
+  if (isSubscriptionActive()) {
+    return true
+  }
+  // Otherwise, check free chat limit
   return getCurrentUsage() < FREE_CHAT_LIMIT
 }

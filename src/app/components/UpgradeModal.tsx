@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { X, Check, Crown, Zap, Star } from 'lucide-react'
 import { pricingTiers } from '@/lib/pricing'
+import { setUserSubscription, getSubscriptionTier } from '@/lib/subscription'
 
 interface UpgradeModalProps {
   isOpen: boolean
@@ -15,14 +16,27 @@ interface UpgradeModalProps {
 
 export default function UpgradeModal({ isOpen, onClose, currentUsage }: UpgradeModalProps) {
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
+  const [currentSubscription, setCurrentSubscription] = useState<string | null>(null)
+
+  // Use useEffect to get subscription on client side only
+  useEffect(() => {
+    setCurrentSubscription(getSubscriptionTier())
+  }, [])
 
   if (!isOpen) return null
 
   const handleUpgrade = (tierId: string) => {
     // In a real app, this would redirect to payment processing
     console.log(`Upgrading to ${tierId} tier`)
-    alert(`Redirecting to payment for ${tierId} plan...`)
+    
+    // Simulate successful payment and set subscription
+    setUserSubscription(tierId as 'silver' | 'gold' | 'platinum')
+    
+    alert(`Successfully upgraded to ${tierId} plan! You now have unlimited access.`)
     onClose()
+    
+    // Refresh the page to update the UI
+    window.location.reload()
   }
 
   const getTierIcon = (tierId: string) => {
@@ -44,9 +58,14 @@ export default function UpgradeModal({ isOpen, onClose, currentUsage }: UpgradeM
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Upgrade to Pro</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {currentSubscription ? 'Manage Subscription' : 'Upgrade to Pro'}
+            </h2>
             <p className="text-gray-600 mt-1">
-              You&apos;ve used {currentUsage} of 4 free chats. Upgrade to continue chatting with Grok!
+              {currentSubscription 
+                ? `You're currently on the ${currentSubscription} plan. View all available plans below.`
+                : `You've used ${currentUsage} of 2 free chats. Upgrade to continue chatting with Grok!`
+              }
             </p>
           </div>
           <Button
@@ -63,14 +82,27 @@ export default function UpgradeModal({ isOpen, onClose, currentUsage }: UpgradeM
         <div className="p-6">
           <div className="grid md:grid-cols-3 gap-6">
             {pricingTiers.map((tier) => (
-              <Card
-                key={tier.id}
-                className={`relative cursor-pointer transition-all hover:shadow-lg ${
-                  selectedTier === tier.id ? 'ring-2 ring-blue-500' : ''
-                } ${tier.popular ? 'border-blue-500' : ''}`}
-                onClick={() => setSelectedTier(tier.id)}
-              >
-                {tier.popular && (
+                              <Card
+                  key={tier.id}
+                  className={`relative transition-all hover:shadow-lg ${
+                    selectedTier === tier.id ? 'ring-2 ring-blue-500' : ''
+                  } ${tier.popular ? 'border-blue-500' : ''} ${
+                    currentSubscription === tier.id ? 'cursor-default' : 'cursor-pointer'
+                  }`}
+                  onClick={() => {
+                    if (currentSubscription !== tier.id) {
+                      setSelectedTier(tier.id)
+                    }
+                  }}
+                >
+                {currentSubscription === tier.id && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-green-500 text-white px-3 py-1">
+                      Current Plan
+                    </Badge>
+                  </div>
+                )}
+                {tier.popular && !currentSubscription && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-blue-500 text-white px-3 py-1">
                       Most Popular
@@ -105,16 +137,26 @@ export default function UpgradeModal({ isOpen, onClose, currentUsage }: UpgradeM
 
                   <Button
                     className={`w-full ${
-                      selectedTier === tier.id
+                      currentSubscription === tier.id
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : selectedTier === tier.id
                         ? 'bg-blue-600 hover:bg-blue-700'
                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                     }`}
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleUpgrade(tier.id)
+                      if (currentSubscription !== tier.id) {
+                        handleUpgrade(tier.id)
+                      }
                     }}
+                    disabled={currentSubscription === tier.id}
                   >
-                    {selectedTier === tier.id ? 'Selected' : 'Choose Plan'}
+                    {currentSubscription === tier.id 
+                      ? 'Current Plan' 
+                      : selectedTier === tier.id 
+                      ? 'Selected' 
+                      : 'Choose Plan'
+                    }
                   </Button>
                 </CardContent>
               </Card>
