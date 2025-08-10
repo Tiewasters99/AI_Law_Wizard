@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
-import { File, Upload, FileText, Image, Video, X, WandSparkles, AlertCircle, FolderOpen, RefreshCw, Search, Database } from 'lucide-react'
+import { File, Upload, FileText, Image, Video, X, AlertCircle, FolderOpen, RefreshCw, Search, Database } from 'lucide-react'
 
 interface UploadedFile {
   id: string
@@ -37,9 +37,19 @@ const WizardPage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('upload')
   const [isLoadingFiles, setIsLoadingFiles] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: string;
+    score: number;
+    metadata: Record<string, string | number | boolean>;
+    rank: number;
+  }>>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [searchStats, setSearchStats] = useState<any>(null)
+  const [searchStats, setSearchStats] = useState<{
+    totalVectorCount: number;
+    dimension: number;
+    indexFullness: number;
+    namespaces: Record<string, unknown>;
+  } | null>(null)
   const [topK, setTopK] = useState(5)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -751,7 +761,7 @@ const WizardPage = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {searchResults.map((result, index) => (
+                      {searchResults.map((result) => (
                         <div
                           key={result.id}
                           className="p-4 border rounded-lg bg-white hover:shadow-md transition-shadow"
@@ -771,7 +781,7 @@ const WizardPage = () => {
                           </div>
                           
                           <div className="space-y-2">
-                            {result.metadata?.text && (
+                            {result.metadata?.text && typeof result.metadata.text === 'string' && (
                               <div>
                                 <p className="text-sm font-medium text-gray-700 mb-1">Content:</p>
                                 <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded border">

@@ -14,8 +14,7 @@ import {
   FileText, 
   RefreshCw,
   Trash2,
-  BarChart3,
-  Download
+  BarChart3
 } from 'lucide-react'
 
 interface EmbeddingChunk {
@@ -138,7 +137,7 @@ export default function EmbeddingProgressPage() {
     // Set up polling for real-time updates
     const interval = setInterval(refreshData, 5000) // Refresh every 5 seconds
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchJobs, fetchStats, refreshData])
 
   const getStatusIcon = (status: string) => {
     switch (status) {

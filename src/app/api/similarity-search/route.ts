@@ -29,7 +29,13 @@ export async function POST(request: NextRequest) {
     console.log('Query embedding created');
 
     // Prepare query parameters
-    const queryParams: any = {
+    const queryParams: {
+      vector: number[];
+      topK: number;
+      includeMetadata: boolean;
+      includeValues: boolean;
+      filter?: Record<string, unknown>;
+    } = {
       vector: queryEmbedding,
       topK: topK,
       includeMetadata: true,
@@ -70,7 +76,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('Similarity search stats API called');
     

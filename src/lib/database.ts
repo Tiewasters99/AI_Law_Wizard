@@ -1,5 +1,22 @@
-import { PrismaClient } from '../generated/prisma';
-import { JobStatus, ChunkStatus } from '../generated/prisma';
+import { PrismaClient } from '@prisma/client';
+
+type JobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+type ChunkStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+const JobStatus = {
+  PENDING: 'PENDING' as const,
+  PROCESSING: 'PROCESSING' as const,
+  COMPLETED: 'COMPLETED' as const,
+  FAILED: 'FAILED' as const,
+  CANCELLED: 'CANCELLED' as const,
+};
+
+const ChunkStatus = {
+  PENDING: 'PENDING' as const,
+  PROCESSING: 'PROCESSING' as const,
+  COMPLETED: 'COMPLETED' as const,
+  FAILED: 'FAILED' as const,
+};
 
 const prisma = new PrismaClient();
 
@@ -18,6 +35,21 @@ export interface CreateChunkData {
   contentLength: number;
 }
 
+interface JobUpdateData {
+  status: JobStatus;
+  updatedAt: Date;
+  completedAt?: Date;
+  error?: string;
+}
+
+interface ChunkUpdateData {
+  status: ChunkStatus;
+  updatedAt: Date;
+  processedAt?: Date;
+  embeddingId?: string;
+  error?: string;
+}
+
 // Create a new embedding job
 export async function createEmbeddingJob(data: CreateEmbeddingJobData) {
   return await prisma.embeddingJob.create({
@@ -34,7 +66,7 @@ export async function createEmbeddingJob(data: CreateEmbeddingJobData) {
 
 // Update job status
 export async function updateJobStatus(jobId: string, status: JobStatus, error?: string) {
-  const updateData: any = {
+  const updateData: JobUpdateData = {
     status,
     updatedAt: new Date(),
   };
@@ -83,7 +115,7 @@ export async function createChunks(jobId: string, chunks: CreateChunkData[]) {
 
 // Update chunk status
 export async function updateChunkStatus(chunkId: string, status: ChunkStatus, embeddingId?: string, error?: string) {
-  const updateData: any = {
+  const updateData: ChunkUpdateData = {
     status,
     updatedAt: new Date(),
   };
@@ -118,7 +150,7 @@ export async function getJobWithChunks(jobId: string) {
 }
 
 // Get all jobs for a user
-export async function getUserJobs(userId: string) {
+export async function getUserJobs(_userId: string) {
   return await prisma.embeddingJob.findMany({
     include: {
       chunks: {
@@ -160,7 +192,7 @@ export async function getJobStats() {
     totalJobs,
     totalChunks,
     completedChunks,
-    statusBreakdown: stats.reduce((acc, stat) => {
+    statusBreakdown: stats.reduce((acc: Record<string, number>, stat: { status: string; _count: { status: number } }) => {
       acc[stat.status] = stat._count.status;
       return acc;
     }, {} as Record<string, number>),

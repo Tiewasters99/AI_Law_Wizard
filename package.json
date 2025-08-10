@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
+    "dev": "next dev",
+    "build": "npx prisma generate && next build && npx prisma migrate deploy",
     "start": "next start",
-    "lint": "next lint",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "npx prisma migrate dev",
+    "copy-static-assets": "if exist public\\assets xcopy /E /I public\\assets dist\\public\\assets"
   },
   "dependencies": {
     "@langchain/community": "^0.3.50",

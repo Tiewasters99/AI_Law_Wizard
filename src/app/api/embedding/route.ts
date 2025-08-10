@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pineIndex, pine, openapi } from '../../lib/pineConfig';
+import { pineIndex, openapi } from '../../lib/pineConfig';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { Document } from '@langchain/core/documents';
 import { createWorker } from 'tesseract.js';
@@ -8,7 +8,7 @@ import { createEmbeddingJob, updateJobStatus, updateJobProgress, createChunks, u
 
 // Configure Tesseract.js for Next.js environment
 const tesseractConfig = {
-    logger: (m: any) => console.log(m),
+    logger: (m: unknown) => console.log(m),
     workerPath: undefined, // Let Tesseract.js find its own worker
     langPath: undefined,   // Let Tesseract.js find its own language data
     corePath: undefined    // Let Tesseract.js find its own core
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
                         const embeddingId = `${fileName.replace(/\.[^/.]+$/, '')}-chunk-${i}`;
                         
                         // Filter metadata to only include Pinecone-compatible values
-                        const filteredMetadata: Record<string, any> = {
+                        const filteredMetadata: Record<string, string | number | boolean | string[]> = {
                             text: doc.pageContent,
                         };
                         
