@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { put } from '@vercel/blob'
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,24 +32,21 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // Create uploads directory if it doesn't exist
-        const uploadsDir = join(process.cwd(), 'uploads')
-        if (!existsSync(uploadsDir)) {
-          await mkdir(uploadsDir, { recursive: true })
-        }
-
         // Generate unique filename
         const timestamp = Date.now()
         const randomId = Math.random().toString(36).substring(2, 15)
         const fileExtension = file.name.split('.').pop() || 'txt'
         const fileName = `${timestamp}-${randomId}.${fileExtension}`
-        const filePath = join(uploadsDir, fileName)
 
-        // Convert file to buffer and save
+        // Convert file to buffer
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
-        
-        await writeFile(filePath, buffer)
+
+        // Upload to Vercel Blob
+        const { url } = await put(fileName, buffer, { 
+          access: 'public',
+          addRandomSuffix: false
+        })
 
         uploadedFiles.push({
           id: `file-${timestamp}-${randomId}`,
@@ -59,11 +54,11 @@ export async function POST(request: NextRequest) {
           fileName: fileName,
           size: file.size,
           type: file.type,
-          path: filePath,
+          url: url,
           uploadedAt: new Date().toISOString()
         })
 
-        console.log(`File uploaded: ${file.name} -> ${fileName}`)
+        console.log(`File uploaded: ${file.name} -> ${url}`)
       } catch (error) {
         console.error(`Error uploading file ${file.name}:`, error)
         return NextResponse.json(
@@ -90,23 +85,13 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    // List uploaded files (for debugging/admin purposes)
-    const uploadsDir = join(process.cwd(), 'uploads')
-    
-    if (!existsSync(uploadsDir)) {
-      return NextResponse.json({ files: [] })
-    }
-
-    // This would need a proper file listing implementation
-    // For now, just return a success message
     return NextResponse.json({
-      message: 'File upload endpoint is working',
-      uploadsDir
+      message: 'File upload endpoint is working with Vercel Blob storage'
     })
   } catch (error) {
-    console.error('Error listing files:', error)
+    console.error('Error in GET endpoint:', error)
     return NextResponse.json(
-      { error: 'Failed to list files' },
+      { error: 'Failed to process request' },
       { status: 500 }
     )
   }

@@ -8,7 +8,7 @@ export interface CreateEmbeddingJobData {
   originalName: string;
   fileType: string;
   fileSize: number;
-  filePath: string;
+  filePath?: string;
 }
 
 export interface CreateChunkData {

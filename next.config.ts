@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Simple configuration for Vercel Blob storage
 };
 
 export default nextConfig;

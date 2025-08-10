@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pineIndex, pine, openapi } from '../../lib/pineConfig';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { Document } from '@langchain/core/documents';
 import { createWorker } from 'tesseract.js';
@@ -18,7 +15,7 @@ const tesseractConfig = {
 };
 
 // Function to get appropriate LangChain document loader based on file type
-async function getDocumentLoader(file: File, filePath: string): Promise<Document[]> {
+async function getDocumentLoader(file: File): Promise<Document[]> {
     const allowedTypes = [
         'application/pdf',
         'application/msword', // .doc files
@@ -49,16 +46,9 @@ async function getDocumentLoader(file: File, filePath: string): Promise<Document
         throw new Error('File too large. Maximum size is 10MB.');
     }
 
-    // Convert file to buffer and save
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    
-    // Ensure filePath is valid before writing
-    if (!filePath || typeof filePath !== 'string') {
-        throw new Error(`Invalid file path: ${filePath}`);
-    }
-    
-    await writeFile(filePath, buffer);
 
     let documents: Document[] = [];
 
@@ -67,7 +57,7 @@ async function getDocumentLoader(file: File, filePath: string): Promise<Document
             // Handle PDF files with OCR (LangChain PDFLoader not available)
             console.log(`Processing PDF with OCR: ${file.name}`);
             const worker = await createWorker('eng', undefined, tesseractConfig);
-            const result = await worker.recognize(filePath);
+            const result = await worker.recognize(buffer);
             await worker.terminate();
             documents = [new Document({
                 pageContent: result.data.text,
@@ -122,7 +112,7 @@ async function getDocumentLoader(file: File, filePath: string): Promise<Document
             // Handle image files with OCR
             console.log(`Processing image with OCR: ${file.name}`);
             const worker = await createWorker('eng', undefined, tesseractConfig);
-            const result = await worker.recognize(filePath);
+            const result = await worker.recognize(buffer);
             await worker.terminate();
             documents = [new Document({
                 pageContent: result.data.text,
@@ -186,20 +176,6 @@ export async function POST(request: NextRequest) {
 
         console.log(`Processing ${files.length} files`);
 
-        // Create uploads directory if it doesn't exist
-        const uploadsDir = join(process.cwd(), 'uploads');
-        console.log(`Uploads directory path: ${uploadsDir}`);
-        console.log(`Current working directory: ${process.cwd()}`);
-        
-        if (!uploadsDir || typeof uploadsDir !== 'string') {
-            throw new Error('Failed to construct uploads directory path');
-        }
-        
-        if (!existsSync(uploadsDir)) {
-            console.log(`Creating uploads directory: ${uploadsDir}`);
-            await mkdir(uploadsDir, { recursive: true });
-        }
-
         // Initialize LangChain text splitter
         const textSplitter = new RecursiveCharacterTextSplitter({
             chunkSize: 1000,
@@ -217,33 +193,27 @@ export async function POST(request: NextRequest) {
                     throw new Error('File must have a valid name');
                 }
                 
-                // Generate unique filename
+                // Generate unique filename for database reference
                 const timestamp = Date.now();
                 const randomId = Math.random().toString(36).substring(2, 15);
                 const fileExtension = file.name.split('.').pop() || 'txt';
                 const fileName = `${timestamp}-${randomId}.${fileExtension}`;
-                const filePath = join(uploadsDir, fileName);
                 
-                // Validate the constructed path
-                if (!filePath || typeof filePath !== 'string') {
-                    throw new Error('Failed to construct valid file path');
-                }
-
-                // Create embedding job in database
+                // Create embedding job in database (no filePath needed since we're not storing locally)
                 const job = await createEmbeddingJob({
                     fileName,
                     originalName: file.name,
                     fileType: file.type,
                     fileSize: file.size,
-                    filePath,
+                    // filePath is optional and not needed since we're working with blob storage
                 });
 
                 // Update job status to processing
                 await updateJobStatus(job.id, JobStatus.PROCESSING);
 
                 // Process file and get documents using LangChain
-                console.log(`Processing file: ${file.name}, path: ${filePath}`);
-                const documents = await getDocumentLoader(file, filePath);
+                console.log(`Processing file: ${file.name}`);
+                const documents = await getDocumentLoader(file);
 
                 // Split documents into chunks using LangChain text splitter
                 const splitDocs = await textSplitter.splitDocuments(documents);
@@ -357,7 +327,6 @@ export async function POST(request: NextRequest) {
                     fileName: fileName,
                     size: file.size,
                     type: file.type,
-                    path: filePath,
                     chunks: splitDocs.length,
                     processedChunks,
                     failedChunks,
@@ -367,7 +336,7 @@ export async function POST(request: NextRequest) {
 
                 uploadedFiles.push(fileInfo);
                 createdJobs.push(job);
-                console.log(`File uploaded: ${file.name} -> ${fileName}`);
+                console.log(`File processed: ${file.name} -> ${fileName}`);
 
             } catch (error) {
                 console.error(`Error processing file ${file.name}:`, error);
@@ -382,7 +351,7 @@ export async function POST(request: NextRequest) {
             success: true,
             files: uploadedFiles,
             jobs: createdJobs.map(job => ({ id: job.id, status: job.status })),
-            message: `${uploadedFiles.length} file(s) uploaded successfully and processing started...`
+            message: `${uploadedFiles.length} file(s) processed successfully and embeddings created...`
         });
 
     } catch (error) {

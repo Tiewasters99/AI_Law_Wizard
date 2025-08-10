@@ -37,7 +37,7 @@ interface EmbeddingJob {
   originalName: string
   fileType: string
   fileSize: number
-  filePath: string
+  filePath?: string
   totalChunks: number
   processedChunks: number
   failedChunks: number

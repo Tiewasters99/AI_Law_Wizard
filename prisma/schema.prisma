@@ -22,7 +22,7 @@ model EmbeddingJob {
   originalName String
   fileType    String
   fileSize    Int
-  filePath    String
+  filePath    String?
   totalChunks Int      @default(0)
   processedChunks Int  @default(0)
   failedChunks Int     @default(0)

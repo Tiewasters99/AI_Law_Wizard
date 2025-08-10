@@ -1,61 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readdir, stat } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { prisma } from '../../../lib/database'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('Files listing API called')
     
-    const uploadsDir = join(process.cwd(), 'uploads')
-    
-    if (!existsSync(uploadsDir)) {
-      return NextResponse.json({ 
-        files: [],
-        message: 'No uploads directory found'
-      })
-    }
-
-    // Read all files in the uploads directory
-    const files = await readdir(uploadsDir)
-    const fileDetails = []
-
-    for (const fileName of files) {
-      try {
-        const filePath = join(uploadsDir, fileName)
-        const fileStats = await stat(filePath)
-        
-        // Skip directories
-        if (fileStats.isDirectory()) {
-          continue
-        }
-
-        // Extract original name from timestamp-id format if possible
-        let originalName = fileName
-        const timestampMatch = fileName.match(/^(\d+)-([a-zA-Z0-9]+)\.(.+)$/)
-        if (timestampMatch) {
-          // For now, just use the filename as is
-          // You could store original names in a separate metadata file
-          originalName = fileName
-        }
-
-        fileDetails.push({
-          id: fileName.replace(/\.[^/.]+$/, ''), // Remove extension for ID
-          fileName: fileName,
-          originalName: originalName,
-          size: fileStats.size,
-          uploadedAt: fileStats.birthtime.toISOString(),
-          modifiedAt: fileStats.mtime.toISOString(),
-          path: filePath
-        })
-      } catch (error) {
-        console.error(`Error reading file ${fileName}:`, error)
-        // Continue with other files
+    // Get all embedding jobs from database
+    const jobs = await prisma.embeddingJob.findMany({
+      orderBy: {
+        createdAt: 'desc'
+      },
+      select: {
+        id: true,
+        fileName: true,
+        originalName: true,
+        fileType: true,
+        fileSize: true,
+        status: true,
+        totalChunks: true,
+        processedChunks: true,
+        failedChunks: true,
+        createdAt: true,
+        updatedAt: true,
+        completedAt: true
       }
-    }
+    })
 
-    // Sort files by upload date (newest first)
-    fileDetails.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+    const fileDetails = jobs.map(job => ({
+      id: job.id,
+      fileName: job.fileName,
+      originalName: job.originalName,
+      size: job.fileSize,
+      type: job.fileType,
+      status: job.status,
+      totalChunks: job.totalChunks,
+      processedChunks: job.processedChunks,
+      failedChunks: job.failedChunks,
+      uploadedAt: job.createdAt.toISOString(),
+      modifiedAt: job.updatedAt.toISOString(),
+      completedAt: job.completedAt?.toISOString() || null
+    }))
 
     return NextResponse.json({
       success: true,
@@ -76,38 +60,31 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const fileName = searchParams.get('fileName')
+    const jobId = searchParams.get('jobId')
     
-    if (!fileName) {
+    if (!jobId) {
       return NextResponse.json(
-        { error: 'fileName parameter is required' },
+        { error: 'jobId parameter is required' },
         { status: 400 }
       )
     }
 
-    const uploadsDir = join(process.cwd(), 'uploads')
-    const filePath = join(uploadsDir, fileName)
-    
-    if (!existsSync(filePath)) {
-      return NextResponse.json(
-        { error: 'File not found' },
-        { status: 404 }
-      )
-    }
-
-    // Import unlink dynamically to avoid issues
-    const { unlink } = await import('fs/promises')
-    await unlink(filePath)
+    // Delete the job and all associated chunks (cascade)
+    await prisma.embeddingJob.delete({
+      where: {
+        id: jobId
+      }
+    })
 
     return NextResponse.json({
       success: true,
-      message: `File ${fileName} deleted successfully`
+      message: `Job ${jobId} and associated chunks deleted successfully`
     })
 
   } catch (error) {
-    console.error('Error deleting file:', error)
+    console.error('Error deleting job:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete file' },
+      { error: error instanceof Error ? error.message : 'Failed to delete job' },
       { status: 500 }
     )
   }
