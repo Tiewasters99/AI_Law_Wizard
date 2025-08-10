@@ -4,6 +4,7 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { Document } from '@langchain/core/documents';
 import { createWorker } from 'tesseract.js';
 import mammoth from 'mammoth';
+import { put } from '@vercel/blob';
 import { createEmbeddingJob, updateJobStatus, updateJobProgress, createChunks, updateChunkStatus, JobStatus, ChunkStatus, prisma } from '../../../lib/database';
 
 // Configure Tesseract.js for Next.js environment
@@ -15,7 +16,7 @@ const tesseractConfig = {
 };
 
 // Function to get appropriate LangChain document loader based on file type
-async function getDocumentLoader(file: File): Promise<Document[]> {
+async function getDocumentLoader(file: File, buffer?: Buffer): Promise<Document[]> {
     const allowedTypes = [
         'application/pdf',
         'application/msword', // .doc files
@@ -46,9 +47,14 @@ async function getDocumentLoader(file: File): Promise<Document[]> {
         throw new Error('File too large. Maximum size is 10MB.');
     }
 
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // Convert file to buffer if not provided
+    let fileBuffer: Buffer;
+    if (buffer) {
+        fileBuffer = buffer;
+    } else {
+        const bytes = await file.arrayBuffer();
+        fileBuffer = Buffer.from(bytes);
+    }
 
     let documents: Document[] = [];
 
@@ -57,7 +63,7 @@ async function getDocumentLoader(file: File): Promise<Document[]> {
             // Handle PDF files with OCR (LangChain PDFLoader not available)
             console.log(`Processing PDF with OCR: ${file.name}`);
             const worker = await createWorker('eng', undefined, tesseractConfig);
-            const result = await worker.recognize(buffer);
+            const result = await worker.recognize(fileBuffer);
             await worker.terminate();
             documents = [new Document({
                 pageContent: result.data.text,
@@ -71,7 +77,7 @@ async function getDocumentLoader(file: File): Promise<Document[]> {
                    file.type === 'application/vnd.ms-word.template.macroEnabled.12') {
             // Handle .docx files with mammoth (LangChain DocxLoader not available)
             console.log(`Processing Word document with mammoth: ${file.name}`);
-            const result = await mammoth.extractRawText({ buffer });
+            const result = await mammoth.extractRawText({ buffer: fileBuffer });
             documents = [new Document({
                 pageContent: result.value,
                 metadata: { source: file.name, type: file.type }
@@ -79,7 +85,7 @@ async function getDocumentLoader(file: File): Promise<Document[]> {
         } else if (file.type === 'application/msword') {
             // Handle .doc files with mammoth
             console.log(`Processing .doc file with mammoth: ${file.name}`);
-            const result = await mammoth.extractRawText({ buffer });
+            const result = await mammoth.extractRawText({ buffer: fileBuffer });
             documents = [new Document({
                 pageContent: result.value,
                 metadata: { source: file.name, type: file.type }
@@ -87,7 +93,7 @@ async function getDocumentLoader(file: File): Promise<Document[]> {
         } else if (file.type.startsWith('text/') || file.type === 'text/rtf') {
             // Handle text files manually
             console.log(`Processing text file manually: ${file.name}`);
-            const textContent = buffer.toString('utf-8');
+            const textContent = fileBuffer.toString('utf-8');
             documents = [new Document({
                 pageContent: textContent,
                 metadata: { source: file.name, type: file.type }
@@ -95,7 +101,7 @@ async function getDocumentLoader(file: File): Promise<Document[]> {
         } else if (file.type === 'text/csv') {
             // Handle CSV files manually
             console.log(`Processing CSV file manually: ${file.name}`);
-            const csvContent = buffer.toString('utf-8');
+            const csvContent = fileBuffer.toString('utf-8');
             documents = [new Document({
                 pageContent: csvContent,
                 metadata: { source: file.name, type: file.type }
@@ -103,7 +109,7 @@ async function getDocumentLoader(file: File): Promise<Document[]> {
         } else if (file.type === 'application/json') {
             // Handle JSON files manually
             console.log(`Processing JSON file manually: ${file.name}`);
-            const jsonContent = buffer.toString('utf-8');
+            const jsonContent = fileBuffer.toString('utf-8');
             documents = [new Document({
                 pageContent: jsonContent,
                 metadata: { source: file.name, type: file.type }
@@ -112,7 +118,7 @@ async function getDocumentLoader(file: File): Promise<Document[]> {
             // Handle image files with OCR
             console.log(`Processing image with OCR: ${file.name}`);
             const worker = await createWorker('eng', undefined, tesseractConfig);
-            const result = await worker.recognize(buffer);
+            const result = await worker.recognize(fileBuffer);
             await worker.terminate();
             documents = [new Document({
                 pageContent: result.data.text,
@@ -193,27 +199,37 @@ export async function POST(request: NextRequest) {
                     throw new Error('File must have a valid name');
                 }
                 
-                // Generate unique filename for database reference
-                const timestamp = Date.now();
-                const randomId = Math.random().toString(36).substring(2, 15);
-                const fileExtension = file.name.split('.').pop() || 'txt';
-                const fileName = `${timestamp}-${randomId}.${fileExtension}`;
-                
-                // Create embedding job in database (no filePath needed since we're not storing locally)
-                const job = await createEmbeddingJob({
-                    fileName,
-                    originalName: file.name,
-                    fileType: file.type,
-                    fileSize: file.size,
-                    // filePath is optional and not needed since we're working with blob storage
-                });
+                        // Generate unique filename for database reference
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 15);
+        const fileExtension = file.name.split('.').pop() || 'txt';
+        const fileName = `${timestamp}-${randomId}.${fileExtension}`;
+        
+        // Convert file to buffer for blob upload
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        
+        // Upload file to Vercel Blob storage
+        const { url } = await put(fileName, buffer, { 
+            access: 'public',
+            addRandomSuffix: false
+        });
+        
+        // Create embedding job in database with blob URL
+        const job = await createEmbeddingJob({
+            fileName,
+            originalName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            filePath: url, // Store the blob URL
+        });
 
                 // Update job status to processing
                 await updateJobStatus(job.id, JobStatus.PROCESSING);
 
-                // Process file and get documents using LangChain
-                console.log(`Processing file: ${file.name}`);
-                const documents = await getDocumentLoader(file);
+                        // Process file and get documents using LangChain
+        console.log(`Processing file: ${file.name}`);
+        const documents = await getDocumentLoader(file, buffer);
 
                 // Split documents into chunks using LangChain text splitter
                 const splitDocs = await textSplitter.splitDocuments(documents);
@@ -327,6 +343,7 @@ export async function POST(request: NextRequest) {
                     fileName: fileName,
                     size: file.size,
                     type: file.type,
+                    url: url, // Include the blob URL
                     chunks: splitDocs.length,
                     processedChunks,
                     failedChunks,
