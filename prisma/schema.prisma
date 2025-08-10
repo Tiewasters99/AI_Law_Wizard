@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Embedding job to track file processing
+model EmbeddingJob {
+  id          String   @id @default(cuid())
+  status      JobStatus @default(PENDING)
+  fileName    String
+  originalName String
+  fileType    String
+  fileSize    Int
+  filePath    String
+  totalChunks Int      @default(0)
+  processedChunks Int  @default(0)
+  failedChunks Int     @default(0)
+  error       String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  chunks EmbeddingChunk[]
+
+  @@map("embedding_jobs")
+}
+
+// Individual chunks for detailed tracking
+model EmbeddingChunk {
+  id            String   @id @default(cuid())
+  jobId         String
+  chunkIndex    Int
+  content       String   @db.Text
+  contentLength Int
+  status        ChunkStatus @default(PENDING)
+  embeddingId   String?  // Pinecone vector ID
+  error         String?
+  processedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  job EmbeddingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, chunkIndex])
+  @@map("embedding_chunks")
+}
+
+// Chat sessions for tracking conversations
+model ChatSession {
+  id        String   @id @default(cuid())
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+// Chat messages
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      MessageRole
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  // Relations
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+// Enums
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ChunkStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+

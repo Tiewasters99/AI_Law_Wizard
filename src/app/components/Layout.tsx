@@ -6,7 +6,8 @@ import {
   Home, 
   MessageCircle,
   Scale,
-  Clock
+  Clock,
+  WandSparkles
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -17,6 +18,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Chat', href: '/chat', icon: MessageCircle },
+    { name: 'Wizard', href: '/wizard', icon: WandSparkles },
   ]
 
 

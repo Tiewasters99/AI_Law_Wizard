@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,8 @@ interface StreamlinedConsultationProps {
 
 export default function StreamlinedConsultation({ onSubmit, isLoading }: StreamlinedConsultationProps) {
   const [issue, setIssue] = useState("");
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +27,54 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as React.FormEvent);
+    }
+  };
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    
+    setUploadingFiles(true);
+    
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      const response = await fetch('/api/embedding', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload files');
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      // Add uploaded files to the issue text
+      const fileNames = Array.from(files).map(f => f.name).join(', ');
+      setIssue(prev => prev + (prev ? '\n\n' : '') + `Uploaded files: ${fileNames}`);
+      
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      alert('Failed to upload files. Please try again.');
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const triggerFileInput = (type: 'document' | 'image' | 'video') => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = type === 'document' 
+        ? '.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.json'
+        : type === 'image'
+        ? '.jpg,.jpeg,.png,.gif,.webp'
+        : '.mp4,.avi,.mov,.wmv,.flv,.webm';
+      fileInputRef.current.click();
     }
   };
 
@@ -62,12 +112,16 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
               {/* Bottom toolbar */}
               <div className="flex items-center justify-between p-4 border-t border-gray-100">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 mr-2">Upload a Contract, Invoice or Email--Or Even an Image or Video</span>
+                  <span className="text-sm text-gray-500 mr-2">
+                    {uploadingFiles ? 'Uploading files...' : 'Upload a Contract, Invoice or Email--Or Even an Image or Video'}
+                  </span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 h-auto"
+                    onClick={() => triggerFileInput('document')}
+                    disabled={uploadingFiles}
                   >
                     <FileText className="w-4 h-4" />
                   </Button>
@@ -76,6 +130,8 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
                     variant="ghost"
                     size="sm"
                     className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 h-auto"
+                    onClick={() => triggerFileInput('image')}
+                    disabled={uploadingFiles}
                   >
                     <ImageIcon className="w-4 h-4" />
                   </Button>
@@ -84,6 +140,8 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
                     variant="ghost"
                     size="sm"
                     className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 h-auto"
+                    onClick={() => triggerFileInput('video')}
+                    disabled={uploadingFiles}
                   >
                     <Video className="w-4 h-4" />
                   </Button>
@@ -97,6 +155,15 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
+              
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFileUpload(e.target.files)}
+              />
             </form>
           </Card>
         </motion.div>
