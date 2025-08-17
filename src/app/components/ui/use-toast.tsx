@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 
 const TOAST_LIMIT = 20;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 5000; // 5 seconds for auto-dismiss
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
@@ -163,6 +163,11 @@ function toast({ ...props }: ToastProps) {
     },
   });
 
+  // Auto-dismiss after 5 seconds
+  setTimeout(() => {
+    dismiss();
+  }, 5000);
+
   return {
     id,
     dismiss,
@@ -187,6 +192,8 @@ function useToast() {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+    dismissAll: () => dispatch({ type: actionTypes.DISMISS_TOAST }),
+    remove: (toastId?: string) => dispatch({ type: actionTypes.REMOVE_TOAST, toastId }),
   };
 }
 

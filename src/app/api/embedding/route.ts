@@ -6,6 +6,8 @@ import { createWorker } from 'tesseract.js';
 import mammoth from 'mammoth';
 import { put } from '@vercel/blob';
 import { createEmbeddingJob, updateJobStatus, updateJobProgress, createChunks, updateChunkStatus, JobStatus, ChunkStatus, prisma } from '../../../lib/database';
+import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
+import { ingestPlainText } from '../../lib/ingest';
 
 // Configure Tesseract.js for Next.js environment
 const tesseractConfig = {
@@ -15,8 +17,8 @@ const tesseractConfig = {
     corePath: undefined    // Let Tesseract.js find its own core
 };
 
-// Function to get appropriate LangChain document loader based on file type
-async function getDocumentLoader(file: File, buffer?: Buffer): Promise<Document[]> {
+// Function to extract text content from files
+async function extractTextContent(file: File, buffer?: Buffer): Promise<string> {
     const allowedTypes = [
         'application/pdf',
         'application/msword', // .doc files
@@ -56,20 +58,15 @@ async function getDocumentLoader(file: File, buffer?: Buffer): Promise<Document[
         fileBuffer = Buffer.from(bytes);
     }
 
-    let documents: Document[] = [];
-
     try {
         if (file.type === 'application/pdf') {
             // Handle PDF files with OCR (LangChain PDFLoader not available)
             console.log(`Processing PDF with OCR: ${file.name}`);
-            const worker = await createWorker('eng', undefined, tesseractConfig);
-            const result = await worker.recognize(fileBuffer);
-            await worker.terminate();
-            documents = [new Document({
-                pageContent: result.data.text,
-                metadata: { source: file.name, type: file.type }
-            })];
-            console.log(`PDF OCR completed for ${file.name}, extracted ${result.data.text.length} characters`);
+            const loader = new PDFLoader(file);
+            const docs = await loader.load();
+            const textContent = docs.map(doc => doc.pageContent).join('\n\n');
+            console.log(`PDF OCR completed for ${file.name}, extracted ${textContent.length} characters`);
+            return textContent;
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
                    file.type === 'application/vnd.ms-word.document.12' ||
                    file.type === 'application/vnd.ms-word.document.macroEnabled.12' ||
@@ -78,91 +75,42 @@ async function getDocumentLoader(file: File, buffer?: Buffer): Promise<Document[
             // Handle .docx files with mammoth (LangChain DocxLoader not available)
             console.log(`Processing Word document with mammoth: ${file.name}`);
             const result = await mammoth.extractRawText({ buffer: fileBuffer });
-            documents = [new Document({
-                pageContent: result.value,
-                metadata: { source: file.name, type: file.type }
-            })];
+            return result.value;
         } else if (file.type === 'application/msword') {
             // Handle .doc files with mammoth
             console.log(`Processing .doc file with mammoth: ${file.name}`);
             const result = await mammoth.extractRawText({ buffer: fileBuffer });
-            documents = [new Document({
-                pageContent: result.value,
-                metadata: { source: file.name, type: file.type }
-            })];
+            return result.value;
         } else if (file.type.startsWith('text/') || file.type === 'text/rtf') {
             // Handle text files manually
             console.log(`Processing text file manually: ${file.name}`);
-            const textContent = fileBuffer.toString('utf-8');
-            documents = [new Document({
-                pageContent: textContent,
-                metadata: { source: file.name, type: file.type }
-            })];
+            return fileBuffer.toString('utf-8');
         } else if (file.type === 'text/csv') {
             // Handle CSV files manually
             console.log(`Processing CSV file manually: ${file.name}`);
-            const csvContent = fileBuffer.toString('utf-8');
-            documents = [new Document({
-                pageContent: csvContent,
-                metadata: { source: file.name, type: file.type }
-            })];
+            return fileBuffer.toString('utf-8');
         } else if (file.type === 'application/json') {
             // Handle JSON files manually
             console.log(`Processing JSON file manually: ${file.name}`);
-            const jsonContent = fileBuffer.toString('utf-8');
-            documents = [new Document({
-                pageContent: jsonContent,
-                metadata: { source: file.name, type: file.type }
-            })];
+            return fileBuffer.toString('utf-8');
         } else if (file.type.startsWith('image/')) {
             // Handle image files with OCR
             console.log(`Processing image with OCR: ${file.name}`);
             const worker = await createWorker('eng', undefined, tesseractConfig);
             const result = await worker.recognize(fileBuffer);
             await worker.terminate();
-            documents = [new Document({
-                pageContent: result.data.text,
-                metadata: { source: file.name, type: file.type }
-            })];
             console.log(`OCR completed for ${file.name}, extracted ${result.data.text.length} characters`);
+            return result.data.text;
         } else {
             // For other binary files, use filename as metadata
-            documents = [new Document({
-                pageContent: `File: ${file.name} (${file.type})`,
-                metadata: { source: file.name, type: file.type }
-            })];
+            return `File: ${file.name} (${file.type})`;
         }
-
-        // Add file metadata to all documents
-        documents = documents.map(doc => ({
-            ...doc,
-            metadata: {
-                ...doc.metadata,
-                originalName: file.name,
-                fileType: file.type,
-                fileSize: file.size,
-                uploadedAt: new Date().toISOString()
-            }
-        }));
 
     } catch (error) {
         console.error(`Error processing file ${file.name}:`, error);
-        // Create a fallback document with error information
-        documents = [new Document({
-            pageContent: `File: ${file.name} (${file.type}) - Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            metadata: { 
-                source: file.name, 
-                type: file.type,
-                originalName: file.name,
-                fileType: file.type,
-                fileSize: file.size,
-                uploadedAt: new Date().toISOString(),
-                error: error instanceof Error ? error.message : 'Unknown error'
-            }
-        })];
+        // Return error information as text content
+        return `File: ${file.name} (${file.type}) - Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
-
-    return documents;
 }
 
 export async function POST(request: NextRequest) {
@@ -182,13 +130,6 @@ export async function POST(request: NextRequest) {
 
         console.log(`Processing ${files.length} files`);
 
-        // Initialize LangChain text splitter
-        const textSplitter = new RecursiveCharacterTextSplitter({
-            chunkSize: 1000,
-            chunkOverlap: 200,
-            separators: ['\n\n', '\n', ' ', '']
-        });
-
         const uploadedFiles = [];
         const createdJobs = [];
 
@@ -199,143 +140,49 @@ export async function POST(request: NextRequest) {
                     throw new Error('File must have a valid name');
                 }
                 
-                        // Generate unique filename for database reference
-        const timestamp = Date.now();
-        const randomId = Math.random().toString(36).substring(2, 15);
-        const fileExtension = file.name.split('.').pop() || 'txt';
-        const fileName = `${timestamp}-${randomId}.${fileExtension}`;
-        
-        // Convert file to buffer for blob upload
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        
-        // Upload file to Vercel Blob storage
-        const { url } = await put(fileName, buffer, { 
-            access: 'public',
-            addRandomSuffix: false
-        });
-        
-        // Create embedding job in database with blob URL
-        const job = await createEmbeddingJob({
-            fileName,
-            originalName: file.name,
-            fileType: file.type,
-            fileSize: file.size,
-            filePath: url, // Store the blob URL
-        });
+                // Generate unique filename for database reference
+                const timestamp = Date.now();
+                const randomId = Math.random().toString(36).substring(2, 15);
+                const fileExtension = file.name.split('.').pop() || 'txt';
+                const fileName = `${timestamp}-${randomId}.${fileExtension}`;
+                
+                // Convert file to buffer for blob upload
+                const bytes = await file.arrayBuffer();
+                const buffer = Buffer.from(bytes);
+                
+                // Upload file to Vercel Blob storage
+                const { url } = await put(fileName, buffer, { 
+                    access: 'public',
+                    addRandomSuffix: false
+                });
+                
+                // Create embedding job in database with blob URL
+                const job = await createEmbeddingJob({
+                    fileName,
+                    originalName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
+                    filePath: url, // Store the blob URL
+                });
 
                 // Update job status to processing
                 await updateJobStatus(job.id, JobStatus.PROCESSING);
 
-                        // Process file and get documents using LangChain
-        console.log(`Processing file: ${file.name}`);
-        const documents = await getDocumentLoader(file, buffer);
+                // Extract text content from file
+                console.log(`Processing file: ${file.name}`);
+                const textContent = await extractTextContent(file, buffer);
 
-                // Split documents into chunks using LangChain text splitter
-                const splitDocs = await textSplitter.splitDocuments(documents);
-                console.log(`Documents split into ${splitDocs.length} chunks.`);
+                // Use ingestPlainText to process the text content
+                const chunkCount = await ingestPlainText(fileName, textContent, job.id, {
+                    maxChars: 1000,
+                    overlap: 200
+                });
 
-                // Create chunks in database
-                const chunkData = splitDocs.map((doc, index) => ({
-                    jobId: job.id,
-                    chunkIndex: index,
-                    content: doc.pageContent,
-                    contentLength: doc.pageContent.length,
-                }));
+                console.log(`File processed with ${chunkCount} chunks: ${file.name}`);
 
-                await createChunks(job.id, chunkData);
-
-                // Update job with total chunks
-                await updateJobProgress(job.id, splitDocs.length, 0, 0);
-
-                // Process each chunk
-                let processedChunks = 0;
-                let failedChunks = 0;
-
-                for (let i = 0; i < splitDocs.length; i++) {
-                    const doc = splitDocs[i];
-                    
-                    try {
-                        // Get chunk from database
-                        const chunks = await prisma.embeddingChunk.findMany({
-                            where: { jobId: job.id, chunkIndex: i },
-                        });
-                        
-                        if (chunks.length === 0) continue;
-                        const chunk = chunks[0];
-
-                        // Update chunk status to processing
-                        await updateChunkStatus(chunk.id, ChunkStatus.PROCESSING);
-
-                        const embedding = await openapi.embedQuery(doc.pageContent);
-                        console.log(`Chunk embedding created for ${file.name}, chunk ${i + 1}/${splitDocs.length}, length: ${doc.pageContent.length}`);
-
-                        // Upsert to Pinecone
-                        const embeddingId = `${fileName.replace(/\.[^/.]+$/, '')}-chunk-${i}`;
-                        
-                        // Filter metadata to only include Pinecone-compatible values
-                        const filteredMetadata: Record<string, string | number | boolean | string[]> = {
-                            text: doc.pageContent,
-                        };
-                        
-                        // Only include metadata fields that are strings, numbers, booleans, or arrays of strings
-                        for (const [key, value] of Object.entries(doc.metadata)) {
-                            if (key === 'loc') {
-                                // Convert loc object to a simple string representation
-                                if (typeof value === 'object' && value !== null) {
-                                    if (value.lines && typeof value.lines === 'object') {
-                                        filteredMetadata.loc = `lines:${value.lines.from || 0}-${value.lines.to || 0}`;
-                                    } else {
-                                        filteredMetadata.loc = JSON.stringify(value);
-                                    }
-                                } else {
-                                    filteredMetadata.loc = String(value);
-                                }
-                            } else if (
-                                typeof value === 'string' ||
-                                typeof value === 'number' ||
-                                typeof value === 'boolean' ||
-                                (Array.isArray(value) && value.every(item => typeof item === 'string'))
-                            ) {
-                                filteredMetadata[key] = value;
-                            }
-                        }
-                        
-                        await pineIndex.upsert([
-                            {
-                                id: embeddingId,
-                                values: embedding,
-                                metadata: filteredMetadata
-                            }
-                        ]);
-
-                        // Update chunk as completed
-                        await updateChunkStatus(chunk.id, ChunkStatus.COMPLETED, embeddingId);
-                        processedChunks++;
-
-                    } catch (error) {
-                        console.error(`Error processing chunk ${i} for file ${file.name}:`, error);
-                        const chunks = await prisma.embeddingChunk.findMany({
-                            where: { jobId: job.id, chunkIndex: i },
-                        });
-                        if (chunks.length > 0) {
-                            await updateChunkStatus(
-                                chunks[0].id, 
-                                ChunkStatus.FAILED, 
-                                undefined, 
-                                error instanceof Error ? error.message : 'Unknown error'
-                            );
-                        }
-                        failedChunks++;
-                    }
-
-                    // Update job progress
-                    await updateJobProgress(job.id, splitDocs.length, processedChunks, failedChunks);
-                }
-
-                // Update job status to completed or failed
-                const finalStatus = failedChunks === 0 ? JobStatus.COMPLETED : JobStatus.FAILED;
-                await updateJobStatus(job.id, finalStatus);
+                // Update job with total chunks and mark as completed
+                await updateJobProgress(job.id, chunkCount, chunkCount, 0);
+                await updateJobStatus(job.id, JobStatus.COMPLETED);
 
                 const fileInfo = {
                     id: job.id,
@@ -344,10 +191,10 @@ export async function POST(request: NextRequest) {
                     size: file.size,
                     type: file.type,
                     url: url, // Include the blob URL
-                    chunks: splitDocs.length,
-                    processedChunks,
-                    failedChunks,
-                    status: finalStatus,
+                    chunks: chunkCount,
+                    processedChunks: chunkCount,
+                    failedChunks: 0,
+                    status: JobStatus.COMPLETED,
                     uploadedAt: new Date().toISOString()
                 };
 

@@ -92,4 +92,35 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(156, 163, 175, 0.7);
   }
+  
+  /* Toast animations */
+  @keyframes slideInFromTop {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideOutToTop {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+  
+  .toast-enter {
+    animation: slideInFromTop 0.3s ease-out;
+  }
+  
+  .toast-exit {
+    animation: slideOutToTop 0.3s ease-in;
+  }
 }
