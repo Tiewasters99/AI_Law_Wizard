@@ -230,7 +230,7 @@ class MicrosoftGraphClient {
     this.clearTokensFromCookies()
   }
 
-  async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  async makeRequest(endpoint: string, options: RequestInit = {}): Promise<unknown> {
     const accessToken = await this.getAccessToken()
     
     const response = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
@@ -263,7 +263,7 @@ class MicrosoftGraphClient {
           await this.refreshAccessToken()
           // Retry the request once
           return this.makeRequest(endpoint, options)
-        } catch (refreshError) {
+        } catch (_refreshError) {
           // If refresh fails, clear tokens and throw auth error
           this.logout()
           throw new Error('Authentication expired. Please sign in again.')
