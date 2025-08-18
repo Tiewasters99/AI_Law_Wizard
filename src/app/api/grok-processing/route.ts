@@ -860,9 +860,9 @@ async function executeTools(
   logger: ProcessingLogger
 ): Promise<{ steps: AgentStep[]; tokenUsage: { totalTokens: number; promptTokens: number; completionTokens: number; calls: number } }> {
   const steps: AgentStep[] = []
-  let totalPromptTokens = 0
-  let totalCompletionTokens = 0
-  let totalTokens = 0
+  const totalPromptTokens = 0
+  const totalCompletionTokens = 0
+  const totalTokens = 0
   let callCount = 0
   
   const toolFunctions = createTools(logger, processedFiles)

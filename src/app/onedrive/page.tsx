@@ -77,8 +77,8 @@ export default function OneDrivePage() {
             <div className="space-y-2 text-sm text-gray-700">
               <p>• <strong>Browse Files:</strong> Click on folders to navigate through your OneDrive</p>
               <p>• <strong>Search:</strong> Use the search box to find specific files</p>
-              <p>• <strong>Upload:</strong> Select a file and click "Upload" to add it to OneDrive</p>
-              <p>• <strong>Download:</strong> Click the "Download" button to save files locally</p>
+              <p>• <strong>Upload:</strong> Select a file and click &quot;Upload&quot; to add it to OneDrive</p>
+              <p>• <strong>Download:</strong> Click the &quot;Download&quot; button to save files locally</p>
               <p>• <strong>Select Files:</strong> Click on any file to select it for processing</p>
             </div>
           </div>

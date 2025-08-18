@@ -317,7 +317,7 @@ const WizardPage = () => {
                     Step 1: Upload Your Documents
                   </CardTitle>
                   <CardDescription className="text-lg">
-                    Start by uploading your documents. They'll be automatically processed and indexed for AI-powered analysis.
+                    Start by uploading your documents. They&apos;ll be automatically processed and indexed for AI-powered analysis.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
