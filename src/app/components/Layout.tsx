@@ -7,7 +7,8 @@ import {
   MessageCircle,
   Scale,
   Clock,
-  WandSparkles
+  WandSparkles,
+  Cloud
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -19,6 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Chat', href: '/chat', icon: MessageCircle },
     { name: 'Wizard', href: '/wizard', icon: WandSparkles },
+    { name: 'OneDrive', href: '/onedrive', icon: Cloud },
   ]
 
 

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Consultation } from "@/lib/api";
 import StreamlinedConsultation from "./consultation/StreamlinedConsultation";
 import AnalysisResults from "./consultation/AnalysisResults";
+import OneDriveInterface from "./OneDriveInterface";
 
 interface AnalysisResult {
   summary: string;
@@ -13,8 +14,6 @@ interface AnalysisResult {
   urgency_level: 'low' | 'medium' | 'high' | 'urgent';
   disclaimer: string;
 }
-
-
 
 export default function Home() {
   const [currentView, setCurrentView] = useState("consultation");
@@ -174,10 +173,78 @@ export default function Home() {
     );
   }
 
+  if (currentView === "onedrive") {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            OneDrive File Management
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Access and manage your OneDrive files for legal document processing.
+          </p>
+          <button
+            onClick={() => setCurrentView("consultation")}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            ← Back to Consultation
+          </button>
+        </div>
+        <OneDriveInterface
+          onFileSelect={(file) => {
+            console.log("Selected file:", file.name);
+            // You can integrate this with your consultation flow
+          }}
+          showUpload={true}
+          showDownload={true}
+        />
+      </div>
+    );
+  }
+
   return (
-    <StreamlinedConsultation
-      onSubmit={handleSubmitIssue}
-      isLoading={isLoading}
-    />
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          AI Legal Assistant
+        </h1>
+        <p className="text-gray-600 mb-4">
+          Get instant legal guidance or manage your documents with OneDrive integration.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <button
+          onClick={() => setCurrentView("consultation")}
+          className="p-6 border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+        >
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">
+            Legal Consultation
+          </h3>
+          <p className="text-blue-700">
+            Get AI-powered legal analysis and recommendations for your situation.
+          </p>
+        </button>
+
+        <button
+          onClick={() => setCurrentView("onedrive")}
+          className="p-6 border-2 border-green-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors text-left"
+        >
+          <h3 className="text-lg font-semibold text-green-900 mb-2">
+            OneDrive Files
+          </h3>
+          <p className="text-green-700">
+            Browse, upload, and manage your legal documents in OneDrive.
+          </p>
+        </button>
+      </div>
+
+      {currentView === "consultation" && (
+        <StreamlinedConsultation
+          onSubmit={handleSubmitIssue}
+          isLoading={isLoading}
+        />
+      )}
+    </div>
   );
 }
