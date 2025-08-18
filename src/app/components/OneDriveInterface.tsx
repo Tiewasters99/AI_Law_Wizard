@@ -42,6 +42,7 @@ export default function OneDriveInterface({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authLoading, setAuthLoading] = useState(false)
+  const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set())
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -220,6 +221,83 @@ export default function OneDriveInterface({
     }
   }
 
+  // Handle file sync to embedding system
+  const handleFileSync = async (file: OneDriveFileInfo, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    if (file.isFolder) {
+      toast({
+        title: "Error",
+        description: "Cannot sync folders to embedding system",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Check if file is already being synced
+    if (syncingFiles.has(file.id)) {
+      return
+    }
+
+    setSyncingFiles(prev => new Set(prev).add(file.id))
+
+    try {
+      // Download the file from OneDrive
+      const result = await downloadOneDriveFile(file.id)
+      
+      if (!result.success || !result.file) {
+        throw new Error(result.error || "Failed to download file from OneDrive")
+      }
+
+      // Convert base64 to File object
+      const downloadedFile = base64ToFile(
+        result.file.content,
+        result.file.name,
+        result.file.type
+      )
+
+      // Create FormData for the embedding API
+      const formData = new FormData()
+      formData.append('files', downloadedFile)
+
+      // Upload to embedding system
+      const response = await fetch('/api/embedding', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        throw new Error(`Embedding API error: ${response.status} - ${errorData}`)
+      }
+
+      const data = await response.json()
+      
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      toast({
+        title: "Sync Successful",
+        description: `File "${file.name}" has been synced to the embedding system`
+      })
+
+    } catch (error) {
+      console.error('Error syncing file:', error)
+      toast({
+        title: "Sync Failed",
+        description: error instanceof Error ? error.message : "Failed to sync file to embedding system",
+        variant: "destructive"
+      })
+    } finally {
+      setSyncingFiles(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(file.id)
+        return newSet
+      })
+    }
+  }
+
   // Handle file upload
   const handleFileUpload = async () => {
     if (!selectedFile) {
@@ -300,7 +378,7 @@ export default function OneDriveInterface({
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Browse your OneDrive files and folders</li>
                 <li>Upload files to OneDrive</li>
-                <li>Download files from OneDrive</li>
+                <li>Sync files to the embedding system</li>
                 <li>Search through your files</li>
               </ul>
             </div>
@@ -403,12 +481,10 @@ export default function OneDriveInterface({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation()
-                        handleFileSelect(file)
-                      }}
+                      onClick={(e: React.MouseEvent) => handleFileSync(file, e)}
+                      disabled={syncingFiles.has(file.id)}
                     >
-                      Download
+                      {syncingFiles.has(file.id) ? 'Syncing...' : 'Sync'}
                     </Button>
                   )}
                 </div>

@@ -143,7 +143,11 @@ async function extractFileContent(fileBuffer: Buffer, fileName: string, logger: 
 async function extractPDFContent(buffer: Buffer, logger: ProcessingLogger): Promise<string> {
   try {
     // Convert buffer to Blob for PDFLoader
-    const blob = new Blob([buffer], { type: 'application/pdf' })
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+    if (arrayBuffer instanceof SharedArrayBuffer) {
+      throw new Error('SharedArrayBuffer is not supported for PDF processing')
+    }
+    const blob = new Blob([arrayBuffer], { type: 'application/pdf' })
     
     // Use PDFLoader with the blob
     const loader = new PDFLoader(blob)

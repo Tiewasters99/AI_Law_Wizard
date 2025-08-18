@@ -90,7 +90,7 @@ class MicrosoftGraphClient {
   generateAuthUrl(): string {
     const clientId = process.env.NEXT_PUBLIC_AZURE_CLIENT_ID
     const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI || 'http://localhost:3000/api/auth/callback'
-    const scope = 'https://graph.microsoft.com/Files.ReadWrite'
+    const scope = 'https://graph.microsoft.com/Files.ReadWrite.All https://graph.microsoft.com/User.Read'
     
     if (!clientId) {
       throw new Error('Azure Client ID not configured. Please set NEXT_PUBLIC_AZURE_CLIENT_ID in your environment variables.')
@@ -130,7 +130,7 @@ class MicrosoftGraphClient {
         code: code,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
-        scope: 'https://graph.microsoft.com/Files.ReadWrite'
+        scope: 'https://graph.microsoft.com/Files.ReadWrite.All https://graph.microsoft.com/User.Read'
       }),
     })
 
@@ -142,7 +142,7 @@ class MicrosoftGraphClient {
     const tokenData: TokenResponse = await response.json()
     
     this.accessToken = tokenData.access_token
-    this.refreshToken = tokenData.refresh_token
+    this.refreshToken = tokenData.refresh_token || null
     this.tokenExpiry = Date.now() + (tokenData.expires_in * 1000)
 
     // Save tokens to storage
@@ -196,7 +196,7 @@ class MicrosoftGraphClient {
         client_secret: clientSecret,
         grant_type: 'refresh_token',
         refresh_token: this.refreshToken,
-        scope: 'https://graph.microsoft.com/Files.ReadWrite'
+        scope: 'https://graph.microsoft.com/Files.ReadWrite.All https://graph.microsoft.com/User.Read'
       }),
     })
 
@@ -208,7 +208,7 @@ class MicrosoftGraphClient {
     const tokenData: TokenResponse = await response.json()
     
     this.accessToken = tokenData.access_token
-    this.refreshToken = tokenData.refresh_token || this.refreshToken
+    this.refreshToken = tokenData.refresh_token || null
     this.tokenExpiry = Date.now() + (tokenData.expires_in * 1000)
 
     // Save updated tokens to storage

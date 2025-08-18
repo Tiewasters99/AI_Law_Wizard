@@ -59,9 +59,8 @@ NEXTAUTH_SECRET=supersecretstring
    - Select "Microsoft Graph"
    - Choose "Delegated permissions"
    - Add the following permissions:
-     - `Files.Read`
-     - `Files.ReadWrite`
-     - `User.Read`
+     - `Files.ReadWrite.All` (for full file access including downloads)
+     - `User.Read` (for user profile information)
    - Click "Grant admin consent"
 
 3. **Get Client Credentials:**

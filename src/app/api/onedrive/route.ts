@@ -89,7 +89,7 @@ class ServerGraphClient {
         client_secret: clientSecret,
         grant_type: 'refresh_token',
         refresh_token: this.refreshToken,
-        scope: 'https://graph.microsoft.com/Files.ReadWrite'
+        scope: 'https://graph.microsoft.com/Files.ReadWrite.All https://graph.microsoft.com/User.Read'
       }),
     })
 
@@ -286,11 +286,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log(`Attempting to download file with ID: ${fileId}`)
+
     // Create server-side Graph client
     const graphClient = new ServerGraphClient(request.cookies)
 
     // Get file metadata first
     const fileMetadata = await graphClient.getFileMetadata(fileId)
+    console.log(`File metadata retrieved: ${fileMetadata.name} (${fileMetadata.size} bytes, type: ${fileMetadata.file?.mimeType})`)
     
     if (fileMetadata.folder) {
       return NextResponse.json(
@@ -299,33 +302,129 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get download URL
-    const downloadUrl = fileMetadata['@microsoft.graph.downloadUrl']
-    if (!downloadUrl) {
+    // Check file size limit (10MB for embedding processing)
+    const maxFileSize = 10 * 1024 * 1024 // 10MB
+    if (fileMetadata.size > maxFileSize) {
       return NextResponse.json(
-        { error: 'Download URL not available' },
+        { 
+          error: `File "${fileMetadata.name}" is too large (${(fileMetadata.size / 1024 / 1024).toFixed(2)}MB). Maximum file size for processing is 10MB.` 
+        },
         { status: 400 }
       )
     }
 
-    // Download the file content
-    const fileBuffer = await graphClient.downloadFile(downloadUrl)
-    const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)))
+    // Check if file type is supported for processing
+    const supportedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'text/csv',
+      'application/json',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ]
 
-    return NextResponse.json({
-      file: {
-        id: fileMetadata.id,
-        name: fileMetadata.name,
-        size: fileMetadata.size,
-        type: fileMetadata.file.mimeType,
-        content: base64Content,
-        downloadUrl: downloadUrl
+    if (!supportedTypes.includes(fileMetadata.file?.mimeType)) {
+      console.log(`Unsupported file type: ${fileMetadata.file?.mimeType}`)
+      return NextResponse.json(
+        { 
+          error: `File type "${fileMetadata.file?.mimeType}" is not supported for processing. Supported types: PDF, Word documents, text files, CSV, JSON, and images.` 
+        },
+        { status: 400 }
+      )
+    }
+
+    // Try to download using the direct content endpoint first (more reliable)
+    console.log('Attempting direct content download...')
+    try {
+      const contentEndpoint = `/me/drive/items/${fileId}/content`
+      const contentResponse = await graphClient.makeFileRequest(`https://graph.microsoft.com/v1.0${contentEndpoint}`)
+      
+      if (contentResponse.ok) {
+        console.log('Direct content download successful')
+        const fileBuffer = await contentResponse.arrayBuffer()
+        const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)))
+
+        return NextResponse.json({
+          file: {
+            id: fileMetadata.id,
+            name: fileMetadata.name,
+            size: fileMetadata.size,
+            type: fileMetadata.file.mimeType,
+            content: base64Content,
+            downloadUrl: `https://graph.microsoft.com/v1.0${contentEndpoint}`
+          }
+        })
       }
-    })
+    } catch (contentError) {
+      console.log('Direct content access failed:', contentError)
+    }
+
+    // Fallback: Try using the download URL if available
+    const downloadUrl = fileMetadata['@microsoft.graph.downloadUrl']
+    if (downloadUrl) {
+      console.log('Attempting download URL method...')
+      try {
+        const fileBuffer = await graphClient.downloadFile(downloadUrl)
+        const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)))
+
+        console.log('Download URL method successful')
+        return NextResponse.json({
+          file: {
+            id: fileMetadata.id,
+            name: fileMetadata.name,
+            size: fileMetadata.size,
+            type: fileMetadata.file.mimeType,
+            content: base64Content,
+            downloadUrl: downloadUrl
+          }
+        })
+      } catch (downloadError) {
+        console.log('Download URL method failed:', downloadError)
+      }
+    } else {
+      console.log('No download URL available in metadata')
+    }
+
+    // If both methods fail, provide a detailed error message
+    console.log('Both download methods failed')
+    return NextResponse.json(
+      { 
+        error: `Unable to download file "${fileMetadata.name}". This could be due to:
+        - File permissions or sharing settings
+        - File type restrictions (some file types may not be downloadable)
+        - File size limitations
+        - OneDrive storage restrictions
+        
+        Please ensure the file is accessible and try again.` 
+      },
+      { status: 400 }
+    )
   } catch (error) {
     console.error('OneDrive download error:', error)
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to download file'
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Authentication expired')) {
+        errorMessage = 'Authentication expired. Please sign in again.'
+      } else if (error.message.includes('File request failed')) {
+        errorMessage = 'Failed to access file. Please check your permissions and try again.'
+      } else if (error.message.includes('Graph API error: 403')) {
+        errorMessage = 'Access denied. You may not have permission to access this file.'
+      } else if (error.message.includes('Graph API error: 404')) {
+        errorMessage = 'File not found. The file may have been moved or deleted.'
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to download file' },
+      { error: errorMessage },
       { status: 500 }
     )
   }
