@@ -853,6 +853,7 @@ async function executeTools(
   executionOrder: string[],
   processedFiles: ProcessedFileInfo[],
   grok: ChatXAI,
+  grok3: ChatXAI,
   logger: ProcessingLogger,
   userPrompt: string
 ): Promise<{ steps: AgentStep[]; tokenUsage: { totalTokens: number; promptTokens: number; completionTokens: number; calls: number } }> {
@@ -889,17 +890,100 @@ async function executeTools(
           break
         case 'getFile':
           // Use Grok to determine which file to get
-          const getFilePrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, which file should be retrieved? Respond with just the filename.`
+          const getFilePrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, which file should be retrieved? 
+
+IMPORTANT: Respond with a JSON object in this exact format:
+{
+  "filename": "filename_to_retrieve"
+}
+
+Only respond with the JSON object, no additional text.`
           const getFileResponse = await grok.invoke([new HumanMessage(getFilePrompt)])
-          const getFileName = (getFileResponse.content as string).trim()
-          toolResult = await toolFunctions.getFile(getFileName)
+          const getFileResponseText = (getFileResponse.content as string).trim()
+          logger.log(`Get file response: ${getFileResponseText}`)
+          
+          try {
+            // Try to extract JSON from the response
+            const jsonMatch = getFileResponseText.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const getFileParams = JSON.parse(jsonMatch[0])
+              const { filename } = getFileParams
+              
+              if (filename) {
+                logger.log(`Parsed get file parameter: filename=${filename}`)
+                toolResult = await toolFunctions.getFile(filename.trim())
+              } else {
+                logger.log(`Missing filename in JSON response`)
+                toolResult = `Error: Missing filename parameter in response: ${getFileResponseText}`
+              }
+            } else {
+              // Fallback: use the response as filename directly
+              const getFileName = getFileResponseText.trim()
+              if (getFileName) {
+                logger.log(`Fallback using response as filename: ${getFileName}`)
+                toolResult = await toolFunctions.getFile(getFileName)
+              } else {
+                logger.log(`Empty response for get file`)
+                toolResult = `Error: Empty response for file selection: ${getFileResponseText}`
+              }
+            }
+          } catch (parseError) {
+            logger.log(`JSON parsing error: ${parseError}`)
+            // Fallback: use the response as filename directly
+            const getFileName = getFileResponseText.trim()
+            if (getFileName) {
+              logger.log(`Fallback using response as filename after parse error: ${getFileName}`)
+              toolResult = await toolFunctions.getFile(getFileName)
+            } else {
+              toolResult = `Error: Failed to parse JSON response: ${getFileResponseText}`
+            }
+          }
           break
         case 'edit':
           // Use Grok to determine what to edit and how
-          const editPrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, what text should be edited and what instruction should be used? Respond with just "text,instruction".`
+          const editPrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, what text should be edited and what instruction should be used? 
+
+IMPORTANT: Respond with a JSON object in this exact format:
+{
+  "text": "text_to_edit",
+  "instruction": "edit_instruction"
+}
+
+Only respond with the JSON object, no additional text.`
           const editResponse = await grok.invoke([new HumanMessage(editPrompt)])
-          const [text, instruction] = (editResponse.content as string).trim().split(',')
-          toolResult = await toolFunctions.edit(text || 'Sample text', instruction || 'Edit instruction')
+          const editResponseText = (editResponse.content as string).trim()
+          logger.log(`Edit response: ${editResponseText}`)
+          
+          try {
+            // Try to extract JSON from the response
+            const jsonMatch = editResponseText.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const editParams = JSON.parse(jsonMatch[0])
+              const { text, instruction } = editParams
+              
+              if (text && instruction) {
+                logger.log(`Parsed edit parameters: text=${text.substring(0, 50)}..., instruction=${instruction}`)
+                toolResult = await toolFunctions.edit(text.trim(), instruction.trim())
+              } else {
+                logger.log(`Missing required parameters in JSON response`)
+                toolResult = `Error: Missing required parameters (text, instruction) in response: ${editResponseText}`
+              }
+            } else {
+              // Fallback: try comma-separated format
+              const parts = editResponseText.split(',').map(p => p.trim()).filter(p => p)
+              if (parts.length >= 2) {
+                const [text, instruction] = parts
+                logger.log(`Fallback parsed edit parameters: text=${text.substring(0, 50)}..., instruction=${instruction}`)
+                toolResult = await toolFunctions.edit(text, instruction)
+              } else {
+                logger.log(`Failed to parse edit response: ${editResponseText}`)
+                toolResult = `Error: Could not parse edit parameters from response: ${editResponseText}`
+              }
+            }
+          } catch (parseError) {
+            logger.log(`JSON parsing error: ${parseError}`)
+            toolResult = `Error: Failed to parse JSON response: ${editResponseText}`
+          }
           break
         case 'analyze':
           // Get content from all files for analysis
@@ -921,34 +1005,209 @@ async function executeTools(
           break
         case 'extract':
           // Use Grok to determine what to extract and from what content
-          const extractContentPrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, what type of extraction would be most useful (dates, emails, phones, urls, numbers, quotes, lists, headings)? Respond with just the extraction type.`
+          const extractContentPrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, what type of extraction would be most useful (dates, emails, phones, urls, numbers, quotes, lists, headings)? 
+
+IMPORTANT: Respond with a JSON object in this exact format:
+{
+  "extractionType": "dates"
+}
+
+Only respond with the JSON object, no additional text.`
           const extractContentResponse = await grok.invoke([new HumanMessage(extractContentPrompt)])
-          const extractionType = (extractContentResponse.content as string).trim()
-          toolResult = await toolFunctions.extract('Content from all files', extractionType)
+          const extractContentResponseText = (extractContentResponse.content as string).trim()
+          logger.log(`Extract content response: ${extractContentResponseText}`)
+          
+          try {
+            // Try to extract JSON from the response
+            const jsonMatch = extractContentResponseText.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const extractContentParams = JSON.parse(jsonMatch[0])
+              const { extractionType } = extractContentParams
+              
+              if (extractionType) {
+                logger.log(`Parsed extract content parameter: extractionType=${extractionType}`)
+                toolResult = await toolFunctions.extract('Content from all files', extractionType.trim())
+              } else {
+                logger.log(`Missing extractionType in JSON response`)
+                toolResult = `Error: Missing extractionType parameter in response: ${extractContentResponseText}`
+              }
+            } else {
+              // Fallback: use the response as extraction type directly
+              const extractionType = extractContentResponseText.trim()
+              if (extractionType) {
+                logger.log(`Fallback using response as extraction type: ${extractionType}`)
+                toolResult = await toolFunctions.extract('Content from all files', extractionType)
+              } else {
+                logger.log(`Empty response for extract content`)
+                toolResult = `Error: Empty response for extraction type selection: ${extractContentResponseText}`
+              }
+            }
+          } catch (parseError) {
+            logger.log(`JSON parsing error: ${parseError}`)
+            // Fallback: use the response as extraction type directly
+            const extractionType = extractContentResponseText.trim()
+            if (extractionType) {
+              logger.log(`Fallback using response as extraction type after parse error: ${extractionType}`)
+              toolResult = await toolFunctions.extract('Content from all files', extractionType)
+            } else {
+              toolResult = `Error: Failed to parse JSON response: ${extractContentResponseText}`
+            }
+          }
           break
         case 'getFilesInfo':
           toolResult = await toolFunctions.getFilesInfo()
           break
         case 'extractFormattedContent':
           // Use Grok to determine which file and format
-          const extractFormatPrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, which file should be extracted and in what format (docx, txt, html)? Respond with just "filename,format".`
+          const extractFormatPrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, which file should be extracted and in what format (docx, txt, html)? 
+
+IMPORTANT: Respond with a JSON object in this exact format:
+{
+  "filename": "filename_to_extract",
+  "format": "docx"
+}
+
+Only respond with the JSON object, no additional text.`
           const extractFormatResponse = await grok.invoke([new HumanMessage(extractFormatPrompt)])
-          const [formatFileName, format] = (extractFormatResponse.content as string).trim().split(',')
-          toolResult = await toolFunctions.extractFormattedContent(formatFileName, format || 'docx')
+          const extractFormatResponseText = (extractFormatResponse.content as string).trim()
+          logger.log(`Extract format response: ${extractFormatResponseText}`)
+          
+          try {
+            // Try to extract JSON from the response
+            const jsonMatch = extractFormatResponseText.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const extractParams = JSON.parse(jsonMatch[0])
+              const { filename, format } = extractParams
+              
+              if (filename) {
+                logger.log(`Parsed extract parameters: filename=${filename}, format=${format}`)
+                toolResult = await toolFunctions.extractFormattedContent(filename.trim(), format?.trim() || 'docx')
+              } else {
+                logger.log(`Missing filename in JSON response`)
+                toolResult = `Error: Missing filename parameter in response: ${extractFormatResponseText}`
+              }
+            } else {
+              // Fallback: try comma-separated format
+              const parts = extractFormatResponseText.split(',').map(p => p.trim()).filter(p => p)
+              if (parts.length >= 2) {
+                const [formatFileName, format] = parts
+                logger.log(`Fallback parsed extract parameters: filename=${formatFileName}, format=${format}`)
+                toolResult = await toolFunctions.extractFormattedContent(formatFileName, format || 'docx')
+              } else {
+                logger.log(`Failed to parse extract format response: ${extractFormatResponseText}`)
+                toolResult = `Error: Could not parse extract parameters from response: ${extractFormatResponseText}`
+              }
+            }
+          } catch (parseError) {
+            logger.log(`JSON parsing error: ${parseError}`)
+            toolResult = `Error: Failed to parse JSON response: ${extractFormatResponseText}`
+          }
           break
         case 'createMergedDocument':
           // Use Grok to determine which files to merge and output format
-          const mergePrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, which two files should be merged and in what format (docx, txt, html)? Respond with just "file1,file2,outputname,format".`
-          const mergeResponse = await grok.invoke([new HumanMessage(mergePrompt)])
-          const [file1, file2, outputName, outputFormat] = (mergeResponse.content as string).trim().split(',')
-          toolResult = await toolFunctions.createMergedDocument(file1, file2, outputName || 'merged_document', outputFormat || 'docx')
+          const mergePrompt = `Based on the available files: ${Array.from(new Set(...processedFiles.map(f => f.originalName))).join(', ')}, which two files should be combined into a NEW DOCUMENT and in what format (docx, txt, html)? 
+
+This should create a completely new document by merging content from two existing files.
+
+IMPORTANT: Respond with a JSON object in this exact format:
+{
+  "file1": "filename1",
+  "file2": "filename2", 
+  "outputName": "merged_document_name",
+  "format": "docx"
+}
+
+Only respond with the JSON object, no additional text.`
+          const mergeResponse = await grok3.invoke([new HumanMessage(mergePrompt)])
+          
+          // Parse the JSON response
+          const mergeResponseText = (mergeResponse.content as string).trim()
+          logger.log(`Merge response: ${mergeResponseText}`)
+          
+          try {
+            // Try to extract JSON from the response
+            const jsonMatch = mergeResponseText.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const mergeParams = JSON.parse(jsonMatch[0])
+              const { file1, file2, outputName, format } = mergeParams
+              
+              if (file1 && file2) {
+                logger.log(`Parsed merge parameters: file1=${file1}, file2=${file2}, outputName=${outputName}, format=${format}`)
+                toolResult = await toolFunctions.createMergedDocument(
+                  file1.trim(), 
+                  file2.trim(), 
+                  outputName?.trim() || 'merged_document', 
+                  format?.trim() || 'docx'
+                )
+              } else {
+                logger.log(`Missing required parameters in JSON response`)
+                toolResult = `Error: Missing required parameters (file1, file2) in response: ${mergeResponseText}`
+              }
+            } else {
+              // Fallback: try comma-separated format
+              const parts = mergeResponseText.split(',').map(p => p.trim()).filter(p => p)
+              if (parts.length >= 4) {
+                const [file1, file2, outputName, outputFormat] = parts
+                logger.log(`Fallback parsed merge parameters: file1=${file1}, file2=${file2}, outputName=${outputName}, format=${outputFormat}`)
+                toolResult = await toolFunctions.createMergedDocument(file1, file2, outputName || 'merged_document', outputFormat || 'docx')
+              } else {
+                logger.log(`Failed to parse merge response: ${mergeResponseText}`)
+                toolResult = `Error: Could not parse merge parameters from response: ${mergeResponseText}`
+              }
+            }
+          } catch (parseError) {
+            logger.log(`JSON parsing error: ${parseError}`)
+            toolResult = `Error: Failed to parse JSON response: ${mergeResponseText}`
+          }
           break
         case 'mergeFiles':
           // Use Grok to determine which files to merge
-          const mergeFilesPrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, which two files should be merged and what strategy (append, prepend, interleave)? Respond with just "file1,file2,strategy".`
+          const mergeFilesPrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, which two files should be COMBINED using a specific strategy (append, prepend, interleave)? 
+
+This should combine the content of two files using the specified strategy to modify one of the existing files.
+
+IMPORTANT: Respond with a JSON object in this exact format:
+{
+  "file1": "filename1",
+  "file2": "filename2",
+  "strategy": "append"
+}
+
+Only respond with the JSON object, no additional text.`
           const mergeFilesResponse = await grok.invoke([new HumanMessage(mergeFilesPrompt)])
-          const [mergeFile1, mergeFile2, strategy] = (mergeFilesResponse.content as string).trim().split(',')
-          toolResult = await toolFunctions.mergeFiles(mergeFile1, mergeFile2, strategy || 'append')
+          const mergeFilesResponseText = (mergeFilesResponse.content as string).trim()
+          logger.log(`Merge files response: ${mergeFilesResponseText}`)
+          
+          try {
+            // Try to extract JSON from the response
+            const jsonMatch = mergeFilesResponseText.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const mergeFilesParams = JSON.parse(jsonMatch[0])
+              const { file1, file2, strategy } = mergeFilesParams
+              
+              if (file1 && file2) {
+                logger.log(`Parsed merge files parameters: file1=${file1}, file2=${file2}, strategy=${strategy}`)
+                toolResult = await toolFunctions.mergeFiles(file1.trim(), file2.trim(), strategy?.trim() || 'append')
+              } else {
+                logger.log(`Missing required parameters in JSON response`)
+                toolResult = `Error: Missing required parameters (file1, file2) in response: ${mergeFilesResponseText}`
+              }
+            } else {
+              // Fallback: try comma-separated format
+              const parts = mergeFilesResponseText.split(',').map(p => p.trim()).filter(p => p)
+              if (parts.length >= 3) {
+                const [mergeFile1, mergeFile2, strategy] = parts
+                logger.log(`Fallback parsed merge files parameters: file1=${mergeFile1}, file2=${mergeFile2}, strategy=${strategy}`)
+                toolResult = await toolFunctions.mergeFiles(mergeFile1, mergeFile2, strategy || 'append')
+              } else {
+                logger.log(`Failed to parse merge files response: ${mergeFilesResponseText}`)
+                toolResult = `Error: Could not parse merge files parameters from response: ${mergeFilesResponseText}`
+              }
+            }
+          } catch (parseError) {
+            logger.log(`JSON parsing error: ${parseError}`)
+            toolResult = `Error: Failed to parse JSON response: ${mergeFilesResponseText}`
+          }
           break
         default:
           toolResult = `Tool ${toolName} executed with placeholder result`
@@ -1082,6 +1341,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<GrokProce
       temperature: 0.3
     })
 
+    const grok3 = new ChatXAI({
+      apiKey: process.env.GROK_API_KEY,
+      model: 'grok-3',
+      maxTokens: 4000,
+      temperature: 0.3
+    })
+
     // Fetch relevant files from vector database
     logger.log(`[${requestId}] Fetching relevant files from vector database`)
     const processedFiles = await fetchRelevantFiles(userPrompt, searchQuery || userPrompt, logger)
@@ -1115,6 +1381,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GrokProce
       toolPlan.executionOrder,
       processedFiles,
       grok,
+      grok3,
       logger,
       userPrompt
     )
