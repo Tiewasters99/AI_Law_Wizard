@@ -400,15 +400,18 @@ const createTools = (logger: ProcessingLogger, processedFiles: ProcessedFileInfo
   },
 
   // Analyze content for specific patterns or extract information
-  analyze: async (content: string) => {
+  analyze: async (content: string,userPrompt:string) => {
     try {
       logger.log(`Analyzing content`)
       
       // Simple MVP approach - just pass content to LLM
-      const prompt = `Please analyze the following content and provide insights:
+      const prompt = `Please analyze the following content and provide insights based on the user's request:
 
 Content:
 ${content}
+
+User Request:
+${userPrompt}
 
 Please provide a comprehensive analysis with actionable insights.`
 
@@ -850,7 +853,8 @@ async function executeTools(
   executionOrder: string[],
   processedFiles: ProcessedFileInfo[],
   grok: ChatXAI,
-  logger: ProcessingLogger
+  logger: ProcessingLogger,
+  userPrompt: string
 ): Promise<{ steps: AgentStep[]; tokenUsage: { totalTokens: number; promptTokens: number; completionTokens: number; calls: number } }> {
   const steps: AgentStep[] = []
   const totalPromptTokens = 0
@@ -911,7 +915,7 @@ async function executeTools(
           })
           
           const allContent = (await Promise.all(allContentPromises)).join('\n\n---\n\n')
-          const humanPromt = await toolFunctions.analyze(allContent)
+          const humanPromt = await toolFunctions.analyze(allContent,userPrompt)
           const humanResponse = await grok.invoke([new HumanMessage(humanPromt)])
           toolResult = humanResponse.content as string
           break
@@ -1111,7 +1115,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<GrokProce
       toolPlan.executionOrder,
       processedFiles,
       grok,
-      logger
+      logger,
+      userPrompt
     )
 
     // Generate final response
