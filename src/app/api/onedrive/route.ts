@@ -193,7 +193,7 @@ class ServerGraphClient {
   }
 
   async getFileMetadata(fileId: string) {
-    return this.makeRequest(`/me/drive/items/${fileId}?$select=id,name,size,file,folder,@microsoft.graph.downloadUrl`)
+    return this.makeRequest(`/me/drive/items/${fileId}?$select=id,name,size,file,folder,@microsoft.graph.downloadUrl,permissions,shared,createdBy,lastModifiedBy`)
   }
 
   async downloadFile(downloadUrl: string): Promise<ArrayBuffer> {
@@ -294,12 +294,24 @@ export async function POST(request: NextRequest) {
     // Get file metadata first
     const fileMetadata = await graphClient.getFileMetadata(fileId)
     console.log(`File metadata retrieved: ${fileMetadata.name} (${fileMetadata.size} bytes, type: ${fileMetadata.file?.mimeType})`)
+    console.log('Full file metadata:', JSON.stringify(fileMetadata, null, 2))
     
     if (fileMetadata.folder) {
       return NextResponse.json(
         { error: 'Cannot download a folder' },
         { status: 400 }
       )
+    }
+
+    // Check if file is shared and might have access restrictions
+    if (fileMetadata.shared) {
+      console.log('File is shared - checking permissions...')
+      console.log('Shared file details:', {
+        shared: fileMetadata.shared,
+        permissions: fileMetadata.permissions,
+        createdBy: fileMetadata.createdBy,
+        lastModifiedBy: fileMetadata.lastModifiedBy
+      })
     }
 
     // Check file size limit (10MB for embedding processing)
@@ -341,12 +353,17 @@ export async function POST(request: NextRequest) {
     console.log('Attempting direct content download...')
     try {
       const contentEndpoint = `/me/drive/items/${fileId}/content`
+      console.log(`Content endpoint: https://graph.microsoft.com/v1.0${contentEndpoint}`)
+      
       const contentResponse = await graphClient.makeFileRequest(`https://graph.microsoft.com/v1.0${contentEndpoint}`)
       
       if (contentResponse.ok) {
         console.log('Direct content download successful')
         const fileBuffer = await contentResponse.arrayBuffer()
-        const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)))
+        console.log(`Downloaded file size: ${fileBuffer.byteLength} bytes`)
+        
+        // Use Buffer for proper base64 encoding of binary data
+        const base64Content = Buffer.from(fileBuffer).toString('base64')
 
         return NextResponse.json({
           file: {
@@ -361,17 +378,24 @@ export async function POST(request: NextRequest) {
       }
     } catch (contentError) {
       console.log('Direct content access failed:', contentError)
+      console.log('Content error details:', {
+        message: contentError instanceof Error ? contentError.message : 'Unknown error',
+        stack: contentError instanceof Error ? contentError.stack : undefined
+      })
     }
 
     // Fallback: Try using the download URL if available
     const downloadUrl = fileMetadata['@microsoft.graph.downloadUrl']
     if (downloadUrl) {
       console.log('Attempting download URL method...')
+      console.log(`Download URL: ${downloadUrl}`)
       try {
         const fileBuffer = await graphClient.downloadFile(downloadUrl)
-        const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)))
+        console.log(`Download URL method successful, file size: ${fileBuffer.byteLength} bytes`)
+        
+        // Use Buffer for proper base64 encoding of binary data
+        const base64Content = Buffer.from(fileBuffer).toString('base64')
 
-        console.log('Download URL method successful')
         return NextResponse.json({
           file: {
             id: fileMetadata.id,
@@ -384,13 +408,71 @@ export async function POST(request: NextRequest) {
         })
       } catch (downloadError) {
         console.log('Download URL method failed:', downloadError)
+        console.log('Download error details:', {
+          message: downloadError instanceof Error ? downloadError.message : 'Unknown error',
+          stack: downloadError instanceof Error ? downloadError.stack : undefined
+        })
       }
     } else {
       console.log('No download URL available in metadata')
     }
 
-    // If both methods fail, provide a detailed error message
-    console.log('Both download methods failed')
+    // Third fallback: Try using a different content endpoint format
+    console.log('Attempting alternative content endpoint...')
+    try {
+      const altContentEndpoint = `/me/drive/items/${fileId}/content?$format=media`
+      console.log(`Alternative content endpoint: https://graph.microsoft.com/v1.0${altContentEndpoint}`)
+      
+      const altContentResponse = await graphClient.makeFileRequest(`https://graph.microsoft.com/v1.0${altContentEndpoint}`)
+      
+      if (altContentResponse.ok) {
+        console.log('Alternative content download successful')
+        const fileBuffer = await altContentResponse.arrayBuffer()
+        console.log(`Alternative download file size: ${fileBuffer.byteLength} bytes`)
+        
+        // Use Buffer for proper base64 encoding of binary data
+        const base64Content = Buffer.from(fileBuffer).toString('base64')
+
+        return NextResponse.json({
+          file: {
+            id: fileMetadata.id,
+            name: fileMetadata.name,
+            size: fileMetadata.size,
+            type: fileMetadata.file.mimeType,
+            content: base64Content,
+            downloadUrl: `https://graph.microsoft.com/v1.0${altContentEndpoint}`
+          }
+        })
+      }
+    } catch (altContentError) {
+      console.log('Alternative content access failed:', altContentError)
+      console.log('Alternative content error details:', {
+        message: altContentError instanceof Error ? altContentError.message : 'Unknown error',
+        stack: altContentError instanceof Error ? altContentError.stack : undefined
+      })
+    }
+
+    // If all methods fail, provide a detailed error message
+    console.log('All download methods failed')
+    
+    // Provide more specific error message for shared files
+    if (fileMetadata.shared) {
+      return NextResponse.json(
+        { 
+          error: `Unable to download shared file "${fileMetadata.name}". This file appears to be shared and may have restricted access permissions.
+          
+          To resolve this issue:
+          1. Copy the file to your personal OneDrive folder
+          2. Request the file owner to grant you "Can edit" permissions
+          3. Download the file directly from OneDrive web interface and upload it manually
+          4. Check if the file is in a shared folder with restricted access
+          
+          File details: ${fileMetadata.size} bytes, type: ${fileMetadata.file?.mimeType}` 
+        },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
       { 
         error: `Unable to download file "${fileMetadata.name}". This could be due to:
@@ -398,8 +480,12 @@ export async function POST(request: NextRequest) {
         - File type restrictions (some file types may not be downloadable)
         - File size limitations
         - OneDrive storage restrictions
+        - File may be in a shared folder with restricted access
         
-        Please ensure the file is accessible and try again.` 
+        Please ensure the file is accessible and try again. If the issue persists, try:
+        1. Moving the file to your personal OneDrive folder
+        2. Checking the file's sharing permissions
+        3. Ensuring you have edit permissions on the file` 
       },
       { status: 400 }
     )
