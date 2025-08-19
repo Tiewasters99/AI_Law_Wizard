@@ -30,6 +30,11 @@ model EmbeddingJob {
   completedAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // OneDrive tracking fields
+  isOneDriveFile Boolean @default(false)
+  oneDriveId    String?  @unique // OneDrive file ID if synced from OneDrive
+  oneDriveLastModified String? // OneDrive last modified date
 
   // Relations
   chunks EmbeddingChunk[]
@@ -84,6 +89,8 @@ model ChatMessage {
 
   @@map("chat_messages")
 }
+
+
 
 // Enums
 enum JobStatus {

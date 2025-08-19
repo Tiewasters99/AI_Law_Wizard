@@ -140,6 +140,11 @@ export async function POST(request: NextRequest) {
                     throw new Error('File must have a valid name');
                 }
                 
+                // Check if this is a OneDrive file
+                const oneDriveId = formData.get('oneDriveId') as string;
+                const oneDriveLastModified = formData.get('oneDriveLastModified') as string;
+                const isOneDriveFile = !!oneDriveId;
+                
                 // Generate unique filename for database reference
                 const timestamp = Date.now();
                 const randomId = Math.random().toString(36).substring(2, 15);
@@ -156,13 +161,16 @@ export async function POST(request: NextRequest) {
                     addRandomSuffix: false
                 });
                 
-                // Create embedding job in database with blob URL
+                // Create embedding job in database with blob URL and OneDrive metadata
                 const job = await createEmbeddingJob({
                     fileName,
                     originalName: file.name,
                     fileType: file.type,
                     fileSize: file.size,
                     filePath: url, // Store the blob URL
+                    isOneDriveFile,
+                    oneDriveId,
+                    oneDriveLastModified,
                 });
 
                 // Update job status to processing

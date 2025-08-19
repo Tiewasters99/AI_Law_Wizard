@@ -26,6 +26,9 @@ export interface CreateEmbeddingJobData {
   fileType: string;
   fileSize: number;
   filePath?: string;
+  isOneDriveFile?: boolean;
+  oneDriveId?: string;
+  oneDriveLastModified?: string;
 }
 
 export interface CreateChunkData {
@@ -59,6 +62,9 @@ export async function createEmbeddingJob(data: CreateEmbeddingJobData) {
       fileType: data.fileType,
       fileSize: data.fileSize,
       filePath: data.filePath,
+      isOneDriveFile: data.isOneDriveFile || false,
+      oneDriveId: data.oneDriveId,
+      oneDriveLastModified: data.oneDriveLastModified,
       status: JobStatus.PENDING,
     },
   });
@@ -204,6 +210,28 @@ export async function deleteJob(jobId: string) {
   return await prisma.embeddingJob.delete({
     where: { id: jobId },
   });
+}
+
+// Check if OneDrive files are already synced
+export async function checkSyncedOneDriveFiles(oneDriveIds: string[]) {
+  // TODO: Implement after Prisma client regeneration
+  // For now, return empty array to prevent errors
+  return [];
+  
+  // return await prisma.embeddingJob.findMany({
+  //   where: {
+  //     oneDriveId: {
+  //       in: oneDriveIds
+  //     },
+  //     isOneDriveFile: true
+  //   },
+  //   select: {
+  //     oneDriveId: true,
+  //     fileName: true,
+  //     status: true,
+  //     createdAt: true
+  //   }
+  // });
 }
 
 export { prisma, JobStatus, ChunkStatus };

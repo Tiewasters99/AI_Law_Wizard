@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { 
   listOneDriveFiles, 
   downloadOneDriveFile, 
@@ -8,6 +8,7 @@ import {
   formatFileSize,
   getFileIcon,
   base64ToFile,
+  checkSyncedOneDriveFiles,
   type OneDriveFileInfo 
 } from '../lib/onedrive'
 import { graphClient } from '../lib/microsoft-graph'
@@ -26,7 +27,7 @@ interface OneDriveInterfaceProps {
   className?: string
 }
 
-export default function OneDriveInterface({
+function OneDriveInterfaceContent({
   onFileSelect,
   onFolderSelect,
   showUpload = true,
@@ -43,6 +44,7 @@ export default function OneDriveInterface({
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authLoading, setAuthLoading] = useState(false)
   const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set())
+  const [syncedFiles, setSyncedFiles] = useState<Set<string>>(new Set())
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -100,6 +102,8 @@ export default function OneDriveInterface({
 
       if (result.success && result.files) {
         setFiles(result.files)
+        // Check which files are already synced
+        await checkSyncStatus(result.files)
       } else {
         toast({
           title: "Error",
@@ -124,6 +128,26 @@ export default function OneDriveInterface({
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Check sync status for files
+  const checkSyncStatus = async (fileList: OneDriveFileInfo[]) => {
+    try {
+      const fileIds = fileList
+        .filter(file => !file.isFolder)
+        .map(file => file.id)
+      
+      if (fileIds.length === 0) return
+
+      const result = await checkSyncedOneDriveFiles(fileIds)
+      
+      if (result.success && result.syncedFiles) {
+        const syncedIds = new Set(result.syncedFiles.map(file => file.oneDriveId))
+        setSyncedFiles(syncedIds)
+      }
+    } catch (error) {
+      console.error('Error checking sync status:', error)
     }
   }
 
@@ -234,6 +258,16 @@ export default function OneDriveInterface({
       return
     }
 
+    // Check if file is already synced
+    if (syncedFiles.has(file.id)) {
+      toast({
+        title: "Already Synced",
+        description: `File "${file.name}" is already synced to the embedding system`,
+        variant: "destructive"
+      })
+      return
+    }
+
     // Check if file is already being synced
     if (syncingFiles.has(file.id)) {
       return
@@ -259,6 +293,8 @@ export default function OneDriveInterface({
       // Create FormData for the embedding API
       const formData = new FormData()
       formData.append('files', downloadedFile)
+      formData.append('oneDriveId', file.id)
+      formData.append('oneDriveLastModified', file.lastModified)
 
       // Upload to embedding system
       const response = await fetch('/api/embedding', {
@@ -276,6 +312,9 @@ export default function OneDriveInterface({
       if (data.error) {
         throw new Error(data.error)
       }
+
+      // Mark file as synced
+      setSyncedFiles(prev => new Set(prev).add(file.id))
 
       toast({
         title: "Sync Successful",
@@ -477,7 +516,12 @@ export default function OneDriveInterface({
                   {file.isFolder && (
                     <Badge variant="outline">Folder</Badge>
                   )}
-                  {showDownload && !file.isFolder && (
+                  {!file.isFolder && syncedFiles.has(file.id) && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      ✓ Synced
+                    </Badge>
+                  )}
+                  {showDownload && !file.isFolder && !syncedFiles.has(file.id) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -494,5 +538,26 @@ export default function OneDriveInterface({
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+// Main component with Suspense boundary
+export default function OneDriveInterface(props: OneDriveInterfaceProps) {
+  return (
+    <Suspense fallback={
+      <Card className={props.className}>
+        <CardHeader>
+          <CardTitle>OneDrive Integration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading OneDrive...</p>
+          </div>
+        </CardContent>
+      </Card>
+    }>
+      <OneDriveInterfaceContent {...props} />
+    </Suspense>
   )
 }

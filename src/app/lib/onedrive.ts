@@ -158,3 +158,26 @@ export function getFileIcon(fileType: string, isFolder: boolean): string {
   
   return iconMap[fileType] || '📄'
 }
+
+// Check if OneDrive files are already synced
+export async function checkSyncedOneDriveFiles(oneDriveIds: string[]): Promise<{ success: boolean; syncedFiles?: Array<{ oneDriveId: string; fileName: string; status: string; syncedAt: string }>; error?: string }> {
+  try {
+    if (oneDriveIds.length === 0) {
+      return { success: true, syncedFiles: [] }
+    }
+
+    const params = new URLSearchParams()
+    params.append('oneDriveIds', oneDriveIds.join(','))
+
+    const response = await fetch(`/api/embedding/synced-files?${params.toString()}`)
+    const data = await response.json()
+
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Failed to check synced files' }
+    }
+
+    return { success: true, syncedFiles: data.syncedFiles }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
