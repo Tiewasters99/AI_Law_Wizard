@@ -400,182 +400,19 @@ const createTools = (logger: ProcessingLogger, processedFiles: ProcessedFileInfo
   },
 
   // Analyze content for specific patterns or extract information
-  analyze: async (content: string, analysisType: string) => {
+  analyze: async (content: string) => {
     try {
-      logger.log(`Analyzing content for: ${analysisType}`)
+      logger.log(`Analyzing content`)
       
-      // Enhanced analysis types with more flexibility
-      const predefinedTypes = {
-        'structure': 'Document structure and organization',
-        'entities': 'Named entities (people, organizations, locations)',
-        'sentiment': 'Sentiment analysis',
-        'keywords': 'Key terms and concepts',
-        'summary': 'Content summary',
-        'legal': 'Legal terms and clauses',
-        'dates': 'Important dates and timelines',
-        'tone': 'Writing tone and style',
-        'complexity': 'Text complexity and readability',
-        'topics': 'Main topics and themes',
-        'relationships': 'Relationships between entities',
-        'contradictions': 'Contradictions or inconsistencies',
-        'recommendations': 'Actionable recommendations',
-        'risks': 'Potential risks or issues',
-        'opportunities': 'Opportunities or positive aspects',
-        'compliance': 'Compliance and regulatory aspects',
-        'clarity': 'Clarity and understandability',
-        'completeness': 'Completeness of information',
-        'accuracy': 'Accuracy and factual consistency',
-        'bias': 'Potential biases or assumptions',
-        'financial': 'Financial terms and monetary values',
-        'technical': 'Technical specifications and requirements',
-        'security': 'Security and privacy considerations',
-        'performance': 'Performance and efficiency metrics',
-        'usability': 'User experience and usability aspects',
-        'accessibility': 'Accessibility and inclusivity factors',
-        'internationalization': 'International and cultural considerations',
-        'scalability': 'Scalability and growth potential',
-        'maintainability': 'Maintainability and code quality',
-        'documentation': 'Documentation quality and completeness'
-      }
-      
-      // Check if it's a predefined type or custom analysis
-      const isPredefined = analysisType.toLowerCase() in predefinedTypes
-      const analysisDescription = isPredefined 
-        ? predefinedTypes[analysisType.toLowerCase() as keyof typeof predefinedTypes]
-        : analysisType
-      
-      // Enhanced analysis logic based on type
-      let analysisResult = ''
-      
-      if (isPredefined) {
-        // Handle predefined analysis types with specific logic
-        switch (analysisType.toLowerCase()) {
-          case 'structure':
-            analysisResult = `Document Structure Analysis:\n` +
-              `- Total length: ${content.length} characters\n` +
-              `- Estimated paragraphs: ${(content.match(/\n\s*\n/g) || []).length + 1}\n` +
-              `- Headers detected: ${(content.match(/^[A-Z][^.!?]*$/gm) || []).length}\n` +
-              `- Lists detected: ${(content.match(/^\s*[-*•]\s/gm) || []).length}\n` +
-              `- Structure complexity: ${content.length > 5000 ? 'High' : content.length > 2000 ? 'Medium' : 'Low'}`
-            break
-            
-          case 'entities':
-            analysisResult = `Entity Analysis:\n` +
-              `- Potential organizations: ${(content.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Inc|Corp|LLC|Ltd|Company|Organization|Association)\b/g) || []).length}\n` +
-              `- Potential people: ${(content.match(/\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/g) || []).length}\n` +
-              `- Potential locations: ${(content.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Street|Ave|Road|City|State|Country)\b/g) || []).length}\n` +
-              `- Email addresses: ${(content.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g) || []).length}`
-            break
-            
-          case 'sentiment':
-            const positiveWords = ['good', 'great', 'excellent', 'positive', 'beneficial', 'advantage', 'success', 'improve', 'better']
-            const negativeWords = ['bad', 'poor', 'negative', 'problem', 'issue', 'risk', 'danger', 'failure', 'worse']
-            const positiveCount = positiveWords.reduce((count, word) => count + (content.toLowerCase().match(new RegExp(word, 'g')) || []).length, 0)
-            const negativeCount = negativeWords.reduce((count, word) => count + (content.toLowerCase().match(new RegExp(word, 'g')) || []).length, 0)
-            analysisResult = `Sentiment Analysis:\n` +
-              `- Positive indicators: ${positiveCount}\n` +
-              `- Negative indicators: ${negativeCount}\n` +
-              `- Overall sentiment: ${positiveCount > negativeCount ? 'Positive' : negativeCount > positiveCount ? 'Negative' : 'Neutral'}\n` +
-              `- Sentiment strength: ${Math.abs(positiveCount - negativeCount) > 5 ? 'Strong' : 'Moderate'}`
-            break
-            
-          case 'keywords':
-            const words = content.toLowerCase().match(/\b\w+\b/g) || []
-            const wordFreq: { [key: string]: number } = {}
-            words.forEach(word => {
-              if (word.length > 3) wordFreq[word] = (wordFreq[word] || 0) + 1
-            })
-            const topKeywords = Object.entries(wordFreq)
-              .sort(([,a], [,b]) => b - a)
-              .slice(0, 10)
-              .map(([word, count]) => `${word} (${count})`)
-            analysisResult = `Keyword Analysis:\n` +
-              `- Total unique words: ${Object.keys(wordFreq).length}\n` +
-              `- Top keywords: ${topKeywords.join(', ')}\n` +
-              `- Most frequent word: ${topKeywords[0] || 'None'}`
-            break
-            
-          case 'dates':
-            const datePatterns = [
-              /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
-              /\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/g,
-              /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b/g
-            ]
-            const dates = datePatterns.flatMap(pattern => content.match(pattern) || [])
-            analysisResult = `Date Analysis:\n` +
-              `- Dates found: ${dates.length}\n` +
-              `- Date patterns: ${dates.slice(0, 5).join(', ')}${dates.length > 5 ? '...' : ''}\n` +
-              `- Date range: ${dates.length > 0 ? 'Available' : 'None detected'}`
-            break
-            
-          case 'financial':
-            const financialPatterns = [
-              /\$\d+(?:,\d{3})*(?:\.\d{2})?/g,
-              /\b\d+(?:,\d{3})*(?:\.\d{2})?\s*(?:dollars?|USD|EUR|GBP|CAD|AUD)/gi,
-              /\b(?:revenue|profit|loss|income|expense|budget|cost|price|fee|payment|salary|wage)/gi
-            ]
-            const financialTerms = financialPatterns.flatMap(pattern => content.match(pattern) || [])
-            analysisResult = `Financial Analysis:\n` +
-              `- Financial terms found: ${financialTerms.length}\n` +
-              `- Currency amounts: ${(content.match(/\$\d+(?:,\d{3})*(?:\.\d{2})?/g) || []).length}\n` +
-              `- Financial keywords: ${(content.match(/\b(?:revenue|profit|loss|income|expense|budget|cost|price|fee|payment|salary|wage)/gi) || []).length}`
-            break
-            
-          case 'technical':
-            const technicalPatterns = [
-              /\b(?:API|SDK|framework|library|database|server|client|protocol|algorithm|architecture|infrastructure|deployment|scaling|performance|optimization)/gi,
-              /\b(?:function|method|class|interface|module|component|service|endpoint|parameter|configuration|environment|version|release|update|patch)/gi
-            ]
-            const technicalTerms = technicalPatterns.flatMap(pattern => content.match(pattern) || [])
-            analysisResult = `Technical Analysis:\n` +
-              `- Technical terms found: ${technicalTerms.length}\n` +
-              `- Code references: ${(content.match(/\b(?:function|method|class|interface|module|component|service|endpoint)/gi) || []).length}\n` +
-              `- Infrastructure terms: ${(content.match(/\b(?:API|SDK|framework|library|database|server|client|protocol)/gi) || []).length}`
-            break
-            
-          case 'security':
-            const securityPatterns = [
-              /\b(?:password|authentication|authorization|encryption|decryption|hash|token|session|cookie|HTTPS|SSL|TLS|firewall|vulnerability|threat|attack|breach|privacy|GDPR|compliance)/gi,
-              /\b(?:secure|protected|private|confidential|sensitive|encrypted|hashed|authenticated|authorized|validated|sanitized)/gi
-            ]
-            const securityTerms = securityPatterns.flatMap(pattern => content.match(pattern) || [])
-            analysisResult = `Security Analysis:\n` +
-              `- Security terms found: ${securityTerms.length}\n` +
-              `- Authentication/Authorization: ${(content.match(/\b(?:password|authentication|authorization|token|session)/gi) || []).length}\n` +
-              `- Privacy/Compliance: ${(content.match(/\b(?:privacy|GDPR|compliance|confidential|sensitive)/gi) || []).length}\n` +
-              `- Encryption/Security: ${(content.match(/\b(?:encryption|decryption|hash|HTTPS|SSL|TLS|firewall|secure|protected)/gi) || []).length}`
-            break
-            
-          case 'performance':
-            const performancePatterns = [
-              /\b(?:performance|speed|latency|throughput|bandwidth|memory|CPU|load|response time|optimization|caching|indexing|query|execution time|bottleneck|scalability)/gi,
-              /\b(?:fast|slow|efficient|inefficient|optimized|unoptimized|high-performance|low-performance|benchmark|metrics|monitoring|profiling)/gi
-            ]
-            const performanceTerms = performancePatterns.flatMap(pattern => content.match(pattern) || [])
-            analysisResult = `Performance Analysis:\n` +
-              `- Performance terms found: ${performanceTerms.length}\n` +
-              `- Speed/Latency: ${(content.match(/\b(?:speed|latency|response time|execution time)/gi) || []).length}\n` +
-              `- Optimization: ${(content.match(/\b(?:optimization|caching|indexing|benchmark|profiling)/gi) || []).length}\n` +
-              `- Resource usage: ${(content.match(/\b(?:memory|CPU|bandwidth|throughput|load)/gi) || []).length}`
-            break
-            
-          default:
-            analysisResult = `Analysis Type: ${analysisDescription}\n\nContent Length: ${content.length} characters\nContent Preview: ${content.substring(0, 300)}...\n\nThis analysis type is supported but detailed implementation would require AI processing.`
-        }
-      } else {
-        // Handle custom analysis types
-        analysisResult = `Custom Analysis: "${analysisType}"\n\n` +
-          `Content Length: ${content.length} characters\n` +
-          `Content Preview: ${content.substring(0, 300)}...\n\n` +
-          `This is a custom analysis request. The system would use AI to perform: ${analysisType}\n\n` +
-          `Available predefined types: ${Object.keys(predefinedTypes).join(', ')}\n\n` +
-          `For best results, consider using one of the predefined analysis types or provide more specific instructions.`
-      }
-      
-      const analysis = `${analysisResult}\n\nAnalysis completed at: ${new Date().toISOString()}`
-      
-      logger.log(`Analysis completed for type: ${analysisType}`)
-      return analysis
+      // Simple MVP approach - just pass content to LLM
+      const prompt = `Please analyze the following content and provide insights:
+
+Content:
+${content}
+
+Please provide a comprehensive analysis with actionable insights.`
+
+    return prompt;
       
     } catch (error) {
       logger.log(`Analysis error: ${error}`)
@@ -951,15 +788,13 @@ async function planTools(
       'createMergedDocument'
     ]
     
-    const systemPrompt = `You are a tool planning assistant. Based on the user's request, determine which tools are needed and in what order they should be executed.
+         const systemPrompt = `You are a tool planning assistant. Based on the user's request, determine which tools are needed and in what order they should be executed.
 
 Available tools:
 1. getAllFiles() - Get all processed files content
 2. getFile(fileName) - Get a specific file by name
 3. edit(text, instruction) - Edit or modify text based on instructions
-4. analyze(content, type) - Analyze content for specific patterns or custom analysis types
-   - Predefined types: structure, entities, sentiment, keywords, summary, legal, dates, tone, complexity, topics, relationships, contradictions, recommendations, risks, opportunities, compliance, clarity, completeness, accuracy, bias, financial, technical, security, performance, usability, accessibility, internationalization, scalability, maintainability, documentation
-   - Custom types: Any user-specified analysis type (e.g., "financial analysis", "technical review", "market analysis", "competitive analysis", "SWOT analysis", etc.)
+4. analyze(content) - Analyze content and provide insights
 5. extract(content, type) - Extract specific information from content (dates, emails, phones, urls, numbers, quotes, lists, headings)
 6. getFilesInfo() - Get information about all processed files
 7. mergeFiles(file1Name, file2Name, mergeStrategy) - Merge two files. Strategies: append, prepend, interleave
@@ -1063,17 +898,6 @@ async function executeTools(
           toolResult = await toolFunctions.edit(text || 'Sample text', instruction || 'Edit instruction')
           break
         case 'analyze':
-          // Use Grok to determine what to analyze - more flexible approach
-          const analyzePrompt = `Based on the available files: ${processedFiles.map(f => f.originalName).join(', ')}, what type of analysis would be most useful for the user's request? 
-
-Available predefined analysis types: structure, entities, sentiment, keywords, summary, legal, dates, tone, complexity, topics, relationships, contradictions, recommendations, risks, opportunities, compliance, clarity, completeness, accuracy, bias, financial, technical, security, performance, usability, accessibility, internationalization, scalability, maintainability, documentation
-
-You can also suggest custom analysis types if none of the predefined ones fit. Examples of custom types: "financial analysis", "technical review", "market analysis", "competitive analysis", "SWOT analysis", "risk assessment", "compliance audit", etc.
-
-Respond with just the analysis type (predefined or custom).`
-          const analyzeResponse = await grok.invoke([new HumanMessage(analyzePrompt)])
-          const analysisType = (analyzeResponse.content as string).trim()
-          
           // Get content from all files for analysis
           const allContentPromises = processedFiles.map(async (f) => {
             try {
@@ -1087,7 +911,9 @@ Respond with just the analysis type (predefined or custom).`
           })
           
           const allContent = (await Promise.all(allContentPromises)).join('\n\n---\n\n')
-          toolResult = await toolFunctions.analyze(allContent, analysisType)
+          const humanPromt = await toolFunctions.analyze(allContent)
+          const humanResponse = await grok.invoke([new HumanMessage(humanPromt)])
+          toolResult = humanResponse.content as string
           break
         case 'extract':
           // Use Grok to determine what to extract and from what content
