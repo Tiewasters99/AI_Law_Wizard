@@ -413,7 +413,7 @@ ${content}
 User Request:
 ${userPrompt}
 
-Please provide a comprehensive analysis with actionable insights.`
+Please provide a analysis based on the user's request.`
 
     return prompt;
       
