@@ -53,15 +53,23 @@ export async function GET(request: NextRequest) {
         code: code,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
-        scope: 'https://graph.microsoft.com/Files.ReadWrite'
+        scope: 'https://graph.microsoft.com/Files.ReadWrite.All https://graph.microsoft.com/User.Read'
       }),
     })
 
     if (!response.ok) {
       const error = await response.text()
-      console.error('Token exchange failed:', error)
+      console.error('Token exchange failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: error,
+        clientId: clientId ? 'configured' : 'missing',
+        clientSecret: clientSecret ? 'configured' : 'missing',
+        redirectUri: redirectUri,
+        code: code ? 'present' : 'missing'
+      })
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onedrive?error=${encodeURIComponent('Token exchange failed')}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onedrive?error=${encodeURIComponent(`Token exchange failed: ${response.status} - ${error}`)}`
       )
     }
 
