@@ -22,16 +22,20 @@ import { useSearchParams, useRouter } from 'next/navigation'
 interface OneDriveInterfaceProps {
   onFileSelect?: (file: File) => void
   onFolderSelect?: (folderId: string, folderName: string) => void
+  onFileSync?: (files: any[]) => void
   showUpload?: boolean
   showDownload?: boolean
+  showSync?: boolean
   className?: string
 }
 
 function OneDriveInterfaceContent({
   onFileSelect,
   onFolderSelect,
+  onFileSync,
   showUpload = true,
   showDownload = true,
+  showSync = false,
   className = ''
 }: OneDriveInterfaceProps) {
   const [files, setFiles] = useState<OneDriveFileInfo[]>([])
@@ -45,6 +49,7 @@ function OneDriveInterfaceContent({
   const [authLoading, setAuthLoading] = useState(false)
   const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set())
   const [syncedFiles, setSyncedFiles] = useState<Set<string>>(new Set())
+  const [selectedForSync, setSelectedForSync] = useState<Set<string>>(new Set())
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -337,6 +342,140 @@ function OneDriveInterfaceContent({
     }
   }
 
+  // Handle bulk sync
+  const handleBulkSync = async () => {
+    const filesToSync = files.filter(file => 
+      !file.isFolder && 
+      selectedForSync.has(file.id) && 
+      !syncedFiles.has(file.id) &&
+      !syncingFiles.has(file.id)
+    )
+
+    if (filesToSync.length === 0) {
+      toast({
+        title: "No Files Selected",
+        description: "Please select files to sync that haven't been synced already.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const syncedFilesList = []
+
+    for (const file of filesToSync) {
+      setSyncingFiles(prev => new Set(prev).add(file.id))
+    }
+
+    try {
+      for (const file of filesToSync) {
+        try {
+          // Download the file from OneDrive
+          const result = await downloadOneDriveFile(file.id)
+          
+          if (!result.success || !result.file) {
+            throw new Error(result.error || "Failed to download file from OneDrive")
+          }
+
+          // Convert base64 to File object
+          const downloadedFile = base64ToFile(
+            result.file.content,
+            result.file.name,
+            result.file.type
+          )
+
+          // Create FormData for the embedding API
+          const formData = new FormData()
+          formData.append('files', downloadedFile)
+          formData.append('oneDriveId', file.id)
+          formData.append('oneDriveLastModified', file.lastModified)
+
+          // Upload to embedding system
+          const response = await fetch('/api/embedding', {
+            method: 'POST',
+            body: formData
+          })
+
+          if (!response.ok) {
+            const errorData = await response.text()
+            throw new Error(`Embedding API error: ${response.status} - ${errorData}`)
+          }
+
+          const data = await response.json()
+          
+          if (data.error) {
+            throw new Error(data.error)
+          }
+
+          // Mark file as synced
+          setSyncedFiles(prev => new Set(prev).add(file.id))
+          syncedFilesList.push({ name: file.name, id: file.id })
+
+        } catch (error) {
+          console.error(`Error syncing file ${file.name}:`, error)
+          toast({
+            title: "Sync Failed",
+            description: `Failed to sync "${file.name}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+            variant: "destructive"
+          })
+        } finally {
+          setSyncingFiles(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(file.id)
+            return newSet
+          })
+        }
+      }
+
+      if (syncedFilesList.length > 0) {
+        toast({
+          title: "Bulk Sync Complete",
+          description: `Successfully synced ${syncedFilesList.length} file(s) to the embedding system`
+        })
+
+        // Clear selection after successful sync
+        setSelectedForSync(new Set())
+
+        // Call the onFileSync callback if provided
+        if (onFileSync) {
+          onFileSync(syncedFilesList)
+        }
+      }
+
+    } catch (error) {
+      console.error('Error in bulk sync:', error)
+      toast({
+        title: "Bulk Sync Failed",
+        description: error instanceof Error ? error.message : "Failed to complete bulk sync",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Toggle file selection for sync
+  const toggleFileSelection = (fileId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedForSync(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(fileId)) {
+        newSet.delete(fileId)
+      } else {
+        newSet.add(fileId)
+      }
+      return newSet
+    })
+  }
+
+  // Select all unsync files
+  const selectAllForSync = () => {
+    const unsyncedFiles = files.filter(file => !file.isFolder && !syncedFiles.has(file.id))
+    setSelectedForSync(new Set(unsyncedFiles.map(f => f.id)))
+  }
+
+  // Clear all selections
+  const clearSelection = () => {
+    setSelectedForSync(new Set())
+  }
+
   // Handle file upload
   const handleFileUpload = async () => {
     if (!selectedFile) {
@@ -479,6 +618,44 @@ function OneDriveInterfaceContent({
           />
         </div>
 
+        {/* Bulk Sync Controls */}
+        {showSync && files.some(f => !f.isFolder && !syncedFiles.has(f.id)) && (
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-blue-900">Bulk Sync to AI Analysis</h4>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAllForSync}
+                  disabled={files.filter(f => !f.isFolder && !syncedFiles.has(f.id)).length === selectedForSync.size}
+                >
+                  Select All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSelection}
+                  disabled={selectedForSync.size === 0}
+                >
+                  Clear
+                </Button>
+                <Button
+                  onClick={handleBulkSync}
+                  disabled={selectedForSync.size === 0 || Array.from(selectedForSync).some(id => syncingFiles.has(id))}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  size="sm"
+                >
+                  Sync Selected ({selectedForSync.size})
+                </Button>
+              </div>
+            </div>
+            <p className="text-sm text-blue-700">
+              Select files to sync them to the AI analysis system. Synced files can be analyzed with the AI wizard.
+            </p>
+          </div>
+        )}
+
         {/* Breadcrumb */}
         <div className="mb-4 text-sm text-gray-600">
           {folderPath.join(' / ')}
@@ -496,10 +673,21 @@ function OneDriveInterfaceContent({
             files.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer ${
+                  showSync && selectedForSync.has(file.id) ? 'border-blue-500 bg-blue-50' : ''
+                }`}
                 onClick={() => handleFileSelect(file)}
               >
                 <div className="flex items-center space-x-3">
+                  {showSync && !file.isFolder && !syncedFiles.has(file.id) && (
+                    <input
+                      type="checkbox"
+                      checked={selectedForSync.has(file.id)}
+                      onChange={(e) => toggleFileSelection(file.id, e as any)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                  )}
                   <span className="text-xl">{getFileIcon(file.type, file.isFolder)}</span>
                   <div>
                     <div className="font-medium">{file.name}</div>
@@ -521,7 +709,7 @@ function OneDriveInterfaceContent({
                       ✓ Synced
                     </Badge>
                   )}
-                  {showDownload && !file.isFolder && !syncedFiles.has(file.id) && (
+                  {!showSync && showDownload && !file.isFolder && !syncedFiles.has(file.id) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -529,6 +717,16 @@ function OneDriveInterfaceContent({
                       disabled={syncingFiles.has(file.id)}
                     >
                       {syncingFiles.has(file.id) ? 'Syncing...' : 'Sync'}
+                    </Button>
+                  )}
+                  {showSync && !file.isFolder && !syncedFiles.has(file.id) && !selectedForSync.has(file.id) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e: React.MouseEvent) => handleFileSync(file, e)}
+                      disabled={syncingFiles.has(file.id)}
+                    >
+                      {syncingFiles.has(file.id) ? 'Syncing...' : 'Sync Now'}
                     </Button>
                   )}
                 </div>
