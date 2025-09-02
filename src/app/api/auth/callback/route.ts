@@ -18,14 +18,14 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('OAuth error:', error, errorDescription)
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onedrive?error=${encodeURIComponent(errorDescription || error)}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/integrations?error=${encodeURIComponent(errorDescription || error)}`
       )
     }
 
     // Handle missing authorization code
     if (!code) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onedrive?error=${encodeURIComponent('No authorization code received')}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/integrations?error=${encodeURIComponent('No authorization code received')}`
       )
     }
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     if (!clientId || !clientSecret) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onedrive?error=${encodeURIComponent('Azure configuration missing')}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/integrations?error=${encodeURIComponent('Azure configuration missing')}`
       )
     }
 
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         code: code ? 'present' : 'missing'
       })
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onedrive?error=${encodeURIComponent(`Token exchange failed: ${response.status} - ${error}`)}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/integrations?error=${encodeURIComponent(`Token exchange failed: ${response.status} - ${error}`)}`
       )
     }
 
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     
     // Create a response that sets the tokens in cookies
     const redirectResponse = NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onedrive?success=true`
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/integrations?success=true`
     )
 
     // Set tokens in secure cookies
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('OAuth callback error:', error)
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onedrive?error=${encodeURIComponent(error instanceof Error ? error.message : 'Authentication failed')}`
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/integrations?error=${encodeURIComponent(error instanceof Error ? error.message : 'Authentication failed')}`
     )
   }
 }

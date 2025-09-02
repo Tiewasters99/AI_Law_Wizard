@@ -20,7 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Chat', href: '/chat', icon: MessageCircle },
     { name: 'Wizard', href: '/wizard', icon: WandSparkles },
-    { name: 'OneDrive', href: '/onedrive', icon: Cloud },
+    { name: 'Integrations', href: '/integrations', icon: Cloud },
   ]
 
 

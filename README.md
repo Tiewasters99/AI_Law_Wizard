@@ -132,7 +132,7 @@ The application uses the Grok API for AI-powered legal consultation:
 - **Purpose**: AI-powered legal document analysis
 
 ### OneDrive API
-- **Endpoint**: `/api/onedrive`
+- **Endpoint**: `/api/integrations`
 - **Methods**: GET, POST
 - **Purpose**: OneDrive file management and access
 

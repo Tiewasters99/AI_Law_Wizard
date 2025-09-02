@@ -161,9 +161,9 @@ Enable debug logging by checking the browser console for authentication flow mes
 The OAuth integration provides these endpoints:
 
 - `GET /api/auth/callback` - OAuth callback handler
-- `GET /api/onedrive` - List files and folders
-- `POST /api/onedrive` - Download a file
-- `PUT /api/onedrive` - Upload a file
+- `GET /api/integrations` - List files and folders
+- `POST /api/integrations` - Download a file
+- `PUT /api/integrations` - Upload a file
 
 ## User Experience
 

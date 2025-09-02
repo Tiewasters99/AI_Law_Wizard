@@ -57,7 +57,7 @@ export async function listOneDriveFiles(options: {
 
     return { success: true, files: data.files, total: data.total }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    return { success: false, error: error instanceof Error ? error.message : 'Network error. Please check your connection and try again.' }
   }
 }
 
@@ -80,7 +80,7 @@ export async function downloadOneDriveFile(fileId: string): Promise<OneDriveDown
 
     return { success: true, file: data.file }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    return { success: false, error: error instanceof Error ? error.message : 'Network error. Please check your connection and try again.' }
   }
 }
 
@@ -106,7 +106,7 @@ export async function uploadToOneDrive(file: File, folderId?: string): Promise<O
 
     return { success: true, file: data.file }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    return { success: false, error: error instanceof Error ? error.message : 'Network error. Please check your connection and try again.' }
   }
 }
 

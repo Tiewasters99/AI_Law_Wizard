@@ -117,7 +117,7 @@ const WizardPage = () => {
   }
 
   const navigateToCloudStorage = () => {
-    router.push('/onedrive')
+    router.push('/integrations')
   }
 
   const getFileIcon = (file: ServerFile) => {

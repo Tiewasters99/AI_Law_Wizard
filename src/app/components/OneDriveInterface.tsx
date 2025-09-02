@@ -75,7 +75,7 @@ function OneDriveInterfaceContent({
         variant: "destructive"
       })
       // Clear the error from URL
-      router.replace('/onedrive')
+      router.replace('/integrations')
     }
 
     if (success) {
@@ -84,7 +84,7 @@ function OneDriveInterfaceContent({
         description: "You are now connected to OneDrive!",
       })
       // Clear the success from URL
-      router.replace('/onedrive')
+      router.replace('/integrations')
       // Re-check auth status after a short delay to ensure tokens are loaded
       setTimeout(checkAuth, 100)
     } else {
@@ -110,11 +110,21 @@ function OneDriveInterfaceContent({
         // Check which files are already synced
         await checkSyncStatus(result.files)
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to load files",
-          variant: "destructive"
-        })
+        // Check if it's an authentication error
+        if (result.error?.includes('Authentication required')) {
+          setIsAuthenticated(false)
+          toast({
+            title: "Authentication Required",
+            description: "Please sign in to OneDrive to access your files",
+            variant: "destructive"
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to load files",
+            variant: "destructive"
+          })
+        }
       }
     } catch (error) {
       if (error instanceof Error && error.message.includes('authenticate')) {
