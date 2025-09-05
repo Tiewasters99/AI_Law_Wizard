@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
-import { File, FileText, Image, Video, X, AlertCircle, FolderOpen, RefreshCw, Database, Brain, ArrowRight, CheckCircle, Play, Cloud, Trash2, Plus } from 'lucide-react'
-import { GrokProcessingInterface } from '../components/grok-processing/GrokProcessingInterface'
+import { File, FileText, Image, Video, X, AlertCircle, FolderOpen, RefreshCw, Database, Brain, ArrowRight, CheckCircle, Play, Cloud, Trash2, Plus, HelpCircle, FileCheck, Zap, Upload } from 'lucide-react'
+import { GrokProcessingInterface } from '../components/document-processing/GrokProcessingInterface'
 import { useRouter } from 'next/navigation'
+import Layout from '../components/Layout'
 
 
 
@@ -173,60 +174,74 @@ const WizardPage = () => {
     const baseClasses = "w-6 h-6"
     switch (status) {
       case 'completed':
-        return <CheckCircle className={`${baseClasses} text-green-600`} />
+        return <CheckCircle className={`${baseClasses} text-white`} />
       case 'current':
-        return <Play className={`${baseClasses} text-blue-600`} />
+        return <Play className={`${baseClasses} text-white`} />
       default:
-        return <div className={`${baseClasses} rounded-full border-2 border-gray-300 bg-gray-100`} />
+        return <div className={`${baseClasses} rounded-full border-2 border-gray-400 bg-gray-200`} />
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">AI Document Analysis</h1>
-            <p className="text-xl text-gray-600">Run powerful AI analysis on your synced documents</p>
+    <Layout>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Modern Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mb-6">
+            <Brain className="w-8 h-8 text-white" />
           </div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-4">
+            AI Document Wizard
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Transform your documents into actionable insights with powerful AI analysis
+          </p>
         </div>
 
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center space-x-8">
-            {(['files', 'analyze'] as StepType[]).map((step, index) => {
-              const status = getStepStatus(step)
-              const isLast = index === 1
-              
-              return (
-                <div key={step} className="flex items-center">
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white border-2 border-gray-200 shadow-sm">
-                      {getStepIcon(step, status)}
-                    </div>
-                    <div className="mt-2 text-center">
-                      <p className={`text-sm font-medium ${
-                        status === 'completed' ? 'text-green-600' :
-                        status === 'current' ? 'text-blue-600' : 'text-gray-500'
+        {/* Enhanced Progress Steps */}
+        <div className="mb-12">
+          <div className="relative">
+            <div className="flex items-center justify-between max-w-md mx-auto">
+              {(['files', 'analyze'] as StepType[]).map((step, index) => {
+                const status = getStepStatus(step)
+                const isLast = index === 1
+                
+                return (
+                  <div key={step} className="flex items-center">
+                    <div className="relative">
+                      <div className={`flex items-center justify-center w-14 h-14 rounded-full transition-all duration-300 ${
+                        status === 'completed' ? 'bg-green-500 shadow-lg shadow-green-200' :
+                        status === 'current' ? 'bg-blue-500 shadow-lg shadow-blue-200 scale-110' : 
+                        'bg-gray-200'
                       }`}>
-                        {step === 'files' && 'Document Library'}
+                        {getStepIcon(step, status)}
+                      </div>
+                      {status === 'current' && (
+                        <div className="absolute -inset-1 bg-blue-500 rounded-full animate-pulse opacity-30"></div>
+                      )}
+                    </div>
+                    <div className="ml-4 text-left">
+                      <p className={`font-semibold transition-colors duration-300 ${
+                        status === 'completed' ? 'text-green-700' :
+                        status === 'current' ? 'text-blue-700' : 'text-gray-500'
+                      }`}>
+                        {step === 'files' && 'Sync Documents'}
                         {step === 'analyze' && 'AI Analysis'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {step === 'files' && `${getAllFiles().length} files synced`}
-                        {step === 'analyze' && grokResult ? 'Completed' : 'Ready'}
+                      <p className="text-sm text-gray-500">
+                        {step === 'files' && `${getAllFiles().length} files ready`}
+                        {step === 'analyze' && (grokResult ? 'Analysis complete' : 'Ready to analyze')}
                       </p>
                     </div>
+                    {!isLast && (
+                      <div className={`flex-1 h-1 mx-6 rounded-full transition-colors duration-300 ${
+                        status === 'completed' ? 'bg-green-400' : 'bg-gray-200'
+                      }`} />
+                    )}
                   </div>
-                  {!isLast && (
-                    <div className={`w-16 h-0.5 mx-4 ${
-                      status === 'completed' ? 'bg-green-600' : 'bg-gray-200'
-                    }`} />
-                  )}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
 
@@ -234,300 +249,263 @@ const WizardPage = () => {
         <div className="space-y-6">
           {/* Step 1: Document Library */}
           {currentStep === 'files' && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               {getAllFiles().length === 0 ? (
-                <Card className="border-2 border-dashed border-gray-300">
-                  <CardContent className="text-center py-16">
-                    <FolderOpen className="w-20 h-20 mx-auto text-gray-400 mb-6" />
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4">No Documents Found</h3>
-                    <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                      You need to sync some documents first before you can start AI analysis. Use the Storage Hub to connect your cloud storage or upload files.
-                    </p>
+                <div className="text-center py-20">
+                  <div className="relative mb-8">
+                    <div className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl flex items-center justify-center">
+                      <FolderOpen className="w-16 h-16 text-blue-500" />
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Ready to get started?</h3>
+                  <p className="text-lg text-gray-600 mb-8 max-w-lg mx-auto">
+                    Sync your documents from cloud storage or upload files directly to begin your AI-powered analysis journey.
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                     <Button
                       onClick={navigateToCloudStorage}
                       size="lg"
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <Cloud className="w-5 h-5 mr-2" />
-                      Go to Storage Hub
+                      Connect Cloud Storage
                       <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                  
+                  <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                        <Cloud className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Cloud Integration</h4>
+                      <p className="text-sm text-gray-600">Connect OneDrive, Google Drive, Dropbox and more</p>
+                    </div>
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
+                        <Brain className="w-6 h-6 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-2">AI Analysis</h4>
+                      <p className="text-sm text-gray-600">Powerful insights from your documents using AI</p>
+                    </div>
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+                        <Zap className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Instant Results</h4>
+                      <p className="text-sm text-gray-600">Get answers and insights in seconds</p>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <>
-                  {/* Quick Start Analysis */}
-                  <Card className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-blue-50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center text-green-900">
-                        <Play className="w-6 h-6 mr-2" />
-                        Ready to Analyze Your Documents
-                      </CardTitle>
-                      <CardDescription className="text-green-700">
-                        {getAllFiles().length} documents are processed and ready for AI analysis
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <p className="font-semibold text-green-900">Start analyzing now</p>
-                          <p className="text-sm text-green-700">
-                            Ask questions, extract insights, or generate summaries from your documents
-                          </p>
-                        </div>
-                        <Button
-                          onClick={() => setCurrentStep('analyze')}
-                          className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-3"
-                          size="lg"
-                        >
-                          <Brain className="w-5 h-5 mr-2" />
-                          Start AI Analysis
-                          <ArrowRight className="w-5 h-5 ml-2" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Sync More Files */}
-                  <Card className="border-blue-200 bg-blue-50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center text-blue-900">
-                        <Plus className="w-5 h-5 mr-2" />
-                        Need More Documents?
-                      </CardTitle>
-                      <CardDescription className="text-blue-700">
-                        Add more files from cloud storage or upload directly to enhance your analysis.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-blue-800 mb-1">
-                            • Sync from OneDrive, Google Drive, Dropbox, and more
-                          </p>
-                          <p className="text-sm text-blue-800 mb-1">
-                            • Upload files directly from your computer
-                          </p>
-                          <p className="text-sm text-blue-800">
-                            • Manage and organize all your documents in one place
-                          </p>
-                        </div>
-                        <Button
-                          onClick={navigateToCloudStorage}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Cloud className="w-4 h-4 mr-2" />
-                          Storage Hub
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-
-              {/* File Library */}
-              {getAllFiles().length > 0 && (
-                <Card>
-                  <CardHeader>
+                <div className="space-y-6">
+                  {/* Quick Start Analysis - Enhanced */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-8">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center">
-                          <Database className="w-5 h-5 mr-2" />
-                          Your Document Library
-                        </CardTitle>
-                        <CardDescription>
-                          {getAllFiles().length} document(s) ready for AI analysis
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getAllFiles().length > 0 && (
-                          <>
-                            <Button
-                              onClick={handleSelectAll}
-                              variant="outline"
-                              size="sm"
-                            >
-                              {selectedFiles.length === getAllFiles().length ? 'Deselect All' : 'Select All'}
-                            </Button>
-                            {selectedFiles.length > 0 && (
-                              <Button
-                                onClick={handleDeleteSelected}
-                                variant="destructive"
-                                size="sm"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete ({selectedFiles.length})
-                              </Button>
-                            )}
-                          </>
-                        )}
-                        <Button
-                          onClick={fetchServerFiles}
-                          disabled={isLoadingFiles}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingFiles ? 'animate-spin' : ''}`} />
-                          Refresh
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {getAllFiles().slice(-6).map((file) => {
-                        const isSelected = selectedFiles.includes(file.fileName)
-                        return (
-                          <div
-                            key={file.fileName}
-                            className={`p-4 border rounded-lg bg-white hover:shadow-md transition-all cursor-pointer ${
-                              isSelected ? 'border-blue-500 bg-blue-50' : ''
-                            }`}
-                            onClick={() => handleFileSelect(file.fileName)}
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => handleFileSelect(file.fileName)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                />
-                                {getFileIcon(file)}
-                                <Badge className="bg-green-100 text-green-800">
-                                  Synced
-                                </Badge>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  deleteServerFile(file.fileName)
-                                }}
-                                className="text-gray-400 hover:text-red-500"
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm mb-1 truncate">
-                                {file.originalName}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {formatFileSize(file.size)} • Synced {new Date(file.uploadedAt).toLocaleDateString()}
-                              </p>
-                            </div>
+                      <div className="flex items-start space-x-4">
+                        <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center">
+                          <FileCheck className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold text-green-900 mb-2">
+                            {getAllFiles().length} Documents Ready
+                          </h3>
+                          <p className="text-green-700 mb-4 max-w-md">
+                            Your documents have been processed and are ready for AI analysis. 
+                            Start asking questions or request insights from your content.
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm text-green-600">
+                            <span className="flex items-center">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Processed
+                            </span>
+                            <span className="flex items-center">
+                              <Brain className="w-4 h-4 mr-1" />
+                              AI Ready
+                            </span>
                           </div>
-                        )
-                      })}
-                    </div>
-                    
-                    {getAllFiles().length > 6 && (
-                      <div className="mt-4 text-center">
-                        <p className="text-sm text-gray-500">
-                          Showing 6 of {getAllFiles().length} files
-                        </p>
+                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      <Button
+                        onClick={() => setCurrentStep('analyze')}
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                        size="lg"
+                      >
+                        <Zap className="w-5 h-5 mr-2" />
+                        Start Analysis
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Add More Files - Simplified */}
+                  <div className="flex items-center justify-center py-6">
+                    <Button
+                      onClick={navigateToCloudStorage}
+                      variant="outline"
+                      className="border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 text-blue-700 px-6 py-3 rounded-xl transition-all duration-300"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
+                      Add More Documents
+                    </Button>
+                  </div>
+                </div>
               )}
 
-              {/* Navigation */}
+              {/* Enhanced Navigation */}
               {getAllFiles().length > 0 && (
-                <div className="text-center">
-                  <Button
-                    onClick={() => setCurrentStep('analyze')}
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Continue to AI Analysis
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
+                <div className="text-center py-8">
+                  <div className="space-y-4">
+                    <p className="text-gray-600">Ready to unlock insights from your documents?</p>
+                    <Button
+                      onClick={() => setCurrentStep('analyze')}
+                      size="lg"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                    >
+                      <Brain className="w-5 h-5 mr-2" />
+                      Start AI Analysis
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Step 2: AI Analysis */}
+          {/* Step 2: Enhanced AI Analysis */}
           {currentStep === 'analyze' && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center text-2xl">
-                    <Brain className="w-6 h-6 mr-3" />
-                    Step 2: AI Document Analysis
-                  </CardTitle>
-                  <CardDescription className="text-lg">
-                    Use AI Wizard to analyze your documents. The AI will automatically find relevant content and provide insights.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+            <div className="space-y-8">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
+                  <div className="flex items-center text-white">
+                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4">
+                      <Brain className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold mb-1">AI Document Analysis</h2>
+                      <p className="text-blue-100">
+                        Ask questions, extract insights, and get summaries from your {getAllFiles().length} documents
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-8">
                   {getAllFiles().length === 0 ? (
-                    <div className="text-center py-12">
-                      <FolderOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No documents available</h3>
-                      <p className="text-gray-500 mb-4">Sync some documents first to start AI analysis</p>
+                    <div className="text-center py-16">
+                      <div className="w-24 h-24 mx-auto bg-gray-100 rounded-3xl flex items-center justify-center mb-6">
+                        <FolderOpen className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-3">No Documents Available</h3>
+                      <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                        You need to sync some documents first before starting AI analysis. 
+                        Go back to add your files.
+                      </p>
                       <Button
                         onClick={() => setCurrentStep('files')}
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl"
                       >
-                        Go Back to Files
+                        <ArrowRight className="w-5 h-5 mr-2 rotate-180" />
+                        Back to Documents
                       </Button>
                     </div>
                   ) : (
-                    <GrokProcessingInterface
-                      onComplete={(result, generatedFile) => {
-                        setGrokResult(result)
-                      }}
-                    />
+                    <div className="space-y-6">
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+                        <div className="flex items-center mb-4">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                            <HelpCircle className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <h3 className="font-semibold text-blue-900">Need help getting started?</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+                          <div className="space-y-2">
+                            <p>• "Summarize the key points from all documents"</p>
+                            <p>• "What are the main themes discussed?"</p>
+                            <p>• "Find information about [specific topic]"</p>
+                          </div>
+                          <div className="space-y-2">
+                            <p>• "Extract all action items and deadlines"</p>
+                            <p>• "Compare different viewpoints presented"</p>
+                            <p>• "Generate a comprehensive report"</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <GrokProcessingInterface
+                        onComplete={(result, generatedFile) => {
+                          setGrokResult(result)
+                        }}
+                      />
+                    </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              {/* Navigation */}
+              {/* Enhanced Navigation */}
               <div className="flex items-center justify-between">
                 <Button
                   onClick={() => setCurrentStep('files')}
                   variant="outline"
                   size="lg"
+                  className="border-2 border-gray-300 hover:border-gray-400 px-8 py-3 rounded-xl"
                 >
-                  ← Back to Files
+                  <ArrowRight className="w-5 h-5 mr-2 rotate-180" />
+                  Back to Documents
                 </Button>
                 
                 {grokResult && (
-                  <Button
-                    onClick={() => {
-                      setCurrentStep('files')
-                      setGrokResult(null)
-                    }}
-                    size="lg"
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    Start New Analysis
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center text-green-600">
+                      <CheckCircle className="w-5 h-5 mr-2" />
+                      <span className="font-medium">Analysis Complete</span>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setCurrentStep('files')
+                        setGrokResult(null)
+                      }}
+                      size="lg"
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-3 rounded-xl shadow-lg"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
+                      New Analysis
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Error Display */}
+          {/* Enhanced Error Display */}
           {error && (
-            <Card className="border-red-200 bg-red-50">
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  <p className="text-red-800">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 shadow-sm">
+              <div className="flex items-start space-x-4">
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900 mb-1">Something went wrong</h3>
+                  <p className="text-red-800 text-sm">{error}</p>
+                </div>
+                <Button
+                  onClick={() => setError(null)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-400 hover:text-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </div>
-    </div>
+    </Layout>
   )
 }
 

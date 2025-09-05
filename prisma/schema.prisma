@@ -114,4 +114,13 @@ enum MessageRole {
   SYSTEM
 }
 
+model Blog {
+  id String @id @default(cuid())
+  title String
+  content String @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  published Boolean @default(false)
+}
+
 

@@ -35,7 +35,7 @@ The Grok processing system has been significantly enhanced with the following fe
 
 ## API Endpoint
 
-### POST `/api/grok-processing`
+### POST `/api/document-processing`
 
 **Request Body:**
 ```json

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
+import Layout from '@/components/Layout'
 import { 
   CheckCircle, 
   XCircle, 
@@ -188,14 +189,17 @@ export default function EmbeddingProgressPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </Layout>
     )
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <Layout>
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -383,6 +387,7 @@ export default function EmbeddingProgressPage() {
           ))
         )}
       </div>
-    </div>
+      </div>
+    </Layout>
   )
 }

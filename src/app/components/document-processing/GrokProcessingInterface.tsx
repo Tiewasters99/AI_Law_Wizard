@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
@@ -24,8 +24,20 @@ import {
   Merge,
   Scissors,
   FileDown,
-  FilePlus
+  FilePlus,
+  Pause,
+  RefreshCcw,
+  Activity
 } from 'lucide-react'
+
+// Import real-time processing hook and progress components
+import { useDocumentProcessing, ProgressEventType } from '../../hooks/useDocumentProcessing'
+import { 
+  OperationChainProgress, 
+  RealTimeLogs, 
+  StatusCards, 
+  IntermediateResults 
+} from './ProgressComponents'
 
 interface AgentStep {
   step: number
@@ -61,20 +73,55 @@ interface GrokProcessingProps {
 }
 
 export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
+  // Input state
   const [userPrompt, setUserPrompt] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [agentSteps, setAgentSteps] = useState<AgentStep[]>([])
-  const [finalResult, setFinalResult] = useState('')
-  const [generatedFile, setGeneratedFile] = useState('')
+  
+  // UI state
   const [showFileEditor, setShowFileEditor] = useState(false)
   const [editedFile, setEditedFile] = useState('')
+  const [useRealTime, setUseRealTime] = useState(true) // Toggle between real-time and REST
+  const [showProgress, setShowProgress] = useState(false)
+  
+  // Legacy state for backward compatibility (REST fallback)
+  const [agentSteps, setAgentSteps] = useState<AgentStep[]>([])
+  const [generatedFile, setGeneratedFile] = useState('')
   const [processingLogs, setProcessingLogs] = useState<string[]>([])
-  const [processedFiles, setProcessedFiles] = useState<ProcessedFileInfo[]>([])
   const [toolExecutionPlan, setToolExecutionPlan] = useState<ToolExecutionPlan | null>(null)
   const [tokenUsage, setTokenUsage] = useState<any>(null)
+  
+  // Real-time processing hook
+  const processingState = useDocumentProcessing()
+  
   const { toast } = useToast()
   const fileEditorRef = useRef<HTMLTextAreaElement>(null)
+  
+  // Determine current processing state
+  const isProcessing = useRealTime ? processingState.isProcessing : false
+  const finalResult = useRealTime ? processingState.finalResult || '' : ''
+  const processedFiles = useRealTime ? processingState.processedFiles : []
+
+  // Handle processing completion
+  useEffect(() => {
+    if (useRealTime && !processingState.isProcessing && processingState.finalResult && !processingState.error) {
+      // Processing completed successfully
+      toast({
+        title: 'Success',
+        description: `Successfully processed ${processingState.processedFiles?.length || 0} relevant documents`
+      })
+
+      if (onComplete) {
+        onComplete(processingState.finalResult, processingState.finalResult)
+      }
+    } else if (useRealTime && processingState.error) {
+      // Processing failed
+      toast({
+        title: 'Error',
+        description: processingState.error,
+        variant: 'destructive'
+      })
+    }
+  }, [useRealTime, processingState.isProcessing, processingState.finalResult, processingState.error, processingState.processedFiles, toast, onComplete])
 
   const handleProcess = async () => {
     if (!userPrompt.trim()) {
@@ -86,67 +133,105 @@ export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
       return
     }
 
-    setIsProcessing(true)
-    setAgentSteps([])
-    setFinalResult('')
-    setProcessingLogs([])
-    setProcessedFiles([])
-    setToolExecutionPlan(null)
-    setTokenUsage(null)
-
-    try {
+    if (useRealTime) {
+      // Use real-time processing
+      setShowProgress(true)
+      processingState.clearState()
+      
       toast({
-        title: 'Processing',
-        description: 'Analyzing your request and finding relevant documents...',
+        title: 'Starting Processing',
+        description: 'Connecting to real-time processing stream...',
       })
 
-      const response = await fetch('/api/grok-processing', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userPrompt,
-          searchQuery: searchQuery || undefined
-        })
+      processingState.startProcessing({
+        userPrompt,
+        searchQuery: searchQuery || undefined
       })
 
-      const data = await response.json()
+      // The completion will be handled by the real-time events automatically
+      // No need for manual completion checking since the hook handles state updates
+      
+    } else {
+      // Fallback to REST API
+      setAgentSteps([])
+      setProcessingLogs([])
+      setToolExecutionPlan(null)
+      setTokenUsage(null)
 
-      if (data.success) {
-        setAgentSteps(data.agentSteps || [])
-        setFinalResult(data.result || '')
-        setProcessingLogs(data.logs || [])
-        setProcessedFiles(data.processedFiles || [])
-        setToolExecutionPlan(data.toolExecutionPlan || null)
-        setTokenUsage(data.tokenUsage || null)
-        
-        if (data.generatedFile) {
-          setGeneratedFile(data.generatedFile)
-          setEditedFile(data.generatedFile)
-        }
-
+      try {
         toast({
-          title: 'Success',
-          description: `Successfully processed ${data.processedFiles?.length || 0} relevant documents`
+          title: 'Processing',
+          description: 'Analyzing your request and finding relevant documents...',
         })
 
-        if (onComplete) {
-          onComplete(data.result || '', data.generatedFile || '')
+        const response = await fetch('/api/document-processing', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userPrompt,
+            searchQuery: searchQuery || undefined
+          })
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          setAgentSteps(data.agentSteps || [])
+          setProcessingLogs(data.logs || [])
+          setToolExecutionPlan(data.toolExecutionPlan || null)
+          setTokenUsage(data.tokenUsage || null)
+          
+          if (data.generatedFile) {
+            setGeneratedFile(data.generatedFile)
+            setEditedFile(data.generatedFile)
+          }
+
+          toast({
+            title: 'Success',
+            description: `Successfully processed ${data.processedFiles?.length || 0} relevant documents`
+          })
+
+          if (onComplete) {
+            onComplete(data.result || '', data.generatedFile || '')
+          }
+        } else {
+          throw new Error(data.error || 'Processing failed')
         }
-      } else {
-        throw new Error(data.error || 'Processing failed')
+      } catch (error) {
+        console.error('Processing error:', error)
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to process documents',
+          variant: 'destructive'
+        })
       }
-    } catch (error) {
-      console.error('Processing error:', error)
+    }
+  }
+
+  const handleStopProcessing = () => {
+    if (useRealTime) {
+      processingState.stopProcessing()
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to process documents',
+        title: 'Processing Stopped',
+        description: 'Processing has been stopped by user',
+      })
+    }
+  }
+
+  const handleToggleProcessingMode = () => {
+    if (isProcessing) {
+      toast({
+        title: 'Cannot Switch',
+        description: 'Cannot switch processing mode while processing is active',
         variant: 'destructive'
       })
-    } finally {
-      setIsProcessing(false)
+      return
     }
+    setUseRealTime(!useRealTime)
+    setShowProgress(false)
+    processingState.clearState()
   }
 
   const handleDownloadFile = () => {
@@ -258,29 +343,102 @@ export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
             />
           </div>
 
-          <Button 
-            onClick={handleProcess} 
-            disabled={isProcessing || !userPrompt.trim()}
-            className="w-full"
-            size="lg"
-          >
-            {isProcessing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Processing...
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 mr-2" />
-                Start AI Analysis
-              </>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleProcess} 
+              disabled={isProcessing || !userPrompt.trim()}
+              className="flex-1"
+              size="lg"
+            >
+              {isProcessing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {useRealTime ? 'Processing...' : 'Processing...'}
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Start AI Analysis
+                </>
+              )}
+            </Button>
+
+            {isProcessing && useRealTime && (
+              <Button 
+                onClick={handleStopProcessing}
+                variant="outline"
+                size="lg"
+              >
+                <Pause className="w-4 h-4 mr-2" />
+                Stop
+              </Button>
             )}
-          </Button>
+          </div>
+
+          {/* Processing Mode Toggle */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium">Processing Mode:</span>
+              <Badge variant={useRealTime ? "default" : "secondary"}>
+                {useRealTime ? 'Real-time' : 'Standard'}
+              </Badge>
+            </div>
+            <Button
+              onClick={handleToggleProcessingMode}
+              disabled={isProcessing}
+              variant="ghost"
+              size="sm"
+            >
+              <RefreshCcw className="w-4 h-4 mr-1" />
+              Switch
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Tool Execution Plan */}
-      {toolExecutionPlan && (
+      {/* Real-time Progress Section */}
+      {useRealTime && (showProgress || processingState.events.length > 0) && (
+        <div className="space-y-4">
+          {/* Status Cards */}
+          <StatusCards
+            isProcessing={processingState.isProcessing}
+            isConnected={processingState.isConnected}
+            currentStep={processingState.currentStep}
+            totalSteps={processingState.totalSteps}
+            processedFiles={processingState.processedFiles}
+            processingTime={processingState.processingTime}
+            confidence={processingState.confidence}
+            error={processingState.error}
+          />
+
+          {/* Operation Chain Progress */}
+          {processingState.operationChain.length > 0 && (
+            <OperationChainProgress
+              operationChain={processingState.operationChain}
+              currentStep={processingState.currentStep}
+              totalSteps={processingState.totalSteps}
+              isChain={processingState.isChain}
+            />
+          )}
+
+          {/* Real-time Logs */}
+          {processingState.events.length > 0 && (
+            <RealTimeLogs events={processingState.events} />
+          )}
+
+          {/* Intermediate Results */}
+          {processingState.intermediateResults.length > 0 && (
+            <IntermediateResults
+              intermediateResults={processingState.intermediateResults}
+              operationChain={processingState.operationChain}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Tool Execution Plan (REST mode) */}
+      {!useRealTime && toolExecutionPlan && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -328,16 +486,20 @@ export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {processedFiles.map((file) => (
-                <div key={file.fileId} className="p-3 border rounded-lg bg-gray-50">
+              {processedFiles.map((file, index) => (
+                <div key={file.fileId || file.fileName || index} className="p-3 border rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-sm truncate">{file.originalName}</h4>
+                    <h4 className="font-medium text-sm truncate">
+                      {file.originalName || file.fileName || 'Unknown file'}
+                    </h4>
                     <Badge variant="outline" className="text-xs">
-                      {file.fileSize > 0 ? `${(file.fileSize / 1024).toFixed(1)} KB` : 'Unknown size'}
+                      {file.fileSize && file.fileSize > 0 
+                        ? `${(file.fileSize / 1024).toFixed(1)} KB` 
+                        : 'Unknown size'}
                     </Badge>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Content length: {file.contentLength.toLocaleString()} characters
+                    Content length: {file.contentLength ? file.contentLength.toLocaleString() : 'Unknown'} characters
                   </p>
                 </div>
               ))}
@@ -346,8 +508,8 @@ export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
         </Card>
       )}
 
-      {/* Token Usage */}
-      {tokenUsage && (
+      {/* Token Usage (REST mode) */}
+      {!useRealTime && tokenUsage && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -378,8 +540,8 @@ export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
         </Card>
       )}
 
-      {/* Processing Logs */}
-      {processingLogs.length > 0 && (
+      {/* Processing Logs (REST mode) */}
+      {!useRealTime && processingLogs.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -398,8 +560,8 @@ export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
         </Card>
       )}
 
-      {/* Agent Steps */}
-      {agentSteps.length > 0 && (
+      {/* Agent Steps (REST mode) */}
+      {!useRealTime && agentSteps.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
