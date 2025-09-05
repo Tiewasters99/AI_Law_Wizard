@@ -3,14 +3,43 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-// GET - List all blogs
-export async function GET() {
+// GET - List all blogs or get specific blog by ID
+export async function GET(request: NextRequest) {
   try {
-    const blogs = await prisma.blog.findMany({
-      orderBy: { createdAt: 'desc' }
-    })
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
 
-    return NextResponse.json({ blogs })
+    if (id) {
+      // Get specific blog
+      const blog = await prisma.blog.findUnique({
+        where: { id },
+        include: {
+          comments: {
+            where: { parentId: null },
+            include: {
+              replies: true
+            },
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      })
+
+      if (!blog) {
+        return NextResponse.json(
+          { error: 'Blog not found' },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json({ blog })
+    } else {
+      // List all blogs
+      const blogs = await prisma.blog.findMany({
+        orderBy: { createdAt: 'desc' }
+      })
+
+      return NextResponse.json({ blogs })
+    }
   } catch (error) {
     console.error('Error fetching blogs:', error)
     return NextResponse.json(

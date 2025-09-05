@@ -118,9 +118,33 @@ model Blog {
   id String @id @default(cuid())
   title String
   content String @db.Text
+  author String @default("Admin") // Blog author name
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   published Boolean @default(false)
+  
+  // Relations
+  comments Comment[]
+  
+  @@map("blogs")
+}
+
+model Comment {
+  id String @id @default(cuid())
+  content String @db.Text
+  authorName String
+  authorEmail String?
+  blogId String
+  parentId String? // For nested replies
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  parent Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+  
+  @@map("comments")
 }
 
 
