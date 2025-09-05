@@ -1,12 +1,12 @@
 'use client'
 
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/app/components/ui/card'
+import { Button } from '@/app/components/ui/button'
 import { Bot, Loader2, AlertTriangle, ArrowDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ChatMessage from './ChatMessage'
 import { Message } from './types'
-import { isSubscriptionActive } from '@/lib/subscription'
+import { isSubscriptionActive } from '@/app/lib/subscription'
 
 interface ChatMessagesProps {
   messages: Message[]

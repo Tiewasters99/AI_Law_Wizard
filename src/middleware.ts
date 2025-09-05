@@ -1,4 +1,5 @@
-// Middleware removed - authentication is no longer required
+export { default } from "next-auth/middleware"
+
 export const config = {
-  matcher: [],
+  matcher: ["/chat", "/wizard"],
 };

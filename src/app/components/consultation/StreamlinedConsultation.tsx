@@ -1,8 +1,8 @@
 
 import React, { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
+import { Button } from "@/app/components/ui/button";
+import { Textarea } from "@/app/components/ui/textarea";
+import { Card } from "@/app/components/ui/card";
 import { Image as ImageIcon, Video, Send, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 

@@ -1,10 +1,10 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/app/components/ui/button'
+import { Textarea } from '@/app/components/ui/textarea'
 import { Send, Crown, FileText } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { isSubscriptionActive } from '@/lib/subscription'
+import { isSubscriptionActive } from '@/app/lib/subscription'
 
 interface ChatInputProps {
   inputMessage: string

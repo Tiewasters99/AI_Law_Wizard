@@ -1,7 +1,7 @@
 'use client'
 
-import Layout from '@/components/Layout'
-import Home from '@/components/Home'
+import Layout from '@/app/components/Layout'
+import Home from '@/app/components/Home'
 
 export default function Page() {
   return (

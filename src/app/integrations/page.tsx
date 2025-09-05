@@ -1,16 +1,16 @@
 'use client'
 
-import Layout from '@/components/Layout'
+import Layout from '@/app/components/Layout'
 import { useState, useEffect } from 'react'
-import { useToast } from '@/components/ui/use-toast'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/app/components/ui/use-toast'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Button } from '@/app/components/ui/button'
+import { Badge } from '@/app/components/ui/badge'
 import { Cloud, Database, FileText, Trash2, Upload, Brain, ArrowRight, RefreshCw, FolderOpen, Play, CheckCircle, AlertCircle, Settings, HardDrive, Files } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 // Import individual integration components
-import OneDriveInterface from '@/components/OneDriveInterface'
+import OneDriveInterface from '@/app/components/OneDriveInterface'
 import { graphClient } from '../lib/microsoft-graph'
 
 interface SyncedFile {

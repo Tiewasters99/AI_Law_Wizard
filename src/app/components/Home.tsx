@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from "react";
-import { Consultation } from "@/lib/api";
+import { Consultation } from "@/app/lib/api";
 import StreamlinedConsultation from "./consultation/StreamlinedConsultation";
 import AnalysisResults from "./consultation/AnalysisResults";
 import OneDriveInterface from "./OneDriveInterface";

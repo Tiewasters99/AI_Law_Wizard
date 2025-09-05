@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/use-toast'
-import Layout from '@/components/Layout'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
+import { useToast } from '@/app/components/ui/use-toast'
+import Layout from '@/app/components/Layout'
 import { 
   CheckCircle, 
   XCircle, 

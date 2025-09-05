@@ -1,16 +1,16 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { canUserChat, getCurrentUsage, incrementChatCount, FREE_CHAT_LIMIT } from '@/lib/pricing'
-import UpgradeModal from '@/components/UpgradeModal'
+import { canUserChat, getCurrentUsage, incrementChatCount, FREE_CHAT_LIMIT } from '@/app/lib/pricing'
+import UpgradeModal from '@/app/components/UpgradeModal'
 import { motion } from 'framer-motion'
-import { useToast } from '@/components/ui/use-toast'
-import Layout from '@/components/Layout'
-import ChatHeader from '@/components/chat/ChatHeader'
-import QuickPrompts from '@/components/chat/QuickPrompts'
-import ChatMessages from '@/components/chat/ChatMessages'
-import ChatInput from '@/components/chat/ChatInput'
-import { Message } from '@/components/chat/types'
+import { useToast } from '@/app/components/ui/use-toast'
+import Layout from '@/app/components/Layout'
+import ChatHeader from '@/app/components/chat/ChatHeader'
+import QuickPrompts from '@/app/components/chat/QuickPrompts'
+import ChatMessages from '@/app/components/chat/ChatMessages'
+import ChatInput from '@/app/components/chat/ChatInput'
+import { Message } from '@/app/components/chat/types'
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])

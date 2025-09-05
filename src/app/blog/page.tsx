@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Layout from '../components/Layout'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { EnhancedTextEditor } from '@/components/ui/enhanced-text-editor'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
+import { Input } from '@/app/components/ui/input'
+import { Textarea } from '@/app/components/ui/textarea'
+import { EnhancedTextEditor } from '@/app/components/ui/enhanced-text-editor'
+import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Badge } from '@/app/components/ui/badge'
 import { 
   PenTool, 
   Wand2, 

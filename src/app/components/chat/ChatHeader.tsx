@@ -1,9 +1,9 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
+import { Button } from '@/app/components/ui/button'
 import { Crown, Zap, Star } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { getSubscriptionTier } from '@/lib/subscription'
+import { getSubscriptionTier } from '@/app/lib/subscription'
 import Image from 'next/image'
 
 interface ChatHeaderProps {

@@ -1,7 +1,7 @@
 'use client'
 
 
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/app/components/ui/badge'
 import { 
   Home, 
   MessageCircle,
@@ -11,14 +11,18 @@ import {
   FileText,
   Scale,
   WholeWord,
-  EarthIcon
+  EarthIcon,
+  User
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
+import { useSession, signIn, signOut } from 'next-auth/react'
+import { Button } from '@/app/components/ui/button'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
@@ -27,6 +31,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { name: 'Integrations', href: '/integrations', icon: Cloud },
     { name: 'Blog', href: '/blog', icon: FileText },
     { name: 'Mini Verse', href: '#', icon: EarthIcon },
+  ]
+  
+  const authenticatedNavigation = [
+    { name: 'Profile', href: '/profile', icon: User },
   ]
 
 
@@ -72,11 +80,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 )
               })}
+              {session && authenticatedNavigation.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{item.name}</span>
+                  </Link>
+                )
+              })}
             </nav>
           </div>
           
-          {/* Date badge */}
-          <div className="flex items-center space-x-2">
+          {/* Right side items */}
+          <div className="flex items-center space-x-4">
             <Badge variant="secondary" className="text-xs">
               <Clock className="w-3 h-3 mr-1" />
               {new Date().toLocaleDateString('en-US', {
@@ -85,6 +111,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 day: 'numeric'
               })}
             </Badge>
+            {session ? (
+              <Button variant="outline" onClick={() => signOut()}>Sign Out</Button>
+            ) : (
+              <Button onClick={() => signIn()}>Sign In</Button>
+            )}
           </div>
         </div>
       </div>
