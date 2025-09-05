@@ -1,6 +1,6 @@
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { ToasterComponent } from '@/components/ui/toaster'
+import { ToasterComponent } from '@/app/components/ui/toaster'
 import { Providers } from './providers'
 
 const inter = Inter({ 
