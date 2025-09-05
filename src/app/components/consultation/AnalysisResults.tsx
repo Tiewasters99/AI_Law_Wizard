@@ -2,8 +2,9 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertTriangle, Scale, ArrowLeft, Clock, FileText } from "lucide-react";
+import { CheckCircle, AlertTriangle, ArrowLeft, Clock, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 interface AnalysisResult {
   summary: string;
@@ -86,7 +87,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
               </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Legal Analysis Complete</h1>
-                <p className="text-slate-600">AI-generated insights for your legal matter</p>
+                <p className="text-slate-600">Wizard insights for your legal matter</p>
               </div>
             </div>
             <Button
@@ -107,7 +108,13 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-xl">
-                      <Scale className="w-5 h-5 text-slate-700" />
+                      <Image 
+                        src="/images/ai_law_wizard_logo.svg" 
+                        alt="AI Law Wizard" 
+                        width={20} 
+                        height={20}
+                        className="w-5 h-5 flex-shrink-0"
+                      />
                       Case Summary
                     </CardTitle>
                     <Badge className={`${urgencyInfo.color} border flex items-center gap-1`}>

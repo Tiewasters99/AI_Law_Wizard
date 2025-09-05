@@ -1,0 +1,58 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="90" fill="url(#gradient)" stroke="none"/>
+  
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="hatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1b4b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4c1d95;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="scaleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Wizard hat (geometric, modern interpretation) -->
+  <path d="M 100 40 L 75 110 L 125 110 Z" fill="url(#hatGrad)" stroke="none"/>
+  
+  <!-- Hat brim -->
+  <ellipse cx="100" cy="110" rx="30" ry="8" fill="url(#hatGrad)" stroke="none"/>
+  
+  <!-- Scales of justice (simplified, integrated into design) -->
+  <!-- Central pillar/staff -->
+  <rect x="98" y="110" width="4" height="35" fill="url(#scaleGrad)" rx="2"/>
+  
+  <!-- Scale arms -->
+  <rect x="75" y="125" width="50" height="3" fill="url(#scaleGrad)" rx="1.5"/>
+  
+  <!-- Scale pans (simplified circles) -->
+  <circle cx="85" cy="135" r="8" fill="none" stroke="url(#scaleGrad)" stroke-width="2"/>
+  <circle cx="115" cy="135" r="8" fill="none" stroke="url(#scaleGrad)" stroke-width="2"/>
+  
+  <!-- Magical sparkles (subtle) -->
+  <g fill="#fbbf24" opacity="0.8">
+    <!-- Four-pointed stars -->
+    <path d="M 65 60 L 67 67 L 74 65 L 67 67 L 65 74 L 63 67 L 56 65 L 63 67 Z" transform="scale(0.6)"/>
+    <path d="M 140 70 L 142 77 L 149 75 L 142 77 L 140 84 L 138 77 L 131 75 L 138 77 Z" transform="scale(0.4)"/>
+    <path d="M 130 45 L 132 52 L 139 50 L 132 52 L 130 59 L 128 52 L 121 50 L 128 52 Z" transform="scale(0.3)"/>
+  </g>
+  
+  <!-- Additional subtle magical elements -->
+  <g fill="#ffffff" opacity="0.3">
+    <circle cx="70" cy="85" r="1.5"/>
+    <circle cx="135" cy="95" r="1"/>
+    <circle cx="60" cy="120" r="1"/>
+    <circle cx="145" cy="55" r="1.5"/>
+  </g>
+  
+  <!-- Subtle glow effect inside hat -->
+  <ellipse cx="100" cy="75" rx="15" ry="8" fill="#ffffff" opacity="0.1"/>
+</svg>

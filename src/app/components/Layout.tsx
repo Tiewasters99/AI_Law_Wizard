@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { 
   Home, 
   MessageCircle,
-  Scale,
   Clock,
   WandSparkles,
   Cloud,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Image from 'next/image'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -34,10 +34,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center space-x-6">
             {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <Scale className="w-6 h-6 text-blue-600" />
-              <span className="text-lg font-semibold">AI Wizard</span>
-            </div>
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+              <Image 
+                src="/images/ai_law_wizard_logo.svg" 
+                alt="AI Law Wizard" 
+                width={32} 
+                height={32}
+                className="w-8 h-8 flex-shrink-0"
+                priority
+              />
+              <span className="text-lg font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:block">
+                AI Law Wizard
+              </span>
+            </Link>
             
             {/* Navigation links */}
             <nav className="flex items-center space-x-1">

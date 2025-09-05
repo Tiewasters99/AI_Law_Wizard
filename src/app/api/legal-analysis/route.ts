@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     console.log('Legal Analysis API called - checking environment...')
     
     // Debug: Check if API key is available
-    if (!process.env.GROK_API_KEY) {
+    if (!process.env.XAI_API_KEY) {
       console.error('GROK_API_KEY is not set in environment variables')
       return NextResponse.json(
         { error: 'API key not configured. Please set GROK_API_KEY in your environment variables.' },
@@ -38,14 +38,14 @@ export async function POST(request: NextRequest) {
     `
 
     console.log('Analysis prompt created, calling Grok API...')
-    console.log('API Key (first 10 chars):', process.env.GROK_API_KEY?.substring(0, 10) + '...')
+    console.log('API Key (first 10 chars):', process.env.XAI_API_KEY?.substring(0, 10) + '...')
 
     // Call Grok API
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+        'Authorization': `Bearer ${process.env.XAI_API_KEY}`
       },
       body: JSON.stringify({
         messages: [

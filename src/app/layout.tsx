@@ -9,8 +9,8 @@ const inter = Inter({
 })
 
 export const metadata = {
-  title: 'AI Wizard',
-  description: 'AI-powered legal consultation platform',
+  title: 'AI Law Wizard',
+  description: 'AI-powered legal consultation platform combining wizard intelligence with scales of justice',
 }
 
 export default function RootLayout({ 

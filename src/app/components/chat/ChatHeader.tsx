@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Crown, Zap, Star } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { getSubscriptionTier } from '@/lib/subscription'
+import Image from 'next/image'
 
 interface ChatHeaderProps {
   isClient: boolean
@@ -61,11 +62,20 @@ export default function ChatHeader({ isClient, onUpgrade }: ChatHeaderProps) {
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-            Chat with <span className="text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text">
-              {subscriptionTier ? 'Grok' : 'Apprentice'}
-            </span>
-          </h1>
+          <div className="flex items-center gap-3 mb-1">
+            <Image 
+              src="/images/ai_law_wizard_logo.svg" 
+              alt="AI Law Wizard" 
+              width={24} 
+              height={24}
+              className="w-6 h-6 flex-shrink-0"
+            />
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Chat with <span className="text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text">
+                {subscriptionTier ? 'Grok' : 'Apprentice'}
+              </span>
+            </h1>
+          </div>
           <p className="text-sm text-gray-600">Ask me anything about legal matters</p>
         </div>
         <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ import { canUserChat, getCurrentUsage, incrementChatCount, FREE_CHAT_LIMIT } fro
 import UpgradeModal from '@/components/UpgradeModal'
 import { motion } from 'framer-motion'
 import { useToast } from '@/components/ui/use-toast'
+import Layout from '@/components/Layout'
 import ChatHeader from '@/components/chat/ChatHeader'
 import QuickPrompts from '@/components/chat/QuickPrompts'
 import ChatMessages from '@/components/chat/ChatMessages'
@@ -187,9 +188,9 @@ export default function ChatPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col">
+    <Layout>
       <motion.div 
-        className="flex flex-col h-screen bg-white/90 backdrop-blur-sm shadow-2xl"
+        className="flex flex-col h-[calc(100vh-100px)] bg-white/90 backdrop-blur-sm shadow-2xl rounded-lg mx-auto max-w-6xl"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -239,6 +240,6 @@ export default function ChatPage() {
           onUpgrade={() => setShowUpgradeModal(true)}
         />
       </motion.div>
-    </div>
+    </Layout>
   )
 }
