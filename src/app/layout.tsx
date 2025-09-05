@@ -11,6 +11,11 @@ const inter = Inter({
 export const metadata = {
   title: 'AI Law Wizard',
   description: 'AI-powered legal consultation platform combining wizard intelligence with scales of justice',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({ 

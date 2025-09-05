@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     console.log('Request parsed:', { userIssue: userIssue.substring(0, 50) + '...' })
 
     const analysisPrompt = `
-      Analyze the following legal issue in the persona of Grok (witty, a bit rebellious, but ultimately insightful and smart). Provide comprehensive guidance.
+      Analyze the following legal issue in the persona of AI Law Wizard (witty, a bit rebellious, but ultimately insightful and smart). Provide comprehensive guidance.
 
       LEGAL ISSUE: "${userIssue}"
 
@@ -36,9 +36,6 @@ export async function POST(request: NextRequest) {
       - urgency_level: A string which can be one of: "low", "medium", "high", "urgent".
       - disclaimer: Your standard legal disclaimer, but with a bit of a witty Grok spin.
     `
-
-    console.log('Analysis prompt created, calling Grok API...')
-    console.log('API Key (first 10 chars):', process.env.XAI_API_KEY?.substring(0, 10) + '...')
 
     // Call Grok API
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
