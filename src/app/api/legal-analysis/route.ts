@@ -28,13 +28,37 @@ export async function POST(request: NextRequest) {
 
       LEGAL ISSUE: "${userIssue}"
 
-      Structure your response as a JSON object with the following keys: "summary", "key_points", "recommendations", "legal_areas", "urgency_level", "disclaimer".
+      Structure your response as a JSON object with the following keys: "summary", "key_points", "recommendations", "legal_areas", "urgency_level", "disclaimer", "recommended_lawyers".
       - summary: A brief, insightful summary of the legal issue.
       - key_points: An array of strings with the main legal points to consider.
       - recommendations: An array of strings with recommended actions or next steps.
       - legal_areas: An array of strings with the relevant areas of law.
       - urgency_level: A string which can be one of: "low", "medium", "high", "urgent".
       - disclaimer: Your standard legal disclaimer, but with a bit of a witty Grok spin.
+      - recommended_lawyers: An array of 2-3 lawyer objects, each with the following structure:
+        {
+          "id": "unique_id",
+          "name": "Full Name",
+          "title": "Professional Title",
+          "specializations": ["Area 1", "Area 2", "Area 3"],
+          "experience": "X+ years",
+          "rating": 4.7-4.9,
+          "reviewCount": 50-200,
+          "description": "How this lawyer can specifically help WIN this type of case - be persuasive and case-specific",
+          "achievements": ["Achievement 1", "Achievement 2", "Achievement 3"],
+          "contactEmail": "email@lawfirm.com",
+          "contactPhone": "(555) XXX-XXXX",
+          "image": "/images/lawyer-X.jpg"
+        }
+
+      IMPORTANT for recommended_lawyers:
+      - Generate realistic lawyer profiles that match the specific legal areas identified
+      - Each lawyer should specialize in the areas most relevant to this case
+      - Descriptions should be tailored to how they can help WIN this specific type of case
+      - Use diverse names and backgrounds
+      - Make achievements relevant to their specializations
+      - Ensure specializations directly match the legal_areas identified
+      - Focus on lawyers who can help the user ACHIEVE SUCCESS and WIN their case
     `
 
     // Call Grok API
