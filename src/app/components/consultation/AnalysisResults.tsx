@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
-import { CheckCircle, AlertTriangle, ArrowLeft, Clock, FileText, Phone, Mail, Star, Users, Award } from "lucide-react";
-import { motion } from "framer-motion";
+import { CheckCircle, AlertTriangle, ArrowLeft, Clock, FileText, Phone, Mail, Star, Users, Award, X, Send } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
 interface AnalysisResult {
@@ -58,6 +58,34 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
   
   // Get recommended lawyers from LLM-generated analysis
   const recommendedLawyers = analysis ? getRecommendedLawyers(analysis) : [];
+  
+  // Contact form state
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [selectedLawyer, setSelectedLawyer] = useState<Lawyer | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    message: '',
+    preferredContact: 'email'
+  });
+  
+  const handleContactClick = (lawyer?: Lawyer) => {
+    if (lawyer) {
+      setSelectedLawyer(lawyer);
+    }
+    setShowContactForm(true);
+  };
+  
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Here you would handle the form submission
+    console.log('Form submitted:', { formData, selectedLawyer, userIssue: consultation.user_issue });
+    // For now, just close the modal
+    setShowContactForm(false);
+    setFormData({ name: '', email: '', phone: '', message: '', preferredContact: 'email' });
+    setSelectedLawyer(null);
+  };
   
   // Handle case where analysis is undefined
   if (!analysis) {
@@ -254,6 +282,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
                             <Button 
                               className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-0 font-semibold"
                               size="sm"
+                              onClick={() => handleContactClick(lawyer)}
                             >
                               <Phone className="w-4 h-4 mr-2" />
                               Get FREE Consultation
@@ -262,6 +291,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
                               variant="outline" 
                               className="w-full border-slate-300 hover:bg-slate-50 text-slate-700"
                               size="sm"
+                              onClick={() => handleContactClick(lawyer)}
                             >
                               <Mail className="w-4 h-4 mr-2" />
                               Send Message
@@ -284,6 +314,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
                 <Button 
                   size="lg"
                   className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-0 font-bold px-8"
+                  onClick={() => handleContactClick()}
                 >
                   Schedule Your FREE Consultation Now
                 </Button>
@@ -411,13 +442,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
                   <Button 
                     size="lg"
                     className="bg-white text-blue-600 hover:bg-blue-50 border-0 font-bold px-8 py-3"
-                    onClick={() => {
-                      // Scroll back to lawyers section
-                      const lawyersSection = document.querySelector('[data-lawyers-section]');
-                      if (lawyersSection) {
-                        lawyersSection.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }}
+                    onClick={() => handleContactClick()}
                   >
                     Connect with Top Lawyers Now
                   </Button>
@@ -427,6 +452,217 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
           </motion.div>
 
         </motion.div>
+
+        {/* Contact Form Modal */}
+        <AnimatePresence>
+          {showContactForm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowContactForm(false);
+                  setSelectedLawyer(null);
+                }
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">
+                        🏆 Get Your FREE Legal Consultation
+                      </h2>
+                      {selectedLawyer ? (
+                        <p className="text-blue-100">
+                          Connect with {selectedLawyer.name} - {selectedLawyer.title}
+                        </p>
+                      ) : (
+                        <p className="text-blue-100">
+                          Connect with our top-rated lawyers
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/20"
+                      onClick={() => {
+                        setShowContactForm(false);
+                        setSelectedLawyer(null);
+                      }}
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+                  {selectedLawyer && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {selectedLawyer.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900">{selectedLawyer.name}</h3>
+                          <p className="text-sm text-slate-600">{selectedLawyer.title}</p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <div className="flex">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-3 h-3 ${
+                                    i < Math.floor(selectedLawyer.rating)
+                                      ? 'text-yellow-400 fill-current'
+                                      : 'text-slate-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-xs text-slate-600">{selectedLawyer.rating} rating</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <h3 className="font-bold text-green-800 mb-1">✨ FREE Consultation - No Obligation</h3>
+                    <p className="text-sm text-green-700">Discuss your case at no cost. We're here to help you WIN!</p>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                      placeholder="Enter your phone number"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Preferred Contact Method
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="flex items-center gap-2 p-3 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <input
+                          type="radio"
+                          name="preferredContact"
+                          value="email"
+                          checked={formData.preferredContact === 'email'}
+                          onChange={(e) => setFormData({ ...formData, preferredContact: e.target.value })}
+                          className="text-blue-600"
+                        />
+                        <Mail className="w-4 h-4 text-slate-600" />
+                        <span className="text-sm font-medium">Email</span>
+                      </label>
+                      <label className="flex items-center gap-2 p-3 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <input
+                          type="radio"
+                          name="preferredContact"
+                          value="phone"
+                          checked={formData.preferredContact === 'phone'}
+                          onChange={(e) => setFormData({ ...formData, preferredContact: e.target.value })}
+                          className="text-blue-600"
+                        />
+                        <Phone className="w-4 h-4 text-slate-600" />
+                        <span className="text-sm font-medium">Phone</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Tell us about your case *
+                    </label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
+                      placeholder="Briefly describe your legal situation and what you need help with..."
+                    />
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-slate-900 mb-2">Your Original Question:</h4>
+                    <p className="text-sm text-slate-700 italic">"{consultation.user_issue}"</p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 border-slate-300 hover:bg-slate-50"
+                      onClick={() => {
+                        setShowContactForm(false);
+                        setSelectedLawyer(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-0 font-semibold"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Send My Request
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-center text-slate-500">
+                    By submitting this form, you agree to be contacted by our legal team. No fees unless we win your case.
+                  </p>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
