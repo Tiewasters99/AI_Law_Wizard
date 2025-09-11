@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -46,8 +44,6 @@ export async function GET() {
       { error: 'Failed to fetch wallet' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -126,7 +122,5 @@ export async function POST(req: NextRequest) {
       { error: 'Failed to process transaction' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

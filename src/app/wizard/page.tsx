@@ -19,6 +19,9 @@ import { AnalysisSection } from '../components/wizard/AnalysisSection'
 import { WizardHeader } from '../components/wizard/WizardHeader'
 import { NotificationBanner } from '../components/wizard/NotificationBanner'
 
+// Disable static optimization for this page
+export const dynamic = 'force-dynamic'
+
 interface ServerFile {
   id: string
   fileName: string

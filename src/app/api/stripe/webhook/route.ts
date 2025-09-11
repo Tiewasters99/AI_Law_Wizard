@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import { testDatabaseConnection } from '@/lib/db-test';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-08-27.basil',
-});
-
-const prisma = new PrismaClient({
-  log: ['error', 'warn'],
-  errorFormat: 'pretty',
 });
 
 export async function POST(req: NextRequest) {
@@ -39,9 +35,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Test database connection
-    await prisma.$connect();
-    
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
@@ -60,21 +53,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('Error processing webhook:', error);
+    
+    // Log the full error details for debugging
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
     return NextResponse.json(
-      { error: 'Webhook processing failed' },
+      { error: 'Webhook processing failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
-  } finally {
-    try {
-      await prisma.$disconnect();
-    } catch (disconnectError) {
-      console.error('Error disconnecting from database:', disconnectError);
-    }
   }
 }
 
 async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   try {
+    console.log('Processing payment success for:', paymentIntent.id);
+    
+    // Test database connection
+    const isConnected = await testDatabaseConnection();
+    if (!isConnected) {
+      throw new Error('Database connection failed');
+    }
+    
     const purchase = await prisma.purchase.findUnique({
       where: { stripePaymentIntent: paymentIntent.id },
       include: { user: { include: { wallet: true } } },
@@ -84,6 +87,8 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       console.error('Purchase not found for payment intent:', paymentIntent.id);
       return;
     }
+
+    console.log('Found purchase:', { id: purchase.id, userId: purchase.userId, tokensAwarded: purchase.tokensAwarded });
 
     if (purchase.status === 'COMPLETED') {
       console.log('Payment already processed:', paymentIntent.id);

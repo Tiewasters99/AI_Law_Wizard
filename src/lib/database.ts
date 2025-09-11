@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 
 type JobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 type ChunkStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
@@ -17,8 +17,6 @@ const ChunkStatus = {
   COMPLETED: 'COMPLETED' as const,
   FAILED: 'FAILED' as const,
 };
-
-const prisma = new PrismaClient();
 
 export interface CreateEmbeddingJobData {
   fileName: string;
