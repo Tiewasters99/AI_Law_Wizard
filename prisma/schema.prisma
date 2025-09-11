@@ -114,6 +114,21 @@ enum MessageRole {
   SYSTEM
 }
 
+enum TransactionType {
+  PURCHASE
+  CONSUMPTION
+  REFUND
+  ADMIN_ADJUSTMENT
+}
+
+enum PurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
 model Blog {
   id String @id @default(cuid())
   title String
@@ -172,6 +187,7 @@ model User {
   lawyerProfile    LawyerProfile?
   customerProfile  CustomerProfile?
   wallet           Wallet?
+  purchases        Purchase[]
 
   @@map("users")
 }
@@ -250,16 +266,72 @@ model CustomerProfile {
   @@map("customer_profiles")
 }
 
-// Wallet model for future use
+// Wallet model for token management
 model Wallet {
   id      String @id @default(cuid())
   userId  String @unique
-  balance Float  @default(0.0)
+  tokens  Int    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions TokenTransaction[]
 
   @@map("wallets")
+}
+
+// Token transactions for tracking token usage and purchases
+model TokenTransaction {
+  id          String            @id @default(cuid())
+  walletId    String
+  type        TransactionType
+  amount      Int               // Positive for purchase, negative for consumption
+  description String?
+  reference   String?           // Payment intent ID or operation reference
+  createdAt   DateTime          @default(now())
+
+  // Relations
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("token_transactions")
+}
+
+// Token packages configuration for admin
+model TokenPackage {
+  id          String   @id @default(cuid())
+  name        String
+  tokens      Int
+  priceInCents Int     // Price in cents (e.g., 1000 = $10.00)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  purchases Purchase[]
+
+  @@map("token_packages")
+}
+
+// Purchase records for tracking Stripe payments
+model Purchase {
+  id                String       @id @default(cuid())
+  userId            String
+  packageId         String
+  stripePaymentIntent String     @unique
+  status            PurchaseStatus @default(PENDING)
+  tokensAwarded     Int
+  amountPaid        Int          // Amount in cents
+  metadata          String?      // Additional metadata as JSON
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  // Relations
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package TokenPackage @relation(fields: [packageId], references: [id])
+
+  @@map("purchases")
 }
 
 
