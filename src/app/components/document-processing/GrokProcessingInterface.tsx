@@ -70,9 +70,10 @@ interface ToolExecutionPlan {
 
 interface GrokProcessingProps {
   onComplete?: (result: string, generatedFile: string) => void
+  onBeforeStart?: () => Promise<boolean> | boolean
 }
 
-export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
+export function GrokProcessingInterface({ onComplete, onBeforeStart }: GrokProcessingProps) {
   // Input state
   const [userPrompt, setUserPrompt] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -131,6 +132,23 @@ export function GrokProcessingInterface({ onComplete }: GrokProcessingProps) {
         variant: 'destructive'
       })
       return
+    }
+
+    // Check token requirements before starting
+    if (onBeforeStart) {
+      try {
+        const canProceed = await onBeforeStart()
+        if (!canProceed) {
+          return
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to validate requirements',
+          variant: 'destructive'
+        })
+        return
+      }
     }
 
     if (useRealTime) {
