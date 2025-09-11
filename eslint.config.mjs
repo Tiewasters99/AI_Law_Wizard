@@ -24,4 +24,22 @@ export default [
       '@typescript-eslint/no-empty-object-type': 'warn', // Change from error to warning
     },
   },
+  {
+    ignores: [
+      'node_modules/',
+      '.next/',
+      'out/',
+      'dist/',
+      'build/',
+      'prisma/generated/',
+      '*.log',
+      'npm-debug.log*',
+      'yarn-debug.log*',
+      'yarn-error.log*',
+      'coverage/',
+      '.nyc_output',
+      '.env*',
+      '!.env.example'
+    ],
+  },
 ]

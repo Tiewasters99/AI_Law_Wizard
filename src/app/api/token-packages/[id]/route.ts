@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -20,7 +20,7 @@ export async function PATCH(
     }
 
     const { isActive } = await req.json();
-    const { id } = params;
+    const { id } = await params;
 
     const tokenPackage = await prisma.tokenPackage.update({
       where: { id },
@@ -41,7 +41,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -53,7 +53,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     await prisma.tokenPackage.delete({
       where: { id },
