@@ -4,6 +4,7 @@ import { prisma } from '../../../../lib/prisma'
 // GET - Fetch single query by ID
 export async function GET(
   request: NextRequest,
+
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
