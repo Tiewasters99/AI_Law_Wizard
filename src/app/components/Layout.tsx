@@ -30,7 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { name: 'Wizard', href: '/wizard', icon: WandSparkles },
     { name: 'Integrations', href: '/integrations', icon: Cloud },
     { name: 'Blog', href: '/blog', icon: FileText },
-    { name: 'MiniverseTM (superscript)', href: '#', icon: EarthIcon },
+    { name: 'Miniverse™', href: '#', icon: EarthIcon },
   ]
   
   const authenticatedNavigation = [

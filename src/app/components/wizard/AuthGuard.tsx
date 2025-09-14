@@ -23,11 +23,8 @@ export const AuthGuard = ({ onSignIn }: AuthGuardProps) => {
               <Brain className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-4">
-              AI Document Wizard
+              AI Law Wizard
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Transform your documents into actionable insights with powerful AI analysis
-            </p>
           </div>
           <div className="space-y-6">
             <Card className="p-8">

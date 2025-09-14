@@ -10,11 +10,8 @@ export const WizardHeader = () => {
           <Brain className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-          AI Document Wizard
+          AI Law Wizard
         </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Transform your documents into actionable insights with AI analysis
-        </p>
       </div>
     </div>
   )

@@ -90,7 +90,35 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
+// Document Query History for tracking user queries and AI responses
+model DocumentQuery {
+  id              String   @id @default(cuid())
+  userQuery       String   @db.Text
+  aiResponse      String   @db.Text
+  searchQuery     String?  // Optional search query used
+  
+  // Processing metadata
+  success         Boolean  @default(true)
+  error           String?  // Error message if failed
+  confidence      Float?   // AI confidence score
+  processingTime  Int?     // Processing time in milliseconds
+  totalSteps      Int      @default(1)
+  completedSteps  Int      @default(1)
+  
+  // Tool usage tracking
+  toolsUsed       String[] // Array of tool names used
+  filesProcessed  Json?    // Processed files info as JSON
+  
+  // User tracking (optional for future user auth)
+  userId          String?
+  sessionId       String?  // For grouping related queries
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
+  @@map("document_queries")
+}
 
 // Enums
 enum JobStatus {

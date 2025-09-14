@@ -87,8 +87,8 @@ const initialState: ProcessingState = {
 
 export const useDocumentProcessing = (): ProcessingHookResult => {
   const [state, setState] = useState<ProcessingState>(initialState)
-  const eventSourceRef = useRef<EventSource | null>(null)
   const startTimeRef = useRef<number>(0)
+  const isProcessingRef = useRef<boolean>(false)
 
   const addEvent = useCallback((event: ProgressEvent) => {
     setState(prevState => ({
@@ -97,209 +97,138 @@ export const useDocumentProcessing = (): ProcessingHookResult => {
     }))
   }, [])
 
-  const updateStateFromEvent = useCallback((event: ProgressEvent) => {
-    setState(prevState => {
-      const updates: Partial<ProcessingState> = {}
+  // Simplified state management for REST API only
+  const updateProcessingState = useCallback((updates: Partial<ProcessingState>) => {
+    setState(prevState => ({ ...prevState, ...updates }))
+  }, [])
 
-      switch (event.type) {
-        case ProgressEventType.CONNECTION:
-          updates.isConnected = true
-          break
+  // REST API processing function
+  const processWithREST = useCallback(async (request: ProcessingRequest) => {
+    try {
+      // Start processing
+      startTimeRef.current = Date.now()
+      updateProcessingState({
+        isProcessing: true,
+        error: null,
+        events: [{
+          type: ProgressEventType.STARTED,
+          timestamp: new Date().toISOString(),
+          message: 'Processing started'
+        }]
+      })
 
-        case ProgressEventType.STARTED:
-          updates.isProcessing = true
-          updates.error = null
-          startTimeRef.current = Date.now()
-          break
+      const response = await fetch('/api/document-processing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request)
+      })
 
-        case ProgressEventType.CLASSIFICATION:
-          if (event.data?.operationChain) {
-            updates.operationChain = event.data.operationChain
-            updates.totalSteps = event.data.operationChain.length
-            updates.isChain = event.data.isChain
-          }
-          if (event.confidence !== undefined) {
-            updates.confidence = event.confidence
-          }
-          break
-
-        case ProgressEventType.CHAIN_DETECTED:
-          if (event.totalSteps) {
-            updates.totalSteps = event.totalSteps
-            updates.isChain = true
-          }
-          if (event.data?.operationChain) {
-            updates.operationChain = event.data.operationChain
-          }
-          break
-
-        case ProgressEventType.FILES_FOUND:
-          if (event.data?.files) {
-            // Map file structure to expected frontend structure
-            updates.processedFiles = event.data.files.map((file: any, index: number) => ({
-              fileId: `file-${index}`,
-              fileName: file.fileName || 'Unknown',
-              originalName: file.fileName || 'Unknown',
-              contentLength: 0, // Not available in real-time mode
-              fileSize: file.fileSize || 0,
-              url: '', // Not needed for display
-              fileType: file.fileType || 'unknown'
-            }))
-          }
-          break
-
-        case ProgressEventType.OPERATION_START:
-          if (event.step !== undefined) {
-            updates.currentStep = event.step
-          }
-          break
-
-        case ProgressEventType.INTERMEDIATE_RESULT:
-          if (event.data?.result) {
-            updates.intermediateResults = [
-              ...prevState.intermediateResults,
-              event.data.result
-            ]
-          }
-          break
-
-        case ProgressEventType.FINAL_RESULT:
-          if (event.data?.result || event.data?.resultPreview) {
-            updates.finalResult = event.data.result || event.data.resultPreview
-          }
-          break
-
-        case ProgressEventType.FINAL_SUMMARY:
-          if (event.data?.success !== false) {
-            // Extract final result from the latest intermediate result if not already set
-            if (!prevState.finalResult && prevState.intermediateResults.length > 0) {
-              updates.finalResult = prevState.intermediateResults[prevState.intermediateResults.length - 1]
-            }
-            // If still no final result, set a default message
-            if (!updates.finalResult && !prevState.finalResult) {
-              updates.finalResult = 'Processing completed successfully'
-            }
-          }
-          break
-
-        case ProgressEventType.COMPLETE:
-          updates.isProcessing = false
-          if (event.data?.processingTime) {
-            updates.processingTime = event.data.processingTime
-          } else {
-            updates.processingTime = (Date.now() - startTimeRef.current) / 1000
-          }
-          // Ensure we have a final result when completing
-          if (!prevState.finalResult && prevState.intermediateResults.length > 0) {
-            updates.finalResult = prevState.intermediateResults[prevState.intermediateResults.length - 1]
-          }
-          break
-
-        case ProgressEventType.ERROR:
-          updates.error = event.error || event.message
-          updates.isProcessing = false
-          break
+      // Check if response is ok first
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      return { ...prevState, ...updates }
-    })
-  }, [])
+      const data = await response.json()
+      console.log('API Response:', data) // Debug logging
 
-  const handleMessage = useCallback((event: MessageEvent) => {
-    try {
-      const progressEvent: ProgressEvent = JSON.parse(event.data)
-      addEvent(progressEvent)
-      updateStateFromEvent(progressEvent)
+      if (data.success && data.result) {
+        // Map processed files to expected format
+        const processedFiles = data.processedFiles?.map((file: any, index: number) => ({
+          fileId: file.fileId || `file-${index}`,
+          fileName: file.fileName || 'Unknown',
+          originalName: file.originalName || file.fileName || 'Unknown',
+          contentLength: file.contentLength || 0,
+          fileSize: file.fileSize || 0,
+          url: file.url || ''
+        })) || []
+
+        // Calculate processing time
+        const processingTime = (Date.now() - startTimeRef.current) / 1000
+
+        // Update state with final result
+        updateProcessingState({
+          isProcessing: false,
+          finalResult: data.result,
+          processedFiles,
+          processingTime,
+          confidence: data.confidence || 0,
+          operationChain: data.operationChain || [],
+          totalSteps: data.totalSteps || 1,
+          currentStep: data.totalSteps || 1,
+          isChain: (data.operationChain?.length || 0) > 1
+        })
+
+      } else {
+        // Enhanced error logging for debugging
+        console.error('Processing failed:', {
+          success: data.success,
+          result: data.result,
+          error: data.error,
+          fullResponse: data
+        })
+        
+        // Provide more specific error message
+        const errorMsg = data.error || 
+                        (!data.success ? 'Processing was not successful' : '') ||
+                        (!data.result ? 'No result returned from processing' : '') ||
+                        'Processing failed for unknown reason'
+        
+        throw new Error(errorMsg)
+      }
     } catch (error) {
-      console.error('Error parsing progress event:', error)
-      addEvent({
-        type: ProgressEventType.ERROR,
-        timestamp: new Date().toISOString(),
-        message: 'Failed to parse progress event',
-        error: String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      updateProcessingState({
+        isProcessing: false,
+        error: errorMessage
       })
+    } finally {
+      isProcessingRef.current = false
     }
-  }, [addEvent, updateStateFromEvent])
-
-  const handleConnectionError = useCallback((error: Event) => {
-    console.error('Connection error:', error)
-    const errorEvent: ProgressEvent = {
-      type: ProgressEventType.ERROR,
-      timestamp: new Date().toISOString(),
-      message: 'Connection error occurred',
-      error: 'Connection failed'
-    }
-    addEvent(errorEvent)
-    updateStateFromEvent(errorEvent)
-  }, [addEvent, updateStateFromEvent])
-
-  const handleConnectionClose = useCallback(() => {
-    console.log('Connection closed')
-    setState(prevState => ({
-      ...prevState,
-      isConnected: false,
-      isProcessing: false
-    }))
-  }, [])
+  }, [updateProcessingState])
 
   const startProcessing = useCallback((request: ProcessingRequest) => {
-    // Close any existing connection
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close()
+    // Prevent multiple concurrent requests
+    if (isProcessingRef.current) {
+      console.warn('Processing already in progress, ignoring new request')
+      return
     }
 
-    // Reset state
+    // Validate input
+    if (!request.userPrompt?.trim()) {
+      console.error('Invalid request: empty prompt')
+      return
+    }
+
+    // Reset state and start processing
     setState(initialState)
+    isProcessingRef.current = true
 
-    try {
-      // Create real-time connection
-      const params = new URLSearchParams({
-        userPrompt: request.userPrompt,
-        ...(request.searchQuery && { searchQuery: request.searchQuery })
-      })
-
-      const eventSource = new EventSource(`/api/document-processing?${params}`)
-      eventSourceRef.current = eventSource
-
-      // Set up event listeners
-      eventSource.onmessage = handleMessage
-      eventSource.onerror = handleConnectionError
-      eventSource.onopen = () => {
-        console.log('Real-time connection opened')
-      }
-
-      // Handle connection close
-      eventSource.addEventListener('close', handleConnectionClose)
-
-    } catch (error) {
-      console.error('Failed to start processing:', error)
-      const errorEvent: ProgressEvent = {
-        type: ProgressEventType.ERROR,
-        timestamp: new Date().toISOString(),
-        message: 'Failed to start processing',
-        error: String(error)
-      }
-      addEvent(errorEvent)
-      updateStateFromEvent(errorEvent)
+    // Clean and prepare request
+    const cleanRequest = {
+      userPrompt: request.userPrompt.trim(),
+      ...(request.searchQuery?.trim() && { searchQuery: request.searchQuery.trim() })
     }
-  }, [handleMessage, handleConnectionError, handleConnectionClose, addEvent, updateStateFromEvent])
+
+    // Start REST API processing
+    processWithREST(cleanRequest)
+  }, [processWithREST])
 
   const stopProcessing = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close()
-      eventSourceRef.current = null
-    }
-    setState(prevState => ({
-      ...prevState,
+    // Clear processing flag to stop any ongoing operations
+    isProcessingRef.current = false
+    
+    updateProcessingState({
       isProcessing: false,
       isConnected: false
-    }))
-  }, [])
+    })
+  }, [updateProcessingState])
 
   const clearState = useCallback(() => {
-    stopProcessing()
+    isProcessingRef.current = false
     setState(initialState)
-  }, [stopProcessing])
+  }, [])
 
   const getLatestEvent = useCallback((type: ProgressEventType): ProgressEvent | null => {
     const events = state.events.filter(event => event.type === type)
@@ -313,9 +242,8 @@ export const useDocumentProcessing = (): ProcessingHookResult => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close()
-      }
+      // Clear processing flag
+      isProcessingRef.current = false
     }
   }, [])
 
