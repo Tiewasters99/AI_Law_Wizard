@@ -4,10 +4,10 @@ import { prisma } from '../../../../lib/prisma'
 // GET - Fetch single query by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     const query = await prisma.documentQuery.findUnique({
       where: { id },
@@ -55,10 +55,10 @@ export async function GET(
 // DELETE - Delete specific query
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     await prisma.documentQuery.delete({
       where: { id }
