@@ -12,7 +12,10 @@ import {
   Scale,
   WholeWord,
   EarthIcon,
-  User
+  User,
+  GraduationCap,
+  Crown,
+  Coins
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -26,14 +29,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
-    { name: 'Chat', href: '/chat', icon: MessageCircle },
+    { name: 'Apprentice', href: '/apprentice', icon: GraduationCap },
     { name: 'Wizard', href: '/wizard', icon: WandSparkles },
+    { name: 'Grand Wizard', href: '/grand-wizard', icon: Crown },
     { name: 'Integrations', href: '/integrations', icon: Cloud },
     { name: 'Blog', href: '/blog', icon: FileText },
-    { name: 'Miniverse™', href: '#', icon: EarthIcon },
+    { name: 'Miniverse™', href: '/miniverse', icon: EarthIcon },
   ]
   
   const authenticatedNavigation = [
+    { name: 'Tokens', href: '/tokens', icon: Coins },
     { name: 'Profile', href: '/profile', icon: User },
   ]
 
