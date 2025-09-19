@@ -3,7 +3,6 @@
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls, Text, useTexture, PerformanceMonitor, Float, Points, PointMaterial, RoundedBox } from '@react-three/drei';
-import { EffectComposer, SMAA, Bloom, SSAO, DepthOfField, Vignette, ChromaticAberration } from '@react-three/postprocessing';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 
@@ -1624,7 +1623,7 @@ export default function MiniversePage() {
   }, [handleExit, handleFullscreen]);
 
   return (
-    <div className="w-full h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-black">
+    <div className="w-full h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <Canvas
         shadows
         camera={{
@@ -1642,20 +1641,19 @@ export default function MiniversePage() {
         onCreated={({ gl }) => {
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
-          gl.outputColorSpace = THREE.SRGBColorSpace;
+          // Ensure consistent color management and non-black clear color
+          // Use outputColorSpace when available (Three r152+), otherwise fallback
+          if ('outputColorSpace' in (gl as any)) {
+            (gl as any).outputColorSpace = THREE.SRGBColorSpace;
+          }
+          gl.setClearColor(new THREE.Color('#0b1220'), 1);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.2;
         }}
       >
-        <EffectComposer multisampling={0}>
-          <SMAA />
-          {/* Subtle contact shadows and crevice shading */}
-          <SSAO intensity={0.15} radius={0.2} bias={0.02} samples={16} />
-          <Bloom intensity={0.18} luminanceThreshold={0.9} mipmapBlur />
-          <DepthOfField focusDistance={0.02} focalLength={0.02} bokehScale={1.6} />
-          <ChromaticAberration offset={[0.0008, 0.0012]} radialModulation modulationOffset={0.2} />
-          <Vignette eskil={false} offset={0.2} darkness={0.6} />
-        </EffectComposer>
+        {/* Scene background to avoid default black if nothing renders */}
+        <color attach="background" args={["#0b1220"]} />
+        {/* Postprocessing removed for performance */}
         <LawyerOfficeScene />
         <SpawnAtDoor />
         <KeyboardMovement />
