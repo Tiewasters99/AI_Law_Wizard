@@ -1,10 +1,98 @@
 "use client";
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Text, useTexture, PerformanceMonitor, Float, Points, PointMaterial } from '@react-three/drei';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
+
+// Keyboard movement controller with Arrow Keys + WASD support
+const KeyboardMovement: React.FC = () => {
+  const { camera } = useThree();
+  const [keys, setKeys] = useState({
+    ArrowUp: false, KeyW: false,     // Forward
+    ArrowDown: false, KeyS: false,   // Backward
+    ArrowLeft: false, KeyA: false,   // Strafe left
+    ArrowRight: false, KeyD: false   // Strafe right
+  });
+
+  const moveSpeed = 0.08; // Smooth walking speed
+  const roomBounds = {
+    minX: -10.5, maxX: 10.5,  // Slightly inside walls
+    minZ: -7.5, maxZ: 7.5,    // Slightly inside walls
+    minY: 1.2, maxY: 2.8      // Keep head height reasonable
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code in keys) {
+        event.preventDefault();
+        setKeys(prev => ({ ...prev, [event.code]: true }));
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code in keys) {
+        event.preventDefault();
+        setKeys(prev => ({ ...prev, [event.code]: false }));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  useFrame(() => {
+    const direction = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    
+    // Get camera's forward and right directions
+    camera.getWorldDirection(direction);
+    right.crossVectors(camera.up, direction).normalize();
+    
+    // Calculate movement based on pressed keys
+    const movement = new THREE.Vector3();
+    
+    // Forward/Backward movement (Arrow Up/Down or W/S)
+    if (keys.ArrowUp || keys.KeyW) {
+      // Move forward (in camera's forward direction, but keep Y stable)
+      movement.add(new THREE.Vector3(direction.x, 0, direction.z).normalize().multiplyScalar(moveSpeed));
+    }
+    if (keys.ArrowDown || keys.KeyS) {
+      // Move backward
+      movement.add(new THREE.Vector3(direction.x, 0, direction.z).normalize().multiplyScalar(-moveSpeed));
+    }
+    
+    // Strafe movement (Arrow Left/Right or A/D)
+    if (keys.ArrowLeft || keys.KeyA) {
+      // Strafe left
+      movement.add(right.multiplyScalar(moveSpeed));
+    }
+    if (keys.ArrowRight || keys.KeyD) {
+      // Strafe right
+      movement.add(right.multiplyScalar(-moveSpeed));
+    }
+
+    // Apply movement with boundary checking
+    if (movement.length() > 0) {
+      const newPosition = camera.position.clone().add(movement);
+      
+      // Check room boundaries - keep inside walls
+      newPosition.x = Math.max(roomBounds.minX, Math.min(roomBounds.maxX, newPosition.x));
+      newPosition.z = Math.max(roomBounds.minZ, Math.min(roomBounds.maxZ, newPosition.z));
+      newPosition.y = Math.max(roomBounds.minY, Math.min(roomBounds.maxY, newPosition.y));
+      
+      camera.position.copy(newPosition);
+    }
+  });
+
+  return null;
+};
 
 
 // Enhanced Floor Component with PBR materials and procedural textures
@@ -968,9 +1056,15 @@ export default function MiniversePage() {
     }
   }, []);
 
-  // Handle keyboard shortcuts and movement
+  // Handle keyboard shortcuts (excluding movement keys which are handled by KeyboardMovement)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Skip movement keys as they're handled by KeyboardMovement component
+      const movementKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD'];
+      if (movementKeys.includes(event.code)) {
+        return;
+      }
+      
       switch (event.key) {
         case 'Escape':
           if (document.fullscreenElement) {
@@ -1015,6 +1109,7 @@ export default function MiniversePage() {
         }}
       >
         <LawyerOfficeScene />
+        <KeyboardMovement />
         
         {/* First-person style controls for room exploration */}
         <OrbitControls
@@ -1045,13 +1140,14 @@ export default function MiniversePage() {
           <div>🖱️ <strong>Left-click + Drag:</strong> Look around (360°)</div>
           <div>🖱️ <strong>Right-click + Drag:</strong> Move around room</div>
           <div>🔍 <strong>Scroll Wheel:</strong> Walk closer/further</div>
+          <div>⌨️ <strong>Arrow Keys / WASD:</strong> Walk around office</div>
         </div>
         <div className="text-xs opacity-60 mt-2 space-y-1">
           <div>📍 <strong>Starting Position:</strong> Beside office chair</div>
           <div>🏢 <strong>Room Layout:</strong> Fully enclosed office</div>
           <div>🎯 <strong>Explore:</strong> Desk area, bookshelf, window, door</div>
           <div>⚡ <strong>Interactive:</strong> Hover desk lamp for glow</div>
-        </div>
+              </div>
             </div>
 
       {/* Control buttons */}
@@ -1076,16 +1172,14 @@ export default function MiniversePage() {
           Fullscreen
         </button>
         
-        {/* Performance indicator */}
-        <div className="text-white bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
-          <div className="text-xs">React Three Fiber</div>
-        </div>
+       
             </div>
 
       {/* Bottom controls */}
       <div className="absolute bottom-4 left-4 text-white bg-black/40 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20">
-        <div className="text-xs opacity-80">
-          ESC to exit • F11 for fullscreen
+        <div className="text-xs opacity-80 space-y-1">
+          <div>ESC to exit • F11 for fullscreen</div>
+          <div>↑↓←→ Arrow keys or WASD to walk</div>
         </div>
       </div>
 
@@ -1102,20 +1196,20 @@ export default function MiniversePage() {
           </div>
           <div className="absolute" style={{ bottom: '4px', left: '50%', transform: 'translateX(-50%)' }}>
             <div className="w-1.5 h-1 bg-green-400 rounded" title="Door"></div>
-          </div>
+        </div>
           <div className="absolute" style={{ top: '40%', right: '20%' }}>
             <div className="w-1.5 h-1 bg-yellow-400 rounded" title="Desk"></div>
-          </div>
+            </div>
           <div className="absolute" style={{ top: '60%', right: '20%' }}>
             <div className="w-1 h-1 bg-purple-400 rounded-full" title="Chair (Start)"></div>
-          </div>
+            </div>
           <div className="absolute" style={{ top: '25%', left: '12%' }}>
             <div className="w-1 h-1.5 bg-orange-400 rounded" title="Bookshelf"></div>
-          </div>
+            </div>
           <div className="absolute" style={{ top: '25%', right: '12%' }}>
             <div className="w-1 h-1 bg-gray-400 rounded" title="Filing"></div>
-          </div>
-          
+        </div>
+
           {/* Starting position indicator */}
           <div className="absolute" style={{ top: '60%', right: '15%' }}>
             <div className="w-2 h-2 border border-red-400 rounded-full animate-pulse" title="Your starting position"></div>
