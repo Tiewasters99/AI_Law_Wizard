@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Text, useTexture, PerformanceMonitor, Float, Points, PointMaterial } from '@react-three/drei';
+import { PointerLockControls, Text, useTexture, PerformanceMonitor, Float, Points, PointMaterial, RoundedBox } from '@react-three/drei';
+import { EffectComposer, SMAA, Bloom, SSAO, DepthOfField, Vignette, ChromaticAberration } from '@react-three/postprocessing';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 
@@ -71,11 +72,11 @@ const KeyboardMovement: React.FC = () => {
     // Strafe movement (Arrow Left/Right or A/D)
     if (keys.ArrowLeft || keys.KeyA) {
       // Strafe left
-      movement.add(right.multiplyScalar(moveSpeed));
+      movement.add(right.clone().multiplyScalar(moveSpeed));
     }
     if (keys.ArrowRight || keys.KeyD) {
       // Strafe right
-      movement.add(right.multiplyScalar(-moveSpeed));
+      movement.add(right.clone().multiplyScalar(-moveSpeed));
     }
 
     // Apply movement with boundary checking
@@ -142,6 +143,353 @@ const Floor: React.FC = () => {
   );
 };
 
+// Procedural wall texture generator (albedo, bump, roughness)
+function generateWallTextures(baseColor: string): {
+  map: THREE.CanvasTexture;
+  bumpMap: THREE.CanvasTexture;
+  roughnessMap: THREE.CanvasTexture;
+} {
+  const size = 512; // Keep lightweight but detailed
+  const albedo = document.createElement('canvas');
+  const height = document.createElement('canvas');
+  const rough = document.createElement('canvas');
+  albedo.width = albedo.height = size;
+  height.width = height.height = size;
+  rough.width = rough.height = size;
+
+  const actx = albedo.getContext('2d')!;
+  const hctx = height.getContext('2d')!;
+  const rctx = rough.getContext('2d')!;
+
+  // Fill base color
+  actx.fillStyle = baseColor;
+  actx.fillRect(0, 0, size, size);
+
+  // Subtle plaster noise using multi-frequency sine noise
+  const imageData = actx.getImageData(0, 0, size, size);
+  const hData = hctx.createImageData(size, size);
+  const rData = rctx.createImageData(size, size);
+  const data = imageData.data;
+  const hd = hData.data;
+  const rd = rData.data;
+
+  // Convert baseColor to RGB
+  const tmp = new THREE.Color(baseColor);
+  const baseR = Math.round(tmp.r * 255);
+  const baseG = Math.round(tmp.g * 255);
+  const baseB = Math.round(tmp.b * 255);
+
+  const seed = 37.913;
+  const f1 = 0.035, f2 = 0.09, f3 = 0.16;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const n1 = Math.sin((x + seed) * f1) * Math.sin((y - seed) * f1);
+      const n2 = Math.sin((x * 1.7 + y * 0.5 + seed) * f2);
+      const n3 = Math.sin((x * 0.6 - y * 1.3 - seed) * f3);
+      let n = (n1 * 0.6 + n2 * 0.3 + n3 * 0.1);
+      n = (n + 1) / 2; // 0..1
+      const speckle = (Math.random() * 0.04); // micro-variation per pixel
+      const brightness = 0.92 + n * 0.06 + speckle; // subtle range
+
+      data[i] = Math.min(255, Math.max(0, Math.round(baseR * brightness)));
+      data[i + 1] = Math.min(255, Math.max(0, Math.round(baseG * brightness)));
+      data[i + 2] = Math.min(255, Math.max(0, Math.round(baseB * brightness)));
+      data[i + 3] = 255;
+
+      // Height for bump: stronger response on mid-tones
+      const hVal = Math.round(140 + n * 80);
+      hd[i] = hd[i + 1] = hd[i + 2] = hVal;
+      hd[i + 3] = 255;
+
+      // Roughness map: brighter = rougher
+      const rVal = Math.round(180 + (1 - n) * 60);
+      rd[i] = rd[i + 1] = rd[i + 2] = rVal;
+      rd[i + 3] = 255;
+    }
+  }
+
+  // Vertical panel seams
+  const seams = 5; // number of panels across
+  actx.putImageData(imageData, 0, 0);
+  hctx.putImageData(hData, 0, 0);
+  rctx.putImageData(rData, 0, 0);
+  actx.strokeStyle = 'rgba(0,0,0,0.05)';
+  actx.lineWidth = 1;
+  hctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  hctx.lineWidth = 1;
+  for (let s = 1; s < seams; s++) {
+    const x = Math.floor((s / seams) * size);
+    actx.beginPath();
+    actx.moveTo(x, 0);
+    actx.lineTo(x, size);
+    actx.stroke();
+    hctx.beginPath();
+    hctx.moveTo(x, 0);
+    hctx.lineTo(x, size);
+    hctx.stroke();
+  }
+
+  const map = new THREE.CanvasTexture(albedo);
+  const bumpMap = new THREE.CanvasTexture(height);
+  const roughnessMap = new THREE.CanvasTexture(rough);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.needsUpdate = true;
+  bumpMap.needsUpdate = true;
+  roughnessMap.needsUpdate = true;
+
+  return { map, bumpMap, roughnessMap };
+}
+
+// Subtle plaster textures for ceiling (no seams, softer variation)
+function generateCeilingTextures(baseColor: string): {
+  map: THREE.CanvasTexture;
+  bumpMap: THREE.CanvasTexture;
+  roughnessMap: THREE.CanvasTexture;
+} {
+  const size = 512;
+  const albedo = document.createElement('canvas');
+  const height = document.createElement('canvas');
+  const rough = document.createElement('canvas');
+  albedo.width = albedo.height = size;
+  height.width = height.height = size;
+  rough.width = rough.height = size;
+
+  const actx = albedo.getContext('2d')!;
+  const hctx = height.getContext('2d')!;
+  const rctx = rough.getContext('2d')!;
+
+  actx.fillStyle = baseColor;
+  actx.fillRect(0, 0, size, size);
+
+  const imageData = actx.getImageData(0, 0, size, size);
+  const hData = hctx.createImageData(size, size);
+  const rData = rctx.createImageData(size, size);
+  const data = imageData.data;
+  const hd = hData.data;
+  const rd = rData.data;
+
+  const tmp = new THREE.Color(baseColor);
+  const baseR = Math.round(tmp.r * 255);
+  const baseG = Math.round(tmp.g * 255);
+  const baseB = Math.round(tmp.b * 255);
+
+  const seed = 11.71;
+  const f1 = 0.025, f2 = 0.065, f3 = 0.12;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const n1 = Math.sin((x + seed) * f1) * Math.sin((y - seed) * f1);
+      const n2 = Math.sin((x * 1.2 + y * 0.7 + seed) * f2);
+      const n3 = Math.sin((x * 0.5 - y * 1.1 - seed) * f3);
+      let n = (n1 * 0.55 + n2 * 0.35 + n3 * 0.1);
+      n = (n + 1) / 2;
+      const speckle = 0.015 * Math.sin(i * 0.0007);
+      const brightness = 0.96 + n * 0.03 + speckle;
+
+      data[i] = Math.min(255, Math.max(0, Math.round(baseR * brightness)));
+      data[i + 1] = Math.min(255, Math.max(0, Math.round(baseG * brightness)));
+      data[i + 2] = Math.min(255, Math.max(0, Math.round(baseB * brightness)));
+      data[i + 3] = 255;
+
+      const hVal = Math.round(150 + n * 40);
+      hd[i] = hd[i + 1] = hd[i + 2] = hVal;
+      hd[i + 3] = 255;
+
+      const rVal = Math.round(170 + (1 - n) * 40);
+      rd[i] = rd[i + 1] = rd[i + 2] = rVal;
+      rd[i + 3] = 255;
+    }
+  }
+
+  actx.putImageData(imageData, 0, 0);
+  hctx.putImageData(hData, 0, 0);
+  rctx.putImageData(rData, 0, 0);
+
+  const map = new THREE.CanvasTexture(albedo);
+  const bumpMap = new THREE.CanvasTexture(height);
+  const roughnessMap = new THREE.CanvasTexture(rough);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.needsUpdate = true;
+  bumpMap.needsUpdate = true;
+  roughnessMap.needsUpdate = true;
+
+  return { map, bumpMap, roughnessMap };
+}
+
+// Procedural wood texture generator (linear grain with subtle variation)
+function generateWoodTextures(baseColor: string): {
+  map: THREE.CanvasTexture;
+  bumpMap: THREE.CanvasTexture;
+  roughnessMap: THREE.CanvasTexture;
+} {
+  const sizeX = 1024;
+  const sizeY = 512;
+  const albedo = document.createElement('canvas');
+  const height = document.createElement('canvas');
+  const rough = document.createElement('canvas');
+  albedo.width = sizeX; albedo.height = sizeY;
+  height.width = sizeX; height.height = sizeY;
+  rough.width = sizeX; rough.height = sizeY;
+
+  const actx = albedo.getContext('2d')!;
+  const hctx = height.getContext('2d')!;
+  const rctx = rough.getContext('2d')!;
+
+  const aData = actx.createImageData(sizeX, sizeY);
+  const hData = hctx.createImageData(sizeX, sizeY);
+  const rData = rctx.createImageData(sizeX, sizeY);
+  const ad = aData.data;
+  const hd = hData.data;
+  const rd = rData.data;
+
+  const base = new THREE.Color(baseColor);
+  const baseR = Math.round(base.r * 255);
+  const baseG = Math.round(base.g * 255);
+  const baseB = Math.round(base.b * 255);
+
+  // Grain frequencies
+  const fPrimary = 0.015; // long grain
+  const fSecondary = 0.12; // fine grain
+  const fWobble = 0.005; // warp in grain
+  const seed = 73.291;
+
+  for (let y = 0; y < sizeY; y++) {
+    for (let x = 0; x < sizeX; x++) {
+      const i = (y * sizeX + x) * 4;
+
+      // Horizontal grain with slight vertical wobble
+      const wobble = Math.sin((y + seed) * fWobble) * 24;
+      const gx = x + wobble;
+      const longGrain = Math.sin(gx * fPrimary) * 0.6 + 0.4;
+      const fineGrain = Math.sin((gx + y * 0.35 + seed) * fSecondary) * 0.25 + 0.75;
+      const ring = Math.pow(longGrain * fineGrain, 1.2);
+
+      // Occasional darker streaks
+      const streak = (Math.sin((x * 0.03 + y * 0.02) + seed) * 0.5 + 0.5) * 0.06;
+      const brightness = 0.88 + ring * 0.12 - streak;
+
+      ad[i] = Math.min(255, Math.max(0, Math.round(baseR * brightness)));
+      ad[i + 1] = Math.min(255, Math.max(0, Math.round(baseG * brightness * (0.98 + ring * 0.02))));
+      ad[i + 2] = Math.min(255, Math.max(0, Math.round(baseB * (0.94 + ring * 0.06))));
+      ad[i + 3] = 255;
+
+      // Height map for bump (responds around mid-tones of ring)
+      const hVal = Math.round(120 + ring * 100 - streak * 80);
+      hd[i] = hd[i + 1] = hd[i + 2] = hVal;
+      hd[i + 3] = 255;
+
+      // Roughness: darker grains slightly smoother
+      const rVal = Math.round(170 + (1 - ring) * 60 + streak * 30);
+      rd[i] = rd[i + 1] = rd[i + 2] = rVal;
+      rd[i + 3] = 255;
+    }
+  }
+
+  actx.putImageData(aData, 0, 0);
+  hctx.putImageData(hData, 0, 0);
+  rctx.putImageData(rData, 0, 0);
+
+  const map = new THREE.CanvasTexture(albedo);
+  const bumpMap = new THREE.CanvasTexture(height);
+  const roughnessMap = new THREE.CanvasTexture(rough);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.needsUpdate = true;
+  bumpMap.needsUpdate = true;
+  roughnessMap.needsUpdate = true;
+  return { map, bumpMap, roughnessMap };
+}
+
+// Procedural fabric texture (woven) for upholstered furniture
+function generateFabricTextures(baseColor: string): {
+  map: THREE.CanvasTexture;
+  bumpMap: THREE.CanvasTexture;
+  roughnessMap: THREE.CanvasTexture;
+} {
+  const size = 512;
+  const albedo = document.createElement('canvas');
+  const height = document.createElement('canvas');
+  const rough = document.createElement('canvas');
+  albedo.width = albedo.height = size;
+  height.width = height.height = size;
+  rough.width = rough.height = size;
+
+  const actx = albedo.getContext('2d')!;
+  const hctx = height.getContext('2d')!;
+  const rctx = rough.getContext('2d')!;
+
+  const base = new THREE.Color(baseColor);
+  const baseR = Math.round(base.r * 255);
+  const baseG = Math.round(base.g * 255);
+  const baseB = Math.round(base.b * 255);
+
+  const imageData = actx.createImageData(size, size);
+  const hData = hctx.createImageData(size, size);
+  const rData = rctx.createImageData(size, size);
+  const ad = imageData.data;
+  const hd = hData.data;
+  const rd = rData.data;
+
+  // Weave parameters
+  const threadSize = 6; // pixels per thread
+  const variation = 6;  // subtle brightness variation
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const warp = Math.floor(x / threadSize) % 2 === 0; // vertical thread
+      const weft = Math.floor(y / threadSize) % 2 === 0; // horizontal thread
+      const weave = (warp ? 1 : 0) ^ (weft ? 1 : 0); // over/under pattern
+
+      // Thread profile: rounded cross-section
+      const rx = x % threadSize;
+      const ry = y % threadSize;
+      const dx = Math.min(rx, threadSize - rx) / (threadSize * 0.5);
+      const dy = Math.min(ry, threadSize - ry) / (threadSize * 0.5);
+      const radial = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy));
+
+      const noise = (Math.sin((x + y * 7) * 0.07) * 0.5 + 0.5) * 0.06;
+      const weaveBoost = weave ? 0.08 : -0.04;
+      const brightness = 0.86 + radial * 0.10 + weaveBoost + noise;
+
+      ad[i] = Math.min(255, Math.max(0, Math.round(baseR * brightness)));
+      ad[i + 1] = Math.min(255, Math.max(0, Math.round(baseG * brightness)));
+      ad[i + 2] = Math.min(255, Math.max(0, Math.round(baseB * brightness)));
+      ad[i + 3] = 255;
+
+      // Bump: higher on thread centers
+      const hVal = Math.round(140 + radial * 90 + (weave ? 10 : 0));
+      hd[i] = hd[i + 1] = hd[i + 2] = hVal;
+      hd[i + 3] = 255;
+
+      // Roughness: slightly rougher between threads
+      const rVal = Math.round(180 + (1 - radial) * 60 + (weave ? -10 : 10));
+      rd[i] = rd[i + 1] = rd[i + 2] = rVal;
+      rd[i + 3] = 255;
+    }
+  }
+
+  actx.putImageData(imageData, 0, 0);
+  hctx.putImageData(hData, 0, 0);
+  rctx.putImageData(rData, 0, 0);
+
+  const map = new THREE.CanvasTexture(albedo);
+  const bumpMap = new THREE.CanvasTexture(height);
+  const roughnessMap = new THREE.CanvasTexture(rough);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  map.repeat.set(2, 2);
+  map.needsUpdate = true;
+  bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+  bumpMap.repeat.set(2, 2);
+  bumpMap.needsUpdate = true;
+  roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+  roughnessMap.repeat.set(2, 2);
+  roughnessMap.needsUpdate = true;
+
+  return { map, bumpMap, roughnessMap };
+}
+
 // Enhanced Wall Component with PBR materials and door
 interface WallProps {
   position: [number, number, number];
@@ -152,26 +500,62 @@ interface WallProps {
 }
 
 const Wall: React.FC<WallProps> = ({ position, rotation = [0, 0, 0], width, height, hasDoor = false }) => {
+  const wallColor = '#e9e7e3'; // warm neutral
+  const textures = useMemo(() => generateWallTextures(wallColor), [wallColor]);
+
+  // Scale textures to world units for consistent texel density
+  useMemo(() => {
+    const repeatX = Math.max(1, Math.round(width / 4));
+    const repeatY = Math.max(1, Math.round(height / 4));
+    [textures.map, textures.bumpMap, textures.roughnessMap].forEach((t) => {
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(repeatX, repeatY);
+      t.needsUpdate = true;
+    });
+  }, [textures, width, height]);
+
+  const baseboardHeight = 0.5;
+  const baseboardDepth = 0.08;
+  const crownHeight = 0.35;
+  const crownDepth = 0.07;
+  const trimColor = '#d8d6cf';
+
   return (
     <group position={position} rotation={rotation}>
-      {/* Main wall with paint-like texture */}
+      {/* Main wall with procedural plaster and PBR-like properties */}
       <mesh receiveShadow>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial 
-          color="#f8f6f0" 
-          roughness={0.8}
+          color={'#ffffff'}
+          map={textures.map}
+          roughnessMap={textures.roughnessMap}
+          bumpMap={textures.bumpMap}
+          bumpScale={0.02}
+          roughness={0.85}
           metalness={0}
         />
       </mesh>
-      
-      {/* Wooden baseboard */}
-      <mesh position={[0, -height/2 + 0.25, 0.01]}>
-        <planeGeometry args={[width, 0.5]} />
-        <meshStandardMaterial 
-          color="#8B4513" 
-          roughness={0.7}
-          metalness={0}
-        />
+
+      {/* Crown molding */}
+      <mesh position={[0, height/2 - crownHeight/2, 0.035]} castShadow receiveShadow>
+        <boxGeometry args={[width, crownHeight, crownDepth]} />
+        <meshStandardMaterial color={trimColor} roughness={0.6} metalness={0} />
+      </mesh>
+
+      {/* Baseboard with thickness */}
+      <mesh position={[0, -height/2 + baseboardHeight/2, 0.04]} castShadow receiveShadow>
+        <boxGeometry args={[width, baseboardHeight, baseboardDepth]} />
+        <meshStandardMaterial color={trimColor} roughness={0.65} metalness={0} />
+      </mesh>
+
+      {/* Corner trims */}
+      <mesh position={[width/2 - 0.05, 0, 0.03]} castShadow receiveShadow>
+        <boxGeometry args={[0.1, height, 0.05]} />
+        <meshStandardMaterial color={trimColor} roughness={0.6} metalness={0} />
+      </mesh>
+      <mesh position={[-width/2 + 0.05, 0, 0.03]} castShadow receiveShadow>
+        <boxGeometry args={[0.1, height, 0.05]} />
+        <meshStandardMaterial color={trimColor} roughness={0.6} metalness={0} />
       </mesh>
 
       {/* Office door (if specified) */}
@@ -180,13 +564,13 @@ const Wall: React.FC<WallProps> = ({ position, rotation = [0, 0, 0], width, heig
           {/* Door frame */}
           <mesh position={[0, 0, 0]}>
             <boxGeometry args={[2.2, 7, 0.3]} />
-            <meshStandardMaterial color="#654321" roughness={0.6} metalness={0} />
+            <meshStandardMaterial color="#5a3d28" roughness={0.55} metalness={0} />
           </mesh>
           
           {/* Door panel */}
           <mesh position={[0, 0, 0.2]}>
             <boxGeometry args={[2, 6.5, 0.1]} />
-            <meshStandardMaterial color="#8B4513" roughness={0.5} metalness={0} />
+            <meshStandardMaterial color="#7a4a28" roughness={0.5} metalness={0} />
           </mesh>
           
           {/* Door handle */}
@@ -200,46 +584,70 @@ const Wall: React.FC<WallProps> = ({ position, rotation = [0, 0, 0], width, heig
   );
 };
 
-// Ceiling Component with elegant chandelier
+// Ceiling Component with subtle plaster and recessed downlights
 const Ceiling: React.FC = () => {
+  const ceilingTextures = useMemo(() => generateCeilingTextures('#f7f7f5'), []);
+  const downlightPositions: Array<[number, number, number]> = useMemo(() => (
+    [
+      [-6, 7.96, -4], [6, 7.96, -4],
+      [-6, 7.96, 4],  [6, 7.96, 4],
+    ]
+  ), []);
+
   return (
     <group>
-      {/* Main ceiling */}
+      {/* Main ceiling with subtle plaster texture */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 8, 0]} receiveShadow>
         <planeGeometry args={[24, 18]} />
         <meshStandardMaterial 
-          color="#ffffff" 
-          roughness={0.9}
+          color="#f7f7f5"
+          map={ceilingTextures.map}
+          roughnessMap={ceilingTextures.roughnessMap}
+          bumpMap={ceilingTextures.bumpMap}
+          bumpScale={0.01}
+          roughness={0.88}
           metalness={0}
         />
       </mesh>
-      
-      {/* Wooden ceiling beams */}
-      {Array.from({ length: 4 }, (_, i) => (
-        <mesh key={i} position={[-9 + i * 6, 7.8, 0]} castShadow>
-          <boxGeometry args={[0.3, 0.4, 18]} />
-          <meshStandardMaterial 
-            color="#8B4513" 
-            roughness={0.6}
-            metalness={0}
+
+      {/* Recessed downlights (minimal, realistic) */}
+      {downlightPositions.map(([x, y, z], i) => (
+        <group key={i} position={[x, y, z]}>
+          {/* Trim ring */}
+          <mesh>
+            <cylinderGeometry args={[0.25, 0.25, 0.02, 24]} />
+            <meshStandardMaterial color="#e6e6e1" roughness={0.6} metalness={0.05} />
+          </mesh>
+          {/* Light emitter */}
+          <mesh position={[0, -0.015, 0]}>
+            <cylinderGeometry args={[0.17, 0.17, 0.01, 24]} />
+            <meshStandardMaterial color="#fffbe6" emissive="#fff6cc" emissiveIntensity={0.6} roughness={0.4} />
+          </mesh>
+          {/* Downward spotlight */}
+          <spotLight
+            position={[0, -0.02, 0]}
+            angle={Math.PI / 10}
+            penumbra={0.6}
+            intensity={0.35}
+            color="#fff9e6"
+            distance={10}
+            decay={1.5}
+            castShadow={false}
+            target-position={[x, 0, z]}
           />
-        </mesh>
+        </group>
       ))}
 
-      {/* Elegant office chandelier */}
+      {/* Existing chandelier kept minimal */}
       <group position={[0, 7.5, 0]}>
-        {/* Chandelier body */}
         <mesh position={[0, 0, 0]} castShadow>
           <cylinderGeometry args={[0.2, 0.3, 0.8]} />
           <meshStandardMaterial color="#FFD700" roughness={0.1} metalness={0.9} />
         </mesh>
-        
-        {/* Chandelier arms with light fixtures */}
         {Array.from({ length: 6 }, (_, i) => {
           const angle = (i / 6) * Math.PI * 2;
           const x = Math.cos(angle) * 1.2;
           const z = Math.sin(angle) * 1.2;
-          
           return (
             <group key={i} position={[x, -0.3, z]}>
               <mesh>
@@ -249,7 +657,7 @@ const Ceiling: React.FC = () => {
                   roughness={0.3}
                   metalness={0.1}
                   emissive="#FFF8DC"
-                  emissiveIntensity={0.2}
+                  emissiveIntensity={0.18}
                 />
               </mesh>
             </group>
@@ -260,267 +668,262 @@ const Ceiling: React.FC = () => {
   );
 };
 
-// Enhanced Desk Component with PBR materials and interactive lamp
+// Enhanced Desk Component with PBR materials, rounded edges, and minimal tabletop items
 const Desk: React.FC = () => {
-  const [lampHovered, setLampHovered] = useState(false);
-  const lampRef = useRef<THREE.Group>(null!);
+  // Procedural wood textures for desktop and legs (separate instances for different repeats)
+  const woodTop = useMemo(() => {
+    const t = generateWoodTextures('#8B5A2B');
+    [t.map, t.bumpMap, t.roughnessMap].forEach((tex) => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      // A few planks across the width
+      tex.repeat.set(3, 1);
+    });
+    return t;
+  }, []);
+
+  const woodLeg = useMemo(() => {
+    const t = generateWoodTextures('#6D4C41');
+    [t.map, t.bumpMap, t.roughnessMap].forEach((tex) => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      // Stretch grain along leg height
+      tex.repeat.set(1, 3);
+    });
+    return t;
+  }, []);
 
   return (
     <group position={[4, 0, 2]}>
-      {/* Desktop surface with wood texture simulation */}
-      <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
-        <boxGeometry args={[5, 0.15, 2.5]} />
-        <meshStandardMaterial 
-          color="#8B4513" 
-          roughness={0.4}
+      {/* Rounded desktop with procedural wood and light clearcoat */}
+      <RoundedBox position={[0, 1.5, 0]} args={[5, 0.12, 2.5]} radius={0.08} smoothness={4} castShadow receiveShadow>
+        <meshPhysicalMaterial
+          color="#8B5A2B"
+          map={woodTop.map}
+          roughnessMap={woodTop.roughnessMap}
+          bumpMap={woodTop.bumpMap}
+          bumpScale={0.03}
+          roughness={0.55}
           metalness={0}
+          clearcoat={0.05}
+          clearcoatRoughness={0.6}
         />
-      </mesh>
-      
-      {/* Desk legs with wood material */}
-      {[[-2.2, -1], [2.2, -1], [-2.2, 1], [2.2, 1]].map(([x, z], i) => (
-        <mesh key={i} position={[x, 0.75, z]} castShadow>
-          <boxGeometry args={[0.15, 1.5, 0.15]} />
-          <meshStandardMaterial 
-            color="#654321" 
-            roughness={0.5}
-            metalness={0}
-          />
+      </RoundedBox>
+
+      {/* Structural rails under desktop */}
+      {[1.02, -1.02].map((z, i) => (
+        <mesh key={`rail-${i}`} position={[0, 1.44, z]} castShadow receiveShadow>
+          <boxGeometry args={[4.7, 0.08, 0.1]} />
+          <meshStandardMaterial color="#6D4C41" map={woodLeg.map} roughnessMap={woodLeg.roughnessMap} bumpMap={woodLeg.bumpMap} bumpScale={0.02} roughness={0.6} metalness={0} />
         </mesh>
       ))}
-      
-      {/* Computer Monitor with emissive screen */}
-      <mesh position={[-0.5, 2.1, -0.3]} castShadow>
-        <boxGeometry args={[1.8, 1.2, 0.1]} />
-        <meshStandardMaterial 
-          color="#1a1a1a" 
-          roughness={0.8}
-          metalness={0.2}
-        />
-      </mesh>
-      
-      {/* Monitor screen with subtle glow */}
-      <mesh position={[-0.5, 2.1, -0.24]} castShadow>
-        <boxGeometry args={[1.6, 1, 0.01]} />
-        <meshStandardMaterial 
-          color="#0a0a1a" 
-          roughness={0.1}
-          metalness={0}
-          emissive="#001122"
-          emissiveIntensity={0.3}
-        />
-      </mesh>
-      
-      {/* Monitor stand with metallic finish */}
-      <mesh position={[-0.5, 1.7, -0.1]} castShadow>
-        <boxGeometry args={[0.3, 0.3, 0.3]} />
-        <meshStandardMaterial 
-          color="#333" 
-          roughness={0.2}
-          metalness={0.8}
-        />
-      </mesh>
-      
-      {/* Keyboard with plastic material */}
-      <mesh position={[-0.5, 1.57, 0.5]} castShadow>
-        <boxGeometry args={[1.2, 0.04, 0.4]} />
-        <meshStandardMaterial 
-          color="#2a2a2a" 
-          roughness={0.6}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Mouse with ergonomic design */}
-      <mesh position={[0.3, 1.57, 0.3]} castShadow>
-        <boxGeometry args={[0.15, 0.03, 0.25]} />
-        <meshStandardMaterial 
-          color="#1a1a1a" 
-          roughness={0.7}
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Interactive desk lamp with hover effect */}
-      <group 
-        ref={lampRef}
-        position={[1.8, 1.6, 0.8]}
-        onPointerEnter={() => setLampHovered(true)}
-        onPointerLeave={() => setLampHovered(false)}
-      >
-        {/* Lamp base */}
-        <mesh position={[0, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.15, 0.15, 0.05]} />
-          <meshStandardMaterial 
-            color="#2a2a2a" 
-            roughness={0.3}
-            metalness={0.7}
-          />
+      {[2.25, -2.25].map((x, i) => (
+        <mesh key={`side-rail-${i}`} position={[x, 0.9, 0]} castShadow>
+          <boxGeometry args={[0.1, 1.2, 2.2]} />
+          <meshStandardMaterial color="#6D4C41" map={woodLeg.map} roughnessMap={woodLeg.roughnessMap} bumpMap={woodLeg.bumpMap} bumpScale={0.02} roughness={0.6} metalness={0} />
         </mesh>
-        
-        {/* Lamp arm */}
-        <mesh position={[0, 0.8, 0]} castShadow>
-          <cylinderGeometry args={[0.02, 0.02, 1.5]} />
-          <meshStandardMaterial 
-            color="#333" 
-            roughness={0.4}
-            metalness={0.6}
-          />
+      ))}
+
+      {/* Sturdy wooden legs */}
+      {[[-2.2, -1], [2.2, -1], [-2.2, 1], [2.2, 1]].map(([x, z], i) => (
+        <mesh key={`leg-${i}`} position={[x, 0.75, z]} castShadow>
+          <boxGeometry args={[0.18, 1.5, 0.18]} />
+          <meshStandardMaterial color="#6D4C41" map={woodLeg.map} roughnessMap={woodLeg.roughnessMap} bumpMap={woodLeg.bumpMap} bumpScale={0.02} roughness={0.6} metalness={0} />
         </mesh>
-        
-        {/* Lamp shade with enhanced glow when hovered */}
-        <mesh position={[0, 1.6, 0]} castShadow>
-          <cylinderGeometry args={[0.4, 0.2, 0.3]} />
-          <meshStandardMaterial 
-            color="#FFD700" 
-            roughness={0.2}
-            metalness={0.1}
-            emissive="#FFD700"
-            emissiveIntensity={lampHovered ? 0.4 : 0.1}
-          />
+      ))}
+
+      {/* Minimal drawer on right side */}
+      <group position={[2.15, 1.3, 0.4]}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[0.9, 0.35, 0.5]} />
+          <meshStandardMaterial color="#6D4C41" map={woodLeg.map} roughnessMap={woodLeg.roughnessMap} bumpMap={woodLeg.bumpMap} bumpScale={0.02} roughness={0.6} metalness={0} />
         </mesh>
-        
-        {/* Spotlight from lamp */}
-        <spotLight
-          position={[0, 1.6, 0]}
-          angle={Math.PI / 4}
-          penumbra={0.5}
-          intensity={lampHovered ? 1 : 0.5}
-          color="#FFD700"
-          castShadow
-          target-position={[0, 0, 0]}
-        />
-      </group>
-      
-      {/* Coffee mug with ceramic material */}
-      <mesh position={[1.5, 1.65, -0.8]} castShadow>
-        <cylinderGeometry args={[0.12, 0.1, 0.2]} />
-        <meshStandardMaterial 
-          color="#8B4513" 
-          roughness={0.1}
-          metalness={0}
-        />
-      </mesh>
-      
-      {/* Law books stack */}
-      <group position={[-1.8, 1.57, -0.5]}>
-        {/* Red law book */}
-        <mesh position={[0, 0.15, 0]} castShadow>
-          <boxGeometry args={[0.25, 0.3, 1]} />
-          <meshStandardMaterial 
-            color="#8B0000" 
-            roughness={0.8}
-            metalness={0}
-          />
+        {/* Drawer face (slightly proud) */}
+        <mesh position={[0, 0, 0.26]} castShadow>
+          <boxGeometry args={[0.9, 0.35, 0.02]} />
+          <meshStandardMaterial color="#7A5A3A" roughness={0.55} metalness={0} />
         </mesh>
-        
-        {/* Brown law book */}
-        <mesh position={[0, 0.45, 0]} castShadow>
-          <boxGeometry args={[0.23, 0.3, 0.9]} />
-          <meshStandardMaterial 
-            color="#654321" 
-            roughness={0.7}
-            metalness={0}
-          />
-        </mesh>
-        
-        {/* Black law book */}
-        <mesh position={[0, 0.75, 0]} castShadow>
-          <boxGeometry args={[0.24, 0.3, 0.95]} />
-          <meshStandardMaterial 
-            color="#1a1a1a" 
-            roughness={0.6}
-            metalness={0}
-          />
+        {/* Handle */}
+        <mesh position={[0, 0, 0.31]} castShadow>
+          <boxGeometry args={[0.18, 0.04, 0.04]} />
+          <meshStandardMaterial color="#C0C0C0" roughness={0.2} metalness={0.8} />
         </mesh>
       </group>
-      
-      {/* Papers with realistic paper material */}
-      <mesh position={[-1.5, 1.57, 0.2]} castShadow>
-        <boxGeometry args={[0.8, 0.02, 1.2]} />
-        <meshStandardMaterial 
-          color="#ffffff" 
-          roughness={0.9}
-          metalness={0}
-        />
+
+      {/* Computer monitor centered with improved stand */}
+      <mesh position={[0, 2.1, -0.35]} castShadow>
+        <boxGeometry args={[1.8, 1.2, 0.08]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.85} metalness={0.2} />
       </mesh>
-      
-      {/* Pen holder with wood material */}
-      <mesh position={[0.8, 1.7, -0.8]} castShadow>
-        <cylinderGeometry args={[0.15, 0.15, 0.3]} />
-        <meshStandardMaterial 
-          color="#8B4513" 
-          roughness={0.5}
-          metalness={0}
-        />
+      <mesh position={[0, 2.1, -0.29]} castShadow>
+        <boxGeometry args={[1.68, 1.04, 0.01]} />
+        <meshStandardMaterial color="#0a0a1a" roughness={0.1} emissive="#001122" emissiveIntensity={0.35} />
       </mesh>
+      {/* Stand neck */}
+      <mesh position={[0, 1.86, 0.0]} castShadow>
+        <boxGeometry args={[0.08, 0.45, 0.08]} />
+        <meshStandardMaterial color="#3a3a3a" roughness={0.25} metalness={0.85} />
+      </mesh>
+      {/* Stand foot */}
+      <RoundedBox position={[0, 1.58, 0.18]} args={[0.7, 0.05, 0.28]} radius={0.04} smoothness={3} castShadow>
+        <meshStandardMaterial color="#303030" roughness={0.25} metalness={0.9} />
+      </RoundedBox>
+      {/* Open book (left) */}
+      <group position={[-1.55, 1.535, 0.35]} rotation={[0, Math.PI / 14, 0]}>
+        {/* Left cover */}
+        <RoundedBox position={[-0.46, 0, 0]} args={[0.45, 0.06, 0.7]} radius={0.03} smoothness={2} castShadow receiveShadow>
+          <meshPhysicalMaterial color="#6b2f1a" roughness={0.85} metalness={0.1} sheen={1} sheenRoughness={0.6} sheenColor={'#552a1a'} />
+        </RoundedBox>
+        {/* Right cover */}
+        <RoundedBox position={[0.46, 0, 0]} args={[0.45, 0.06, 0.7]} radius={0.03} smoothness={2} castShadow receiveShadow>
+          <meshPhysicalMaterial color="#6b2f1a" roughness={0.85} metalness={0.1} sheen={1} sheenRoughness={0.6} sheenColor={'#552a1a'} />
+        </RoundedBox>
+
+        {/* Left pages stack */}
+        <RoundedBox position={[-0.46, 0.008, 0]} rotation={[0, 0.06, 0]} args={[0.43, 0.048, 0.66]} radius={0.01} smoothness={1} castShadow>
+          <meshStandardMaterial color="#f7f5ef" roughness={0.95} metalness={0} />
+        </RoundedBox>
+        {/* Right pages stack */}
+        <RoundedBox position={[0.46, 0.008, 0]} rotation={[0, -0.06, 0]} args={[0.43, 0.048, 0.66]} radius={0.01} smoothness={1} castShadow>
+          <meshStandardMaterial color="#f7f5ef" roughness={0.95} metalness={0} />
+        </RoundedBox>
+
+        {/* Center gutter */}
+        <mesh position={[0, 0.012, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.01, 0.01, 0.7, 24]} />
+          <meshStandardMaterial color="#5a3a22" roughness={0.8} metalness={0.1} />
+        </mesh>
+
+        {/* Bookmark ribbon between pages */}
+        <mesh position={[0.12, -0.05, 0.22]} castShadow>
+          <boxGeometry args={[0.04, 0.01, 0.32]} />
+          <meshStandardMaterial color="#b71c1c" roughness={0.6} metalness={0.1} />
+        </mesh>
+      </group>
+
+      {/* Refined pen stand with pens (right) */}
+      <group position={[1.6, 1.61, -0.55]}>
+        {/* Cup */}
+        <mesh castShadow receiveShadow>
+          <cylinderGeometry args={[0.12, 0.12, 0.22, 24]} />
+          <meshPhysicalMaterial color="#ececec" roughness={0.22} metalness={0.05} clearcoat={0.2} clearcoatRoughness={0.7} />
+        </mesh>
+        {/* Rim ring */}
+        <mesh position={[0, 0.11, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.12, 0.01, 12, 48]} />
+          <meshStandardMaterial color="#c0c0c0" roughness={0.35} metalness={0.8} />
+        </mesh>
+        {/* Pens */}
+        {[
+          { x: -0.045, z: 0.0, color: '#1565C0', rot: 0.06 },
+          { x: 0.0, z: 0.04, color: '#2E7D32', rot: -0.03 },
+          { x: 0.05, z: -0.02, color: '#EF5350', rot: 0.02 },
+        ].map((p, i) => (
+          <group key={i} position={[p.x, 0.16, p.z]} rotation={[p.rot, 0, 0]}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.006, 0.006, 0.18, 12]} />
+              <meshStandardMaterial color={p.color} roughness={0.4} metalness={0.2} />
+            </mesh>
+            {/* Tip */}
+            <mesh position={[0, 0.095, 0]}>
+              <coneGeometry args={[0.008, 0.015, 12]} />
+              <meshStandardMaterial color="#d0d0d0" roughness={0.3} metalness={0.7} />
+            </mesh>
+            {/* Clip */}
+            <mesh position={[0.008, 0.02, 0]}>
+              <boxGeometry args={[0.002, 0.04, 0.01]} />
+              <meshStandardMaterial color="#9e9e9e" roughness={0.4} metalness={0.6} />
+            </mesh>
+          </group>
+        ))}
+      </group>
     </group>
   );
 };
 
-// Enhanced Chair Component with fabric materials
+// Enhanced Chair Component with fabric materials and star base
 const Chair: React.FC = () => {
+  const fabric = useMemo(() => generateFabricTextures('#1a2456'), []);
+
   return (
-    <group position={[4, 0, 5]}>
-      {/* Seat with fabric texture */}
-      <mesh position={[0, 1.1, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.4, 0.12, 1.4]} />
-        <meshStandardMaterial 
-          color="#191970" 
+    <group position={[4, 0, 3.4]} rotation={[0, Math.PI, 0]}>
+      {/* Gas lift */}
+      <mesh position={[0, 0.78, 0]} castShadow>
+        <cylinderGeometry args={[0.06, 0.06, 0.7, 24]} />
+        <meshStandardMaterial color="#3a3a3a" roughness={0.2} metalness={0.85} />
+      </mesh>
+
+      {/* Base hub */}
+      <mesh position={[0, 0.44, 0]} castShadow>
+        <cylinderGeometry args={[0.12, 0.12, 0.12, 24]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.25} metalness={0.85} />
+      </mesh>
+
+      {/* Star base with 5 legs and casters */}
+      {Array.from({ length: 5 }, (_, i) => {
+        const angle = (i / 5) * Math.PI * 2;
+        return (
+          <group key={i} rotation={[0, angle, 0]}>
+            {/* Leg */}
+            <mesh position={[0.55, 0.40, 0]} castShadow>
+              <boxGeometry args={[1.1, 0.06, 0.14]} />
+              <meshStandardMaterial color="#303030" roughness={0.25} metalness={0.85} />
+            </mesh>
+            {/* Caster bracket */}
+            <mesh position={[1.06, 0.34, 0]} castShadow>
+              <boxGeometry args={[0.12, 0.08, 0.12]} />
+              <meshStandardMaterial color="#2a2a2a" roughness={0.3} metalness={0.8} />
+            </mesh>
+            {/* Wheel */}
+            <mesh position={[1.06, 0.26, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.09, 0.09, 0.04, 20]} />
+              <meshStandardMaterial color="#111111" roughness={0.6} metalness={0.2} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* Seat support plate */}
+      <mesh position={[0, 1.0, 0]} castShadow>
+        <cylinderGeometry args={[0.2, 0.2, 0.05, 24]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.3} metalness={0.7} />
+      </mesh>
+
+      {/* Seat cushion */}
+      <RoundedBox position={[0, 1.08, 0]} args={[1.6, 0.16, 1.6]} radius={0.1} smoothness={4} castShadow receiveShadow>
+        <meshPhysicalMaterial
+          color="#1b275f"
+          map={fabric.map}
+          roughnessMap={fabric.roughnessMap}
+          bumpMap={fabric.bumpMap}
+          bumpScale={0.03}
           roughness={0.9}
           metalness={0}
+          clearcoat={0.02}
+          clearcoatRoughness={0.9}
         />
-      </mesh>
-      
-      {/* Backrest with fabric */}
-      <mesh position={[0, 1.9, -0.6]} castShadow>
-        <boxGeometry args={[1.4, 1.6, 0.12]} />
-        <meshStandardMaterial 
-          color="#191970" 
-          roughness={0.9}
+      </RoundedBox>
+
+      {/* Backrest */}
+      <RoundedBox position={[0, 1.9, -0.62]} args={[1.5, 1.7, 0.18]} radius={0.1} smoothness={4} castShadow>
+        <meshPhysicalMaterial
+          color="#1b275f"
+          map={fabric.map}
+          roughnessMap={fabric.roughnessMap}
+          bumpMap={fabric.bumpMap}
+          bumpScale={0.03}
+          roughness={0.92}
           metalness={0}
+          clearcoat={0.02}
+          clearcoatRoughness={0.95}
         />
-      </mesh>
-      
-      {/* Armrests with padding */}
-      <mesh position={[-0.6, 1.5, 0]} castShadow>
-        <boxGeometry args={[0.1, 0.8, 1.2]} />
-        <meshStandardMaterial 
-          color="#000080" 
-          roughness={0.8}
-          metalness={0}
-        />
-      </mesh>
-      <mesh position={[0.6, 1.5, 0]} castShadow>
-        <boxGeometry args={[0.1, 0.8, 1.2]} />
-        <meshStandardMaterial 
-          color="#000080" 
-          roughness={0.8}
-          metalness={0}
-        />
-      </mesh>
-      
-      {/* Chair legs with metal finish and wheels */}
-      {[[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5], [0, -0.7]].map(([x, z], i) => (
-        <group key={i} position={[x, 0, z]}>
-          <mesh position={[0, 0.5, 0]} castShadow>
-            <cylinderGeometry args={[0.04, 0.04, 1]} />
-            <meshStandardMaterial 
-              color="#333" 
-              roughness={0.2}
-              metalness={0.9}
-            />
-          </mesh>
-          <mesh position={[0, 0.05, 0]} castShadow>
-            <cylinderGeometry args={[0.08, 0.08, 0.1]} />
-            <meshStandardMaterial 
-              color="#1a1a1a" 
-              roughness={0.4}
-              metalness={0.6}
-            />
-          </mesh>
-        </group>
-      ))}
+      </RoundedBox>
+
+      {/* Armrests */}
+      <RoundedBox position={[-0.66, 1.5, 0]} args={[0.14, 0.16, 1.25]} radius={0.06} smoothness={3} castShadow>
+        <meshStandardMaterial color="#0e1228" roughness={0.8} metalness={0.05} />
+      </RoundedBox>
+      <RoundedBox position={[0.66, 1.5, 0]} args={[0.14, 0.16, 1.25]} radius={0.06} smoothness={3} castShadow>
+        <meshStandardMaterial color="#0e1228" roughness={0.8} metalness={0.05} />
+      </RoundedBox>
     </group>
   );
 };
@@ -528,131 +931,239 @@ const Chair: React.FC = () => {
 // Enhanced Bookshelf with law files and decorative items
 const Bookshelf: React.FC = () => {
   const bookColors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', 
-    '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'
+    '#8B0000', '#2F4F4F', '#800080', '#B22222', '#006400', 
+    '#4B0082', '#8B4513', '#2E8B57', '#DC143C', '#4682B4',
+    '#D2691E', '#556B2F', '#8B008B', '#B8860B', '#CD853F'
   ];
-  const lawFileColors = ['#8B0000', '#654321', '#1a1a1a'];
+  const lawFileColors = ['#8B0000', '#654321', '#1a1a1a', '#2F2F2F', '#4A4A4A'];
+  
+  // Book titles for realistic appearance
+  const bookTitles = [
+    'Civil Code', 'Criminal Law', 'Constitutional Law', 'Contract Law', 'Tort Law',
+    'Property Law', 'Family Law', 'Corporate Law', 'Tax Law', 'Labor Law',
+    'Environmental Law', 'Intellectual Property', 'International Law', 'Evidence', 'Procedure',
+    'Legal Ethics', 'Jurisprudence', 'Legal History', 'Comparative Law', 'Administrative Law'
+  ];
   
   return (
-    <group position={[-9, 0, -2]}>
-      {/* Bookshelf frame with wood material */}
-      <mesh position={[-1.8, 3.5, 0]} castShadow>
+    <group position={[-9.5, 0, -2.5]}>
+      {/* Bookshelf frame with enhanced wood material */}
+      <mesh position={[-1.8, 3.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.3, 7, 1.5]} />
-        <meshStandardMaterial color="#8B4513" roughness={0.6} metalness={0} />
+        <meshStandardMaterial 
+          color="#8B4513" 
+          roughness={0.8} 
+          metalness={0.1}
+          normalScale={[0.5, 0.5]}
+        />
       </mesh>
-      <mesh position={[1.8, 3.5, 0]} castShadow>
+      <mesh position={[1.8, 3.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.3, 7, 1.5]} />
-        <meshStandardMaterial color="#8B4513" roughness={0.6} metalness={0} />
+        <meshStandardMaterial 
+          color="#8B4513" 
+          roughness={0.8} 
+          metalness={0.1}
+          normalScale={[0.5, 0.5]}
+        />
       </mesh>
-      <mesh position={[0, 0.15, 0]} castShadow>
+      <mesh position={[0, 0.15, 0]} castShadow receiveShadow>
         <boxGeometry args={[3.6, 0.3, 1.5]} />
-        <meshStandardMaterial color="#8B4513" roughness={0.6} metalness={0} />
+        <meshStandardMaterial 
+          color="#8B4513" 
+          roughness={0.8} 
+          metalness={0.1}
+          normalScale={[0.5, 0.5]}
+        />
       </mesh>
       
-      {/* Shelves */}
+      {/* Back panel for bookshelf */}
+      <mesh position={[0, 3.5, -0.75]} castShadow receiveShadow>
+        <boxGeometry args={[3.6, 7, 0.05]} />
+        <meshStandardMaterial 
+          color="#654321" 
+          roughness={0.9} 
+          metalness={0}
+        />
+      </mesh>
+      
+      {/* Enhanced shelves with better wood grain */}
       {[1.4, 2.8, 4.2, 5.6, 7].map((y, index) => (
         <mesh key={index} position={[0, y, 0]} castShadow receiveShadow>
           <boxGeometry args={[3.6, 0.15, 1.5]} />
-          <meshStandardMaterial color="#8B4513" roughness={0.6} metalness={0} />
+          <meshStandardMaterial 
+            color="#8B4513" 
+            roughness={0.8} 
+            metalness={0.1}
+            normalScale={[0.3, 0.3]}
+          />
         </mesh>
       ))}
       
-      {/* Books with realistic placement */}
+      {/* Enhanced books with realistic placement and titles */}
       {[0.9, 2.2, 3.6, 5, 6.4].map((shelfY, shelfIndex) => (
         <group key={shelfIndex}>
-          {Array.from({ length: 10 }, (_, bookIndex) => {
-            const bookWidth = 0.12 + (bookIndex % 3) * 0.03; // More consistent sizing
-            const bookHeight = 0.5 + (bookIndex % 4) * 0.1;
-            const bookDepth = 0.8 + (bookIndex % 2) * 0.2;
-            const xPosition = -1.3 + (bookIndex * 0.27);
-            const colorIndex = (shelfIndex * 10 + bookIndex) % bookColors.length;
-            // Use deterministic slight lean instead of random rotation
-            const lean = Math.sin(bookIndex) * 0.1; 
+          {Array.from({ length: 12 }, (_, bookIndex) => {
+            const bookWidth = 0.11 + (bookIndex % 4) * 0.02;
+            const bookHeight = 0.45 + (bookIndex % 3) * 0.08;
+            const bookDepth = 0.75 + (bookIndex % 2) * 0.15;
+            const xPosition = -1.4 + (bookIndex * 0.23);
+            const colorIndex = (shelfIndex * 12 + bookIndex) % bookColors.length;
+            const lean = Math.sin(bookIndex * 0.5) * 0.05; 
             
             return (
-              <mesh 
-                key={bookIndex} 
-                position={[xPosition, shelfY + bookHeight / 2, 0.2]} 
-                rotation={[0, lean, 0]}
-                castShadow
-              >
-                <boxGeometry args={[bookWidth, bookHeight, bookDepth]} />
-                <meshStandardMaterial 
-                  color={bookColors[colorIndex]} 
-                  roughness={0.8}
-                  metalness={0}
-                />
-              </mesh>
+              <group key={bookIndex}>
+                {/* Main book body */}
+                <mesh 
+                  position={[xPosition, shelfY + bookHeight / 2, 0.15]} 
+                  rotation={[0, lean, 0]}
+                  castShadow
+                  receiveShadow
+                >
+                  <boxGeometry args={[bookWidth, bookHeight, bookDepth]} />
+                  <meshStandardMaterial 
+                    color={bookColors[colorIndex]} 
+                    roughness={0.9}
+                    metalness={0}
+                    normalScale={[0.2, 0.2]}
+                  />
+                </mesh>
+                
+                {/* Book spine with title */}
+                <mesh 
+                  position={[xPosition - bookWidth/2 - 0.01, shelfY + bookHeight / 2, 0.15]} 
+                  rotation={[0, lean, 0]}
+                  castShadow
+                >
+                  <boxGeometry args={[0.02, bookHeight * 0.8, bookDepth * 0.9]} />
+                  <meshStandardMaterial 
+                    color={bookColors[colorIndex]} 
+                    roughness={0.7}
+                    metalness={0.1}
+                  />
+                </mesh>
+                
+                {/* Book title text (simplified as colored strip) */}
+                <mesh 
+                  position={[xPosition - bookWidth/2 - 0.005, shelfY + bookHeight / 2, 0.15]} 
+                  rotation={[0, lean, 0]}
+                >
+                  <boxGeometry args={[0.01, bookHeight * 0.3, bookDepth * 0.7]} />
+                  <meshStandardMaterial 
+                    color="#FFFFFF" 
+                    roughness={0.3}
+                    metalness={0.2}
+                  />
+                </mesh>
+              </group>
             );
           })}
         </group>
       ))}
       
-      {/* Law files and binders on one shelf */}
+      {/* Enhanced law files and binders */}
       <group position={[0, 3.6, 0]}>
-        {Array.from({ length: 5 }, (_, i) => (
-          <mesh
-            key={i}
-            position={[1 + i * 0.3, 0.4, 0.3]}
-            castShadow
-          >
-            <boxGeometry args={[0.25, 0.8, 1]} />
-            <meshStandardMaterial 
-              color={lawFileColors[i % lawFileColors.length]} 
-              roughness={0.7}
-              metalness={0}
-            />
-          </mesh>
+        {Array.from({ length: 6 }, (_, i) => (
+          <group key={i}>
+            <mesh
+              position={[0.8 + i * 0.28, 0.4, 0.3]}
+              castShadow
+              receiveShadow
+            >
+              <boxGeometry args={[0.25, 0.8, 1]} />
+              <meshStandardMaterial 
+                color={lawFileColors[i % lawFileColors.length]} 
+                roughness={0.8}
+                metalness={0.1}
+                normalScale={[0.3, 0.3]}
+              />
+            </mesh>
+            
+            {/* Binder rings */}
+            <mesh
+              position={[0.8 + i * 0.28, 0.2, 0.31]}
+              castShadow
+            >
+              <cylinderGeometry args={[0.01, 0.01, 0.4]} />
+              <meshStandardMaterial 
+                color="#C0C0C0" 
+                roughness={0.2}
+                metalness={0.8}
+              />
+            </mesh>
+            <mesh
+              position={[0.8 + i * 0.28, 0.6, 0.31]}
+              castShadow
+            >
+              <cylinderGeometry args={[0.01, 0.01, 0.4]} />
+              <meshStandardMaterial 
+                color="#C0C0C0" 
+                roughness={0.2}
+                metalness={0.8}
+              />
+            </mesh>
+          </group>
         ))}
         
-        {/* Gold law file labels */}
-        {Array.from({ length: 5 }, (_, i) => (
+        {/* Enhanced gold law file labels */}
+        {Array.from({ length: 6 }, (_, i) => (
           <mesh
             key={`label-${i}`}
-            position={[1 + i * 0.3, 0.2, 0.31]}
+            position={[0.8 + i * 0.28, 0.2, 0.32]}
             castShadow
           >
             <boxGeometry args={[0.02, 0.6, 0.8]} />
             <meshStandardMaterial 
               color="#FFD700" 
               roughness={0.1}
-              metalness={0.8}
+              metalness={0.9}
             />
           </mesh>
         ))}
       </group>
       
-      {/* Decorative globe on top shelf */}
+      {/* Enhanced decorative globe with better materials */}
       <Float speed={1.5} rotationIntensity={0.05} floatIntensity={0.1}>
         <group position={[0.5, 7.3, 0.5]}>
-          {/* Globe sphere */}
-          <mesh castShadow>
-            <sphereGeometry args={[0.2]} />
+          {/* Globe sphere with enhanced material */}
+          <mesh castShadow receiveShadow>
+            <sphereGeometry args={[0.2, 32, 32]} />
             <meshStandardMaterial 
               color="#4169E1" 
-              roughness={0.2}
-              metalness={0.1}
+              roughness={0.1}
+              metalness={0.3}
+              normalScale={[0.5, 0.5]}
             />
           </mesh>
-          {/* Globe stand */}
-          <mesh position={[0, -0.25, 0]} castShadow>
+          {/* Globe stand with wood material */}
+          <mesh position={[0, -0.25, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.05, 0.05, 0.1]} />
             <meshStandardMaterial 
               color="#8B4513" 
-              roughness={0.6}
-              metalness={0}
+              roughness={0.8}
+              metalness={0.1}
             />
           </mesh>
         </group>
       </Float>
       
-      {/* Legal statue decoration */}
-      <mesh position={[-0.8, 7.3, 0.3]} castShadow>
+      {/* Enhanced legal statue decoration */}
+      <mesh position={[-0.8, 7.3, 0.3]} castShadow receiveShadow>
         <boxGeometry args={[0.3, 0.4, 0.2]} />
         <meshStandardMaterial 
           color="#DAA520" 
           roughness={0.1}
           metalness={0.9}
+          normalScale={[0.3, 0.3]}
+        />
+      </mesh>
+      
+      {/* Additional decorative elements */}
+      <mesh position={[1.2, 7.3, 0.2]} castShadow receiveShadow>
+        <boxGeometry args={[0.2, 0.3, 0.15]} />
+        <meshStandardMaterial 
+          color="#8B4513" 
+          roughness={0.7}
+          metalness={0.2}
         />
       </mesh>
     </group>
@@ -991,12 +1502,25 @@ const LawyerOfficeScene: React.FC = () => {
         shadow-bias={-0.0001}
       />
       
-      {/* Warm accent lighting */}
-      <pointLight position={[4, 6, 2]} intensity={0.6} color="#FFD700" distance={15} decay={2} />
-      <pointLight position={[-8, 5, -2]} intensity={0.4} color="#ffffff" distance={12} decay={2} />
+      {/* Warm accent lighting (balanced) */}
+      <pointLight position={[4, 6, 2]} intensity={0.5} color="#FFD700" distance={15} decay={2} />
+      <pointLight position={[-8, 5, -2]} intensity={0.35} color="#ffffff" distance={12} decay={2} />
       
       {/* Chandelier lighting */}
-      <pointLight position={[0, 7, 0]} intensity={0.8} color="#FFF8DC" distance={20} decay={1.5} />
+      <pointLight position={[0, 7, 0]} intensity={0.6} color="#FFF8DC" distance={20} decay={1.5} />
+      
+      {/* Bookshelf accent lighting */}
+      <spotLight
+        position={[-9.5, 6, -1]}
+        target-position={[-9.5, 3.5, -2.5]}
+        angle={Math.PI / 6}
+        penumbra={0.8}
+        intensity={0.4}
+        color="#FFF8DC"
+        distance={12}
+        decay={2}
+        castShadow
+      />
       
       {/* Room Structure */}
       <Floor />
@@ -1039,6 +1563,17 @@ const LawyerOfficeScene: React.FC = () => {
   );
 };
 
+// Spawn the camera at the door facing into the room
+const SpawnAtDoor: React.FC = () => {
+  const { camera } = useThree();
+  useEffect(() => {
+    const spawnPosition = new THREE.Vector3(6, 1.7, 7.4);
+    camera.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+    camera.lookAt(0, 1.7, 0);
+  }, [camera]);
+  return null;
+};
+
 // Main Page Component with enhanced performance
 export default function MiniversePage() {
   const router = useRouter();
@@ -1067,6 +1602,10 @@ export default function MiniversePage() {
       
       switch (event.key) {
         case 'Escape':
+          // If pointer is locked, just unlock (browser handles it) and do nothing else
+          if (document.pointerLockElement) {
+            return;
+          }
           if (document.fullscreenElement) {
             document.exitFullscreen();
           } else {
@@ -1089,7 +1628,7 @@ export default function MiniversePage() {
       <Canvas
         shadows
         camera={{
-          position: [5.5, 1.7, 5], // Standing beside chair at human height
+          position: [6, 1.7, 7.4], // Spawn at door
           fov: 75, // Wider FOV for immersive feel
           near: 0.1,
           far: 100,
@@ -1108,42 +1647,33 @@ export default function MiniversePage() {
           gl.toneMappingExposure = 1.2;
         }}
       >
+        <EffectComposer multisampling={0}>
+          <SMAA />
+          {/* Subtle contact shadows and crevice shading */}
+          <SSAO intensity={0.15} radius={0.2} bias={0.02} samples={16} />
+          <Bloom intensity={0.18} luminanceThreshold={0.9} mipmapBlur />
+          <DepthOfField focusDistance={0.02} focalLength={0.02} bokehScale={1.6} />
+          <ChromaticAberration offset={[0.0008, 0.0012]} radialModulation modulationOffset={0.2} />
+          <Vignette eskil={false} offset={0.2} darkness={0.6} />
+        </EffectComposer>
         <LawyerOfficeScene />
+        <SpawnAtDoor />
         <KeyboardMovement />
         
-        {/* First-person style controls for room exploration */}
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={0.8} // Prevent getting too close to walls
-          maxDistance={12}  // Keep within room bounds
-          minPolarAngle={Math.PI / 8} // Prevent extreme upward looking
-          maxPolarAngle={Math.PI - Math.PI / 8} // Prevent looking down too much
-          target={[4, 1.7, 2]} // Look towards desk area initially
-          autoRotate={false}
-          enableDamping={true}
-          dampingFactor={0.1} // Slightly more responsive
-          panSpeed={1.0} // Balanced panning speed
-          rotateSpeed={0.9} // Smooth rotation
-          zoomSpeed={1.2} // Controlled zoom speed
-          // Full 360-degree rotation for room exploration
-          minAzimuthAngle={-Math.PI}
-          maxAzimuthAngle={Math.PI}
-        />
+        {/* FPS mouse look controls */}
+        <PointerLockControls makeDefault />
       </Canvas>
       
       {/* Enhanced UI overlay for first-person exploration */}
       <div className="absolute top-4 left-4 text-white bg-black/40 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/20">
         <div className="text-lg font-bold mb-1">🚶 Law Office Walkthrough</div>
         <div className="text-xs opacity-70 mt-1 space-y-1">
-          <div>🖱️ <strong>Left-click + Drag:</strong> Look around (360°)</div>
-          <div>🖱️ <strong>Right-click + Drag:</strong> Move around room</div>
-          <div>🔍 <strong>Scroll Wheel:</strong> Walk closer/further</div>
+          <div>🖱️ <strong>Click:</strong> Lock mouse, move to look around</div>
           <div>⌨️ <strong>Arrow Keys / WASD:</strong> Walk around office</div>
+          <div>⎋ <strong>Escape:</strong> Unlock mouse</div>
         </div>
         <div className="text-xs opacity-60 mt-2 space-y-1">
-          <div>📍 <strong>Starting Position:</strong> Beside office chair</div>
+          <div>📍 <strong>Starting Position:</strong> At the door</div>
           <div>🏢 <strong>Room Layout:</strong> Fully enclosed office</div>
           <div>🎯 <strong>Explore:</strong> Desk area, bookshelf, window, door</div>
           <div>⚡ <strong>Interactive:</strong> Hover desk lamp for glow</div>
@@ -1200,8 +1730,8 @@ export default function MiniversePage() {
           <div className="absolute" style={{ top: '40%', right: '20%' }}>
             <div className="w-1.5 h-1 bg-yellow-400 rounded" title="Desk"></div>
             </div>
-          <div className="absolute" style={{ top: '60%', right: '20%' }}>
-            <div className="w-1 h-1 bg-purple-400 rounded-full" title="Chair (Start)"></div>
+          <div className="absolute" style={{ bottom: '8%', left: '50%', transform: 'translateX(-50%)' }}>
+            <div className="w-1 h-1 bg-purple-400 rounded-full" title="Door (Start)"></div>
             </div>
           <div className="absolute" style={{ top: '25%', left: '12%' }}>
             <div className="w-1 h-1.5 bg-orange-400 rounded" title="Bookshelf"></div>
