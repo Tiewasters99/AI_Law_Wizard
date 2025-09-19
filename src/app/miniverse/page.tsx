@@ -949,26 +949,9 @@ const Desk: React.FC<{
   onDeskProximity?: () => void;
   onDeskProximityChange?: (isNear: boolean) => void;
 }> = ({ onPaperClick, onPaperProximity, onProximityChange, onDeskProximity, onDeskProximityChange }) => {
-  // Procedural wood textures for desktop and legs (separate instances for different repeats)
-  const woodTop = useMemo(() => {
-    const t = generateWoodTextures('#EAE0D5');
-    [t.map, t.bumpMap, t.roughnessMap].forEach((tex) => {
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      // A few planks across the width
-      tex.repeat.set(3, 1);
-    });
-    return t;
-  }, []);
-
-  const woodLeg = useMemo(() => {
-    const t = generateWoodTextures('#D8CFC3');
-    [t.map, t.bumpMap, t.roughnessMap].forEach((tex) => {
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      // Stretch grain along leg height
-      tex.repeat.set(1, 3);
-    });
-    return t;
-  }, []);
+  // Matte off-white materials for desktop and legs
+  const deskTopColor = '#F5F5F0'; // Matte off-white
+  const deskLegColor = '#F0F0EB'; // Slightly darker off-white for legs
 
   return (
     <group position={[4, 0, 2]}>
@@ -993,18 +976,12 @@ const Desk: React.FC<{
         </mesh>
       </Float>
       
-      {/* Rounded desktop with procedural wood and light clearcoat */}
+      {/* Rounded desktop with matte off-white finish */}
       <RoundedBox position={[0, 1.5, 0]} args={[5, 0.12, 2.5]} radius={0.08} smoothness={4}>
-        <meshPhysicalMaterial
-          color="#EAE0D5"
-          map={woodTop.map}
-          roughnessMap={woodTop.roughnessMap}
-          bumpMap={woodTop.bumpMap}
-          bumpScale={0.03}
-          roughness={0.55}
+        <meshStandardMaterial
+          color={deskTopColor}
+          roughness={0.8}
           metalness={0}
-          clearcoat={0.05}
-          clearcoatRoughness={0.6}
         />
       </RoundedBox>
 
@@ -1012,21 +989,21 @@ const Desk: React.FC<{
       {[1.02, -1.02].map((z, i) => (
         <mesh key={`rail-${i}`} position={[0, 1.44, z]}>
           <boxGeometry args={[4.7, 0.08, 0.1]} />
-          <meshStandardMaterial color="#D8CFC3" map={woodLeg.map} roughnessMap={woodLeg.roughnessMap} bumpMap={woodLeg.bumpMap} bumpScale={0.02} roughness={0.6} metalness={0} />
+          <meshStandardMaterial color={deskLegColor} roughness={0.8} metalness={0} />
         </mesh>
       ))}
       {[2.25, -2.25].map((x, i) => (
         <mesh key={`side-rail-${i}`} position={[x, 0.9, 0]}>
           <boxGeometry args={[0.1, 1.2, 2.2]} />
-          <meshStandardMaterial color="#D8CFC3" map={woodLeg.map} roughnessMap={woodLeg.roughnessMap} bumpMap={woodLeg.bumpMap} bumpScale={0.02} roughness={0.6} metalness={0} />
+          <meshStandardMaterial color={deskLegColor} roughness={0.8} metalness={0} />
         </mesh>
       ))}
 
-      {/* Sturdy wooden legs */}
+      {/* Sturdy desk legs */}
       {[[-2.2, -1], [2.2, -1], [-2.2, 1], [2.2, 1]].map(([x, z], i) => (
         <mesh key={`leg-${i}`} position={[x, 0.75, z]}>
           <boxGeometry args={[0.18, 1.5, 0.18]} />
-          <meshStandardMaterial color="#D8CFC3" map={woodLeg.map} roughnessMap={woodLeg.roughnessMap} bumpMap={woodLeg.bumpMap} bumpScale={0.02} roughness={0.6} metalness={0} />
+          <meshStandardMaterial color={deskLegColor} roughness={0.8} metalness={0} />
         </mesh>
       ))}
 
@@ -1034,12 +1011,12 @@ const Desk: React.FC<{
       <group position={[2.15, 1.3, 0.4]}>
         <mesh>
           <boxGeometry args={[0.9, 0.35, 0.5]} />
-          <meshStandardMaterial color="#D8CFC3" map={woodLeg.map} roughnessMap={woodLeg.roughnessMap} bumpMap={woodLeg.bumpMap} bumpScale={0.02} roughness={0.6} metalness={0} />
+          <meshStandardMaterial color={deskLegColor} roughness={0.8} metalness={0} />
         </mesh>
         {/* Drawer face (slightly proud) */}
         <mesh position={[0, 0, 0.26]}>
           <boxGeometry args={[0.9, 0.35, 0.02]} />
-          <meshStandardMaterial color="#F0EBE3" roughness={0.55} metalness={0} />
+          <meshStandardMaterial color={deskTopColor} roughness={0.8} metalness={0} />
         </mesh>
         {/* Handle */}
         <mesh position={[0, 0, 0.31]}>
