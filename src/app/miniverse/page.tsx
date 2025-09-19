@@ -2,9 +2,83 @@
 
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { PointerLockControls, Text, useTexture, PerformanceMonitor, Float, Points, PointMaterial, RoundedBox } from '@react-three/drei';
+import { PointerLockControls, OrbitControls, Text, useTexture, PerformanceMonitor, Float, Points, PointMaterial, RoundedBox } from '@react-three/drei';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
+
+// Enhanced Controls Component with PointerLock fallback
+const EnhancedControls: React.FC<{ onControlsTypeChange?: (type: 'pointer-lock' | 'orbit') => void }> = ({ onControlsTypeChange }) => {
+  const [controlsEnabled, setControlsEnabled] = useState(false);
+  const [pointerLockSupported, setPointerLockSupported] = useState(true);
+  const [userInteracted, setUserInteracted] = useState(false);
+
+  useEffect(() => {
+    // Check if PointerLock API is supported
+    const isSupported = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+    
+    if (!isSupported) {
+      console.warn('Pointer Lock API not supported, falling back to OrbitControls');
+      setPointerLockSupported(false);
+      onControlsTypeChange?.('orbit');
+      return;
+    }
+
+    // Check if we're in a secure context (HTTPS or localhost)
+    const isSecureContext = window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (!isSecureContext) {
+      console.warn('Pointer Lock API requires secure context (HTTPS), falling back to OrbitControls');
+      setPointerLockSupported(false);
+      onControlsTypeChange?.('orbit');
+      return;
+    }
+
+    // Wait for user interaction before enabling pointer lock
+    const handleFirstInteraction = () => {
+      setUserInteracted(true);
+      setControlsEnabled(true);
+      onControlsTypeChange?.('pointer-lock');
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('keydown', handleFirstInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pointerLockSupported && !userInteracted) {
+      onControlsTypeChange?.('orbit');
+    }
+  }, [pointerLockSupported, userInteracted, onControlsTypeChange]);
+
+  if (!pointerLockSupported || !userInteracted) {
+    return (
+      <OrbitControls
+        enablePan={true}
+        enableZoom={true}
+        enableRotate={true}
+        maxPolarAngle={Math.PI}
+        minDistance={1}
+        maxDistance={20}
+        target={[0, 2, 0]}
+      />
+    );
+  }
+
+  return (
+    <PointerLockControls 
+      makeDefault={controlsEnabled}
+      onLock={() => console.log('Pointer locked')}
+      onUnlock={() => console.log('Pointer unlocked')}
+    />
+  );
+};
 
 // Keyboard movement controller with Arrow Keys + WASD support
 const KeyboardMovement: React.FC = () => {
@@ -780,8 +854,50 @@ const Ceiling: React.FC = () => {
   );
 };
 
+// Proximity Detection Component for Interactive Elements
+const ProximityDetector: React.FC<{ 
+  position: [number, number, number]; 
+  triggerDistance: number; 
+  onTrigger: () => void;
+  onProximityChange?: (isNear: boolean) => void;
+  cooldownMs?: number;
+}> = ({ position, triggerDistance, onTrigger, onProximityChange, cooldownMs = 3000 }) => {
+  const { camera } = useThree();
+  const [lastTriggered, setLastTriggered] = useState(0);
+  const [isInRange, setIsInRange] = useState(false);
+  
+  useFrame(() => {
+    const now = Date.now();
+    if (now - lastTriggered < cooldownMs) return;
+    
+    const cameraPos = camera.position;
+    const distance = Math.sqrt(
+      Math.pow(cameraPos.x - position[0], 2) + 
+      Math.pow(cameraPos.z - position[2], 2) // Only check X and Z (horizontal distance)
+    );
+    
+    const inRange = distance <= triggerDistance;
+    
+    if (inRange && !isInRange) {
+      setIsInRange(true);
+      onProximityChange?.(true);
+      onTrigger();
+      setLastTriggered(now);
+    } else if (!inRange && isInRange) {
+      setIsInRange(false);
+      onProximityChange?.(false);
+    }
+  });
+  
+  return null;
+};
+
 // Enhanced Desk Component with PBR materials, rounded edges, and minimal tabletop items
-const Desk: React.FC = () => {
+const Desk: React.FC<{ 
+  onPaperClick: () => void; 
+  onPaperProximity: () => void;
+  onProximityChange?: (isNear: boolean) => void;
+}> = ({ onPaperClick, onPaperProximity, onProximityChange }) => {
   // Procedural wood textures for desktop and legs (separate instances for different repeats)
   const woodTop = useMemo(() => {
     const t = generateWoodTextures('#EAE0D5');
@@ -911,6 +1027,77 @@ const Desk: React.FC = () => {
         </mesh>
       </group>
 
+      {/* Second open book (center-right) */}
+      <group position={[-0.5, 1.58, 0.2]} rotation={[0, Math.PI / 6, 0]}>
+        {/* Left cover */}
+        <RoundedBox position={[-0.42, 0, 0]} args={[0.4, 0.05, 0.6]} radius={0.025} smoothness={2}>
+          <meshPhysicalMaterial color="#1e3a8a" roughness={0.8} metalness={0.15} sheen={0.8} sheenRoughness={0.7} sheenColor={'#1e40af'} />
+        </RoundedBox>
+        {/* Right cover */}
+        <RoundedBox position={[0.42, 0, 0]} args={[0.4, 0.05, 0.6]} radius={0.025} smoothness={2}>
+          <meshPhysicalMaterial color="#1e3a8a" roughness={0.8} metalness={0.15} sheen={0.8} sheenRoughness={0.7} sheenColor={'#1e40af'} />
+        </RoundedBox>
+
+        {/* Left pages stack */}
+        <RoundedBox position={[-0.42, 0.007, 0]} rotation={[0, 0.08, 0]} args={[0.38, 0.042, 0.56]} radius={0.008} smoothness={1}>
+          <meshStandardMaterial color="#faf9f6" roughness={0.9} metalness={0} />
+        </RoundedBox>
+        {/* Right pages stack */}
+        <RoundedBox position={[0.42, 0.007, 0]} rotation={[0, -0.08, 0]} args={[0.38, 0.042, 0.56]} radius={0.008} smoothness={1}>
+          <meshStandardMaterial color="#faf9f6" roughness={0.9} metalness={0} />
+        </RoundedBox>
+
+        {/* Center gutter */}
+        <mesh position={[0, 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.008, 0.008, 0.6, 20]} />
+          <meshStandardMaterial color="#1e40af" roughness={0.7} metalness={0.2} />
+        </mesh>
+
+        {/* Gold bookmark ribbon */}
+        <mesh position={[-0.15, -0.04, 0.18]}>
+          <boxGeometry args={[0.03, 0.008, 0.28]} />
+          <meshStandardMaterial color="#ffd700" roughness={0.3} metalness={0.7} />
+        </mesh>
+
+        {/* Reading glasses on the book */}
+        <group position={[0.1, 0.04, 0.1]} rotation={[0, 0, 0.1]}>
+          {/* Left lens frame */}
+          <mesh position={[-0.08, 0, 0]}>
+            <torusGeometry args={[0.06, 0.003, 8, 16]} />
+            <meshStandardMaterial color="#2c3e50" roughness={0.4} metalness={0.3} />
+          </mesh>
+          {/* Right lens frame */}
+          <mesh position={[0.08, 0, 0]}>
+            <torusGeometry args={[0.06, 0.003, 8, 16]} />
+            <meshStandardMaterial color="#2c3e50" roughness={0.4} metalness={0.3} />
+          </mesh>
+          {/* Bridge */}
+          <mesh position={[0, 0, 0]}>
+            <cylinderGeometry args={[0.002, 0.002, 0.04, 8]} />
+            <meshStandardMaterial color="#2c3e50" roughness={0.4} metalness={0.3} />
+          </mesh>
+          {/* Left temple */}
+          <mesh position={[-0.06, 0, -0.04]} rotation={[0, Math.PI / 4, 0]}>
+            <cylinderGeometry args={[0.002, 0.002, 0.12, 8]} />
+            <meshStandardMaterial color="#2c3e50" roughness={0.4} metalness={0.3} />
+          </mesh>
+          {/* Right temple */}
+          <mesh position={[0.06, 0, -0.04]} rotation={[0, -Math.PI / 4, 0]}>
+            <cylinderGeometry args={[0.002, 0.002, 0.12, 8]} />
+            <meshStandardMaterial color="#2c3e50" roughness={0.4} metalness={0.3} />
+          </mesh>
+          {/* Lenses */}
+          <mesh position={[-0.08, 0, 0]}>
+            <circleGeometry args={[0.055, 16]} />
+            <meshPhysicalMaterial color="#ffffff" transparent opacity={0.1} roughness={0.0} metalness={0.0} transmission={0.95} ior={1.5} />
+          </mesh>
+          <mesh position={[0.08, 0, 0]}>
+            <circleGeometry args={[0.055, 16]} />
+            <meshPhysicalMaterial color="#ffffff" transparent opacity={0.1} roughness={0.0} metalness={0.0} transmission={0.95} ior={1.5} />
+          </mesh>
+        </group>
+      </group>
+
       {/* Refined pen stand with pens (right) */}
       <group position={[1.6, 1.61, -0.55]}>
         {/* Cup */}
@@ -946,6 +1133,63 @@ const Desk: React.FC = () => {
             </mesh>
           </group>
         ))}
+      </group>
+
+      {/* Interactive Legal Paper */}
+      <group position={[0.8, 1.565, -0.6]} rotation={[0, -Math.PI / 12, 0]}>
+        {/* Proximity detector for automatic trigger */}
+        <ProximityDetector 
+          position={[4.8, 1.565, 1.4]} // Adjusted for desk position offset
+          triggerDistance={1.5}
+          onTrigger={onPaperProximity}
+          onProximityChange={onProximityChange}
+          cooldownMs={4000}
+        />
+        
+        {/* Animated proximity indicator glow */}
+        <Float
+          speed={2}
+          rotationIntensity={0}
+          floatIntensity={0.3}
+        >
+          <mesh position={[0, 0.02, 0]}>
+            <boxGeometry args={[0.75, 0.008, 0.95]} />
+            <meshBasicMaterial color="#3b82f6" transparent opacity={0.15} />
+          </mesh>
+        </Float>
+        
+        {/* Subtle pulsing border */}
+        <mesh position={[0, 0.025, 0]}>
+          <boxGeometry args={[0.8, 0.003, 1.0]} />
+          <meshBasicMaterial color="#60a5fa" transparent opacity={0.3} />
+        </mesh>
+        
+        <mesh onClick={onPaperClick} onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }} onPointerOut={(e) => { e.stopPropagation(); document.body.style.cursor = 'auto'; }}>
+          <boxGeometry args={[0.6, 0.01, 0.8]} />
+          <meshStandardMaterial color="#f8f8f8" roughness={0.8} metalness={0} />
+        </mesh>
+        {/* Legal letterhead */}
+        <mesh position={[0, 0.005, 0.32]}>
+          <boxGeometry args={[0.55, 0.005, 0.08]} />
+          <meshStandardMaterial color="#1e40af" roughness={0.9} metalness={0} />
+        </mesh>
+        {/* Text lines simulation */}
+        {Array.from({ length: 8 }, (_, i) => (
+          <mesh key={i} position={[0, 0.005, 0.2 - i * 0.08]}>
+            <boxGeometry args={[0.5, 0.003, 0.005]} />
+            <meshStandardMaterial color="#333333" roughness={0.9} metalness={0} />
+          </mesh>
+        ))}
+        {/* Signature line */}
+        <mesh position={[0.15, 0.005, -0.45]}>
+          <boxGeometry args={[0.3, 0.003, 0.005]} />
+          <meshStandardMaterial color="#666666" roughness={0.9} metalness={0} />
+        </mesh>
+        {/* Legal seal */}
+        <mesh position={[-0.2, 0.005, -0.35]} rotation={[0, 0, 0]}>
+          <cylinderGeometry args={[0.05, 0.05, 0.002, 12]} />
+          <meshStandardMaterial color="#b91c1c" roughness={0.7} metalness={0.1} />
+        </mesh>
       </group>
     </group>
   );
@@ -1741,7 +1985,11 @@ const DustParticles: React.FC = () => {
 };
 
 // Enhanced Main Scene Component with all improvements
-const LawyerOfficeScene: React.FC = () => {
+const LawyerOfficeScene: React.FC<{ 
+  onPaperClick: () => void; 
+  onPaperProximity: () => void;
+  onProximityChange?: (isNear: boolean) => void;
+}> = ({ onPaperClick, onPaperProximity, onProximityChange }) => {
   const [dpr, setDpr] = useState(1.5);
 
   // Animate the sea waves
@@ -1800,7 +2048,7 @@ const LawyerOfficeScene: React.FC = () => {
       <Wall position={[12, 4, 0]} rotation={[0, -Math.PI / 2, 0]} width={18} height={8} />
       
       {/* Main Furniture */}
-      <Desk />
+      <Desk onPaperClick={onPaperClick} onPaperProximity={onPaperProximity} onProximityChange={onProximityChange} />
       <Chair />
       {/* Multiple bookshelves */}
       <Bookshelf position={[-9.0, 0, -8.5]} rotation={[0, 0, 0]} />
@@ -1841,9 +2089,202 @@ const SpawnAtDoor: React.FC = () => {
 };
 
 // Main Page Component with enhanced performance
+// Memo Modal Component
+const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  const [userType, setUserType] = useState<'client' | 'attorney' | null>(null);
+  const [selectedAttorney, setSelectedAttorney] = useState('');
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [rating, setRating] = useState(5);
+
+  // Static attorney list for now
+  const attorneys = [
+    { id: 'john_smith', name: 'John Smith, Esq. - Corporate Law' },
+    { id: 'sarah_johnson', name: 'Sarah Johnson, Esq. - Family Law' },
+    { id: 'michael_brown', name: 'Michael Brown, Esq. - Criminal Defense' },
+    { id: 'lisa_davis', name: 'Lisa Davis, Esq. - Personal Injury' },
+    { id: 'robert_wilson', name: 'Robert Wilson, Esq. - Real Estate' },
+    { id: 'emily_garcia', name: 'Emily Garcia, Esq. - Immigration' },
+  ];
+
+  const handleSubmit = () => {
+    if (userType === 'client') {
+      console.log('Client Review Submitted:', {
+        attorney: selectedAttorney,
+        subject,
+        message,
+        rating,
+        date: new Date().toISOString()
+      });
+      alert('Review submitted successfully!');
+    } else {
+      console.log('Attorney Memo Sent:', {
+        to: selectedAttorney,
+        subject,
+        message,
+        date: new Date().toISOString()
+      });
+      alert('Memo sent successfully!');
+    }
+    
+    // Reset form
+    setUserType(null);
+    setSelectedAttorney('');
+    setSubject('');
+    setMessage('');
+    setRating(5);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="bg-blue-600 text-white p-4 rounded-t-lg">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Legal Network Communication</h2>
+            <button onClick={onClose} className="text-white hover:text-gray-200 text-2xl">&times;</button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {/* User Type Selection */}
+          {!userType && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-4">Please select your role:</h3>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setUserType('client')}
+                  className="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="text-lg font-medium">Client</div>
+                  <div className="text-sm text-gray-600">Leave a review for an attorney</div>
+                </button>
+                <button 
+                  onClick={() => setUserType('attorney')}
+                  className="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="text-lg font-medium">Attorney</div>
+                  <div className="text-sm text-gray-600">Send a memo to colleague</div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Memo Form */}
+          {userType && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="text-sm text-gray-600 mb-2">
+                  {userType === 'client' ? 'ATTORNEY REVIEW FORM' : 'INTER-OFFICE MEMORANDUM'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Date: {new Date().toLocaleDateString()}
+                </div>
+              </div>
+
+              {/* To Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  To: {userType === 'client' ? 'Attorney to Review' : 'Recipient Attorney'}
+                </label>
+                <select 
+                  value={selectedAttorney} 
+                  onChange={(e) => setSelectedAttorney(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Select an attorney...</option>
+                  {attorneys.map(attorney => (
+                    <option key={attorney.id} value={attorney.id}>{attorney.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subject Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Re: {userType === 'client' ? 'Review Subject' : 'Subject Matter'}
+                </label>
+                <input 
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder={userType === 'client' ? 'Brief description of your experience...' : 'Legal matter or case reference...'}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {/* Rating (for clients only) */}
+              {userType === 'client' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Rating:
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setRating(star)}
+                        className={`text-2xl ${star <= rating ? 'text-yellow-400' : 'text-gray-300'} hover:text-yellow-400 transition-colors`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                    <span className="ml-2 text-sm text-gray-600">({rating}/5)</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Message Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {userType === 'client' ? 'Review Details:' : 'Message:'}
+                </label>
+                <textarea 
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder={userType === 'client' 
+                    ? 'Please describe your experience with this attorney...' 
+                    : 'Enter your memo content here...'}
+                  rows={6}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  required
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setUserType(null)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  Back
+                </button>
+                <button 
+                  onClick={handleSubmit}
+                  disabled={!selectedAttorney || !subject || !message}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  {userType === 'client' ? 'Submit Review' : 'Send Memo'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function MiniversePage() {
   const router = useRouter();
   const [dpr, setDpr] = useState(1.5);
+  const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
+  const [controlsType, setControlsType] = useState<'loading' | 'pointer-lock' | 'orbit'>('loading');
+  const [isNearPaper, setIsNearPaper] = useState(false);
 
   const handleExit = useCallback(() => {
     router.push('/');
@@ -1920,27 +2361,66 @@ export default function MiniversePage() {
         {/* Bright background to keep page fully lighted */}
         <color attach="background" args={["#f6fbff"]} />
         {/* Postprocessing removed for performance */}
-        <LawyerOfficeScene />
+        <LawyerOfficeScene 
+          onPaperClick={() => setIsMemoModalOpen(true)} 
+          onPaperProximity={() => setIsMemoModalOpen(true)}
+          onProximityChange={setIsNearPaper}
+        />
         <SpawnAtDoor />
         <KeyboardMovement />
         
-        {/* FPS mouse look controls */}
-        <PointerLockControls makeDefault />
+        {/* Enhanced controls with fallback */}
+        <EnhancedControls onControlsTypeChange={setControlsType} />
       </Canvas>
       
       {/* Enhanced UI overlay for first-person exploration */}
       <div className="absolute top-4 left-4 text-slate-800 bg-white/80 backdrop-blur-sm px-4 py-3 rounded-xl border border-slate-300">
         <div className="text-lg font-bold mb-1">🚶 Law Office Walkthrough</div>
+        
+        {/* Proximity indicator */}
+        {isNearPaper && (
+          <div className="text-xs text-emerald-600 mb-2 animate-pulse">
+            ✨ <strong>Near Interactive Paper</strong> - Memo will auto-open
+          </div>
+        )}
+        
+        {/* Control mode indicator */}
+        {controlsType === 'loading' && (
+          <div className="text-xs text-blue-600 mb-2">⏳ Loading controls...</div>
+        )}
+        {controlsType === 'orbit' && (
+          <div className="text-xs text-orange-600 mb-2">🔄 Orbit Controls Mode (Drag to look, scroll to zoom)</div>
+        )}
+        {controlsType === 'pointer-lock' && (
+          <div className="text-xs text-green-600 mb-2">🎯 FPS Controls Mode (Mouse locked)</div>
+        )}
+        
         <div className="text-xs opacity-70 mt-1 space-y-1">
-          <div>🖱️ <strong>Click:</strong> Lock mouse, move to look around</div>
-          <div>⌨️ <strong>Arrow Keys / WASD:</strong> Walk around office</div>
-          <div>⎋ <strong>Escape:</strong> Unlock mouse</div>
+          {controlsType === 'orbit' ? (
+            <>
+              <div>🖱️ <strong>Drag:</strong> Look around • <strong>Right-click + drag:</strong> Pan</div>
+              <div>⌨️ <strong>Arrow Keys / WASD:</strong> Walk around office</div>
+              <div>🔄 <strong>Scroll:</strong> Zoom in/out</div>
+            </>
+          ) : controlsType === 'pointer-lock' ? (
+            <>
+              <div>🖱️ <strong>Mouse:</strong> Look around (locked)</div>
+              <div>⌨️ <strong>Arrow Keys / WASD:</strong> Walk around office</div>
+              <div>⎋ <strong>Escape:</strong> Unlock mouse</div>
+            </>
+          ) : (
+            <>
+              <div>🖱️ <strong>Click:</strong> Lock mouse for FPS controls (or drag to orbit)</div>
+              <div>⌨️ <strong>Arrow Keys / WASD:</strong> Walk around office</div>
+              <div>⎋ <strong>Escape:</strong> Unlock mouse / 🔄 <strong>Scroll:</strong> Zoom</div>
+            </>
+          )}
         </div>
         <div className="text-xs opacity-60 mt-2 space-y-1">
           <div>📍 <strong>Starting Position:</strong> At the door</div>
           <div>🏢 <strong>Room Layout:</strong> Fully enclosed office</div>
           <div>🎯 <strong>Explore:</strong> Desk area, bookshelf, window, door</div>
-          <div>⚡ <strong>Interactive:</strong> Hover desk lamp for glow</div>
+          <div>⚡ <strong>Interactive:</strong> Walk near or click paper on desk for legal memo</div>
               </div>
             </div>
 
@@ -1973,7 +2453,16 @@ export default function MiniversePage() {
       <div className="absolute bottom-4 left-4 text-slate-800 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-slate-300">
         <div className="text-xs opacity-80 space-y-1">
           <div>ESC to exit • F11 for fullscreen</div>
-          <div>↑↓←→ Arrow keys or WASD to walk</div>
+          {controlsType === 'orbit' ? (
+            <div>↑↓←→ Arrow keys or WASD to walk • Drag to orbit • Scroll to zoom</div>
+          ) : controlsType === 'pointer-lock' ? (
+            <div>↑↓←→ Arrow keys or WASD to walk • Mouse to look (locked)</div>
+          ) : (
+            <div>↑↓←→ Arrow keys or WASD to walk • Mouse to look/orbit</div>
+          )}
+          {isNearPaper && (
+            <div className="text-emerald-600 font-medium animate-pulse">📄 Legal memo ready - Auto-triggered!</div>
+          )}
         </div>
       </div>
 
@@ -2015,6 +2504,12 @@ export default function MiniversePage() {
           🔴 Start Position
         </div>
       </div>
+
+      {/* Memo Modal */}
+      <MemoModal 
+        isOpen={isMemoModalOpen} 
+        onClose={() => setIsMemoModalOpen(false)} 
+      />
     </div>
   );
 }
