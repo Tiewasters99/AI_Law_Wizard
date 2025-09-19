@@ -7,10 +7,14 @@ import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 
 // Enhanced Controls Component with PointerLock fallback
-const EnhancedControls: React.FC<{ onControlsTypeChange?: (type: 'pointer-lock' | 'orbit') => void }> = ({ onControlsTypeChange }) => {
+const EnhancedControls: React.FC<{ 
+  onControlsTypeChange?: (type: 'pointer-lock' | 'orbit') => void;
+  disabled?: boolean;
+}> = ({ onControlsTypeChange, disabled = false }) => {
   const [controlsEnabled, setControlsEnabled] = useState(false);
   const [pointerLockSupported, setPointerLockSupported] = useState(true);
   const [userInteracted, setUserInteracted] = useState(false);
+  const [wasInPointerLock, setWasInPointerLock] = useState(false);
 
   useEffect(() => {
     // Check if PointerLock API is supported
@@ -33,8 +37,27 @@ const EnhancedControls: React.FC<{ onControlsTypeChange?: (type: 'pointer-lock' 
       return;
     }
 
+    // Don't add event listeners if modal is open (disabled = true)
+    if (disabled) {
+      return;
+    }
+
     // Wait for user interaction before enabling pointer lock
-    const handleFirstInteraction = () => {
+    const handleFirstInteraction = (event: Event) => {
+      // Only enable FPS controls if clicking on the canvas
+      const target = event.target as Element;
+      const isCanvasClick = target && target.tagName === 'CANVAS';
+      
+      if (isCanvasClick) {
+        setUserInteracted(true);
+        setControlsEnabled(true);
+        onControlsTypeChange?.('pointer-lock');
+        document.removeEventListener('click', handleFirstInteraction);
+        document.removeEventListener('keydown', handleFirstInteraction);
+      }
+    };
+
+    const handleKeyInteraction = () => {
       setUserInteracted(true);
       setControlsEnabled(true);
       onControlsTypeChange?.('pointer-lock');
@@ -43,13 +66,13 @@ const EnhancedControls: React.FC<{ onControlsTypeChange?: (type: 'pointer-lock' 
     };
 
     document.addEventListener('click', handleFirstInteraction);
-    document.addEventListener('keydown', handleFirstInteraction);
+    document.addEventListener('keydown', handleKeyInteraction);
 
     return () => {
       document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
+      document.removeEventListener('keydown', handleKeyInteraction);
     };
-  }, []);
+  }, [disabled, onControlsTypeChange]);
 
   useEffect(() => {
     if (!pointerLockSupported && !userInteracted) {
@@ -57,12 +80,25 @@ const EnhancedControls: React.FC<{ onControlsTypeChange?: (type: 'pointer-lock' 
     }
   }, [pointerLockSupported, userInteracted, onControlsTypeChange]);
 
+  // Handle re-engagement of pointer lock when disabled state changes
+  useEffect(() => {
+    if (!disabled && wasInPointerLock && userInteracted && pointerLockSupported) {
+      // Re-engage pointer lock after modal closes
+      setTimeout(() => {
+        const canvas = document.querySelector('canvas');
+        if (canvas && !document.pointerLockElement) {
+          canvas.click();
+        }
+      }, 150);
+    }
+  }, [disabled, wasInPointerLock, userInteracted, pointerLockSupported]);
+
   if (!pointerLockSupported || !userInteracted) {
     return (
       <OrbitControls
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
+        enablePan={!disabled}
+        enableZoom={!disabled}
+        enableRotate={!disabled}
         maxPolarAngle={Math.PI}
         minDistance={1}
         maxDistance={20}
@@ -73,15 +109,26 @@ const EnhancedControls: React.FC<{ onControlsTypeChange?: (type: 'pointer-lock' 
 
   return (
     <PointerLockControls 
-      makeDefault={controlsEnabled}
-      onLock={() => console.log('Pointer locked')}
-      onUnlock={() => console.log('Pointer unlocked')}
+      makeDefault={controlsEnabled && !disabled}
+      onLock={() => {
+        console.log('Pointer locked');
+        setWasInPointerLock(true);
+      }}
+      onUnlock={() => {
+        console.log('Pointer unlocked');
+        if (disabled) {
+          // Only set to false if we're disabled (modal is open)
+          // This preserves the state for re-engagement
+        } else {
+          setWasInPointerLock(false);
+        }
+      }}
     />
   );
 };
 
 // Keyboard movement controller with Arrow Keys + WASD support
-const KeyboardMovement: React.FC = () => {
+const KeyboardMovement: React.FC<{ disabled?: boolean }> = ({ disabled = false }) => {
   const { camera } = useThree();
   const [keys, setKeys] = useState({
     ArrowUp: false, KeyW: false,     // Forward
@@ -122,6 +169,8 @@ const KeyboardMovement: React.FC = () => {
   }, []);
 
   useFrame(() => {
+    if (disabled) return; // Disable movement when modal is open
+    
     const direction = new THREE.Vector3();
     const right = new THREE.Vector3();
     
@@ -897,7 +946,9 @@ const Desk: React.FC<{
   onPaperClick: () => void; 
   onPaperProximity: () => void;
   onProximityChange?: (isNear: boolean) => void;
-}> = ({ onPaperClick, onPaperProximity, onProximityChange }) => {
+  onDeskProximity?: () => void;
+  onDeskProximityChange?: (isNear: boolean) => void;
+}> = ({ onPaperClick, onPaperProximity, onProximityChange, onDeskProximity, onDeskProximityChange }) => {
   // Procedural wood textures for desktop and legs (separate instances for different repeats)
   const woodTop = useMemo(() => {
     const t = generateWoodTextures('#EAE0D5');
@@ -921,6 +972,27 @@ const Desk: React.FC<{
 
   return (
     <group position={[4, 0, 2]}>
+      {/* Desk proximity detector - larger area around entire desk */}
+      <ProximityDetector 
+        position={[4, 1.5, 2]} // Desk center position
+        triggerDistance={2.5} // Larger trigger area for entire desk
+        onTrigger={onDeskProximity || (() => {})}
+        onProximityChange={onDeskProximityChange}
+        cooldownMs={5000}
+      />
+      
+      {/* Desk area indicator glow */}
+      <Float
+        speed={1.5}
+        rotationIntensity={0}
+        floatIntensity={0.2}
+      >
+        <mesh position={[0, 1.6, 0]}>
+          <boxGeometry args={[5.5, 0.05, 3.0]} />
+          <meshBasicMaterial color="#10b981" transparent opacity={0.1} />
+        </mesh>
+      </Float>
+      
       {/* Rounded desktop with procedural wood and light clearcoat */}
       <RoundedBox position={[0, 1.5, 0]} args={[5, 0.12, 2.5]} radius={0.08} smoothness={4}>
         <meshPhysicalMaterial
@@ -1146,7 +1218,7 @@ const Desk: React.FC<{
           cooldownMs={4000}
         />
         
-        {/* Animated proximity indicator glow */}
+        {/* Persistent highlight glow - always visible */}
         <Float
           speed={2}
           rotationIntensity={0}
@@ -1154,15 +1226,27 @@ const Desk: React.FC<{
         >
           <mesh position={[0, 0.02, 0]}>
             <boxGeometry args={[0.75, 0.008, 0.95]} />
-            <meshBasicMaterial color="#3b82f6" transparent opacity={0.15} />
+            <meshBasicMaterial color="#3b82f6" transparent opacity={0.25} />
           </mesh>
         </Float>
         
-        {/* Subtle pulsing border */}
+        {/* Pulsing border - always visible */}
         <mesh position={[0, 0.025, 0]}>
           <boxGeometry args={[0.8, 0.003, 1.0]} />
-          <meshBasicMaterial color="#60a5fa" transparent opacity={0.3} />
+          <meshBasicMaterial color="#60a5fa" transparent opacity={0.4} />
         </mesh>
+        
+        {/* Additional attention-grabbing ring */}
+        <Float
+          speed={1.5}
+          rotationIntensity={0}
+          floatIntensity={0.2}
+        >
+          <mesh position={[0, 0.03, 0]}>
+            <boxGeometry args={[0.9, 0.002, 1.1]} />
+            <meshBasicMaterial color="#fbbf24" transparent opacity={0.3} />
+          </mesh>
+        </Float>
         
         <mesh onClick={onPaperClick} onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }} onPointerOut={(e) => { e.stopPropagation(); document.body.style.cursor = 'auto'; }}>
           <boxGeometry args={[0.6, 0.01, 0.8]} />
@@ -1989,7 +2073,9 @@ const LawyerOfficeScene: React.FC<{
   onPaperClick: () => void; 
   onPaperProximity: () => void;
   onProximityChange?: (isNear: boolean) => void;
-}> = ({ onPaperClick, onPaperProximity, onProximityChange }) => {
+  onDeskProximity?: () => void;
+  onDeskProximityChange?: (isNear: boolean) => void;
+}> = ({ onPaperClick, onPaperProximity, onProximityChange, onDeskProximity, onDeskProximityChange }) => {
   const [dpr, setDpr] = useState(1.5);
 
   // Animate the sea waves
@@ -2048,7 +2134,7 @@ const LawyerOfficeScene: React.FC<{
       <Wall position={[12, 4, 0]} rotation={[0, -Math.PI / 2, 0]} width={18} height={8} />
       
       {/* Main Furniture */}
-      <Desk onPaperClick={onPaperClick} onPaperProximity={onPaperProximity} onProximityChange={onProximityChange} />
+      <Desk onPaperClick={onPaperClick} onPaperProximity={onPaperProximity} onProximityChange={onProximityChange} onDeskProximity={onDeskProximity} onDeskProximityChange={onDeskProximityChange} />
       <Chair />
       {/* Multiple bookshelves */}
       <Bookshelf position={[-9.0, 0, -8.5]} rotation={[0, 0, 0]} />
@@ -2061,9 +2147,9 @@ const LawyerOfficeScene: React.FC<{
       <Window />
       <WallClock />
       <Diploma />
-      <PictureFrame position={[-11.9, 5, 2]} />
-      <PictureFrame position={[-11.9, 5, -1]} />
-      <PictureFrame position={[11.9, 5, 0]} isGold />
+      <PictureFrame position={[-11.95, 5, 2]} />
+      <PictureFrame position={[-11.95, 5, -1]} />
+      <PictureFrame position={[11.95, 5, 0]} isGold />
       
       {/* Floating dust particles for atmosphere */}
       <DustParticles />
@@ -2081,9 +2167,11 @@ const LawyerOfficeScene: React.FC<{
 const SpawnAtDoor: React.FC = () => {
   const { camera } = useThree();
   useEffect(() => {
-    const spawnPosition = new THREE.Vector3(6, 3.7, 7.4);
+    // Position further from door to avoid collision (back wall, center, moved forward)
+    const spawnPosition = new THREE.Vector3(0, 3.7, 7.0);
     camera.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
-    camera.lookAt(0, 1.7, 0);
+    // Look towards the center of the room (desk area)
+    camera.lookAt(4, 1.7, 2);
   }, [camera]);
   return null;
 };
@@ -2106,6 +2194,28 @@ const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
     { id: 'robert_wilson', name: 'Robert Wilson, Esq. - Real Estate' },
     { id: 'emily_garcia', name: 'Emily Garcia, Esq. - Immigration' },
   ];
+
+  // Handle mouse unlock when modal opens and re-lock when modal closes
+  useEffect(() => {
+    if (isOpen) {
+      // Unlock mouse when modal opens
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
+    } else {
+      // Re-lock mouse when modal closes (if user was in FPS mode)
+      // Small delay to ensure modal is fully closed
+      setTimeout(() => {
+        if (!document.pointerLockElement) {
+          // Try to re-engage pointer lock by clicking on the canvas
+          const canvas = document.querySelector('canvas');
+          if (canvas) {
+            canvas.click();
+          }
+        }
+      }, 100);
+    }
+  }, [isOpen]);
 
   const handleSubmit = () => {
     if (userType === 'client') {
@@ -2136,15 +2246,57 @@ const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
     onClose();
   };
 
+  const handleClose = () => {
+    onClose();
+  };
+
   if (!isOpen) return null;
 
+  // Prevent all events from propagating to the 3D environment
+  const handleModalEvent = (e: React.MouseEvent | React.KeyboardEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={handleModalEvent}
+      onMouseDown={handleModalEvent}
+      onMouseUp={handleModalEvent}
+      onMouseMove={handleModalEvent}
+      onKeyDown={handleModalEvent}
+      onKeyUp={handleModalEvent}
+      onTouchStart={handleModalEvent}
+      onTouchEnd={handleModalEvent}
+      onTouchMove={handleModalEvent}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        onClick={handleModalEvent}
+        onMouseDown={handleModalEvent}
+        onMouseUp={handleModalEvent}
+        onMouseMove={handleModalEvent}
+        onKeyDown={handleModalEvent}
+        onKeyUp={handleModalEvent}
+        onTouchStart={handleModalEvent}
+        onTouchEnd={handleModalEvent}
+        onTouchMove={handleModalEvent}
+      >
         <div className="bg-blue-600 text-white p-4 rounded-t-lg">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Legal Network Communication</h2>
-            <button onClick={onClose} className="text-white hover:text-gray-200 text-2xl">&times;</button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClose();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
+              className="text-white hover:text-gray-200 text-2xl"
+            >
+              &times;
+            </button>
           </div>
         </div>
 
@@ -2155,14 +2307,24 @@ const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
               <h3 className="text-lg font-semibold mb-4">Please select your role:</h3>
               <div className="flex gap-4">
                 <button 
-                  onClick={() => setUserType('client')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUserType('client');
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
                   className="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
                 >
                   <div className="text-lg font-medium">Client</div>
                   <div className="text-sm text-gray-600">Leave a review for an attorney</div>
                 </button>
                 <button 
-                  onClick={() => setUserType('attorney')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUserType('attorney');
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
                   className="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
                 >
                   <div className="text-lg font-medium">Attorney</div>
@@ -2191,7 +2353,13 @@ const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                 </label>
                 <select 
                   value={selectedAttorney} 
-                  onChange={(e) => setSelectedAttorney(e.target.value)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setSelectedAttorney(e.target.value);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
@@ -2210,7 +2378,14 @@ const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                 <input 
                   type="text"
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setSubject(e.target.value);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
                   placeholder={userType === 'client' ? 'Brief description of your experience...' : 'Legal matter or case reference...'}
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
@@ -2227,7 +2402,12 @@ const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
-                        onClick={() => setRating(star)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRating(star);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onMouseUp={(e) => e.stopPropagation()}
                         className={`text-2xl ${star <= rating ? 'text-yellow-400' : 'text-gray-300'} hover:text-yellow-400 transition-colors`}
                       >
                         ★
@@ -2245,7 +2425,14 @@ const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                 </label>
                 <textarea 
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setMessage(e.target.value);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
                   placeholder={userType === 'client' 
                     ? 'Please describe your experience with this attorney...' 
                     : 'Enter your memo content here...'}
@@ -2258,13 +2445,34 @@ const MemoModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <button 
-                  onClick={() => setUserType(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUserType(null);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   Back
                 </button>
                 <button 
-                  onClick={handleSubmit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClose();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSubmit();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
                   disabled={!selectedAttorney || !subject || !message}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
@@ -2285,6 +2493,7 @@ export default function MiniversePage() {
   const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
   const [controlsType, setControlsType] = useState<'loading' | 'pointer-lock' | 'orbit'>('loading');
   const [isNearPaper, setIsNearPaper] = useState(false);
+  const [isNearDesk, setIsNearDesk] = useState(false);
 
   const handleExit = useCallback(() => {
     router.push('/');
@@ -2341,6 +2550,7 @@ export default function MiniversePage() {
           far: 100,
         }}
         dpr={dpr}
+        style={{ pointerEvents: isMemoModalOpen ? 'none' : 'auto' }}
         gl={{ 
           antialias: true, 
           alpha: false,
@@ -2365,22 +2575,34 @@ export default function MiniversePage() {
           onPaperClick={() => setIsMemoModalOpen(true)} 
           onPaperProximity={() => setIsMemoModalOpen(true)}
           onProximityChange={setIsNearPaper}
+          onDeskProximity={() => setIsMemoModalOpen(true)}
+          onDeskProximityChange={setIsNearDesk}
         />
         <SpawnAtDoor />
-        <KeyboardMovement />
+        <KeyboardMovement disabled={isMemoModalOpen} />
         
         {/* Enhanced controls with fallback */}
-        <EnhancedControls onControlsTypeChange={setControlsType} />
+        <EnhancedControls onControlsTypeChange={setControlsType} disabled={isMemoModalOpen} />
       </Canvas>
       
       {/* Enhanced UI overlay for first-person exploration */}
       <div className="absolute top-4 left-4 text-slate-800 bg-white/80 backdrop-blur-sm px-4 py-3 rounded-xl border border-slate-300">
         <div className="text-lg font-bold mb-1">🚶 Law Office Walkthrough</div>
         
-        {/* Proximity indicator */}
-        {isNearPaper && (
+        {/* Proximity indicators */}
+        {isMemoModalOpen && (
+          <div className="text-xs text-purple-600 mb-2 animate-pulse">
+            📝 <strong>Memo Form Open</strong> - 3D movement disabled
+          </div>
+        )}
+        {isNearPaper && !isMemoModalOpen && (
           <div className="text-xs text-emerald-600 mb-2 animate-pulse">
             ✨ <strong>Near Interactive Paper</strong> - Memo will auto-open
+          </div>
+        )}
+        {isNearDesk && !isNearPaper && !isMemoModalOpen && (
+          <div className="text-xs text-blue-600 mb-2 animate-pulse">
+            🏢 <strong>Near Desk Area</strong> - Legal memo available
           </div>
         )}
         
@@ -2417,10 +2639,11 @@ export default function MiniversePage() {
           )}
         </div>
         <div className="text-xs opacity-60 mt-2 space-y-1">
-          <div>📍 <strong>Starting Position:</strong> At the door</div>
+          <div>📍 <strong>Starting Position:</strong> Near the door entrance</div>
           <div>🏢 <strong>Room Layout:</strong> Fully enclosed office</div>
           <div>🎯 <strong>Explore:</strong> Desk area, bookshelf, window, door</div>
-          <div>⚡ <strong>Interactive:</strong> Walk near or click paper on desk for legal memo</div>
+          <div>⚡ <strong>Interactive:</strong> Walk near desk or paper for legal memo</div>
+          <div>🖱️ <strong>Modal:</strong> Mouse unlocks, 3D movement stops when form opens</div>
               </div>
             </div>
 
@@ -2460,8 +2683,14 @@ export default function MiniversePage() {
           ) : (
             <div>↑↓←→ Arrow keys or WASD to walk • Mouse to look/orbit</div>
           )}
-          {isNearPaper && (
+          {isMemoModalOpen && (
+            <div className="text-purple-600 font-medium animate-pulse">📝 Form active - Complete to resume exploration</div>
+          )}
+          {isNearPaper && !isMemoModalOpen && (
             <div className="text-emerald-600 font-medium animate-pulse">📄 Legal memo ready - Auto-triggered!</div>
+          )}
+          {isNearDesk && !isNearPaper && !isMemoModalOpen && (
+            <div className="text-blue-600 font-medium animate-pulse">🏢 Desk area detected - Walk closer for memo!</div>
           )}
         </div>
       </div>
