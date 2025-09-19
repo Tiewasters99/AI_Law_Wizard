@@ -1368,8 +1368,44 @@ const Chair: React.FC = () => {
   );
 };
 
+// Interactive area indicator component with pulsing effect
+const InteractiveAreaIndicator: React.FC = () => {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (meshRef.current) {
+      // Pulsing effect
+      const scale = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.1;
+      meshRef.current.scale.setScalar(scale);
+      
+      // Slight rotation
+      meshRef.current.rotation.y = state.clock.elapsedTime * 0.5;
+    }
+  });
+
+  return (
+    <mesh ref={meshRef} position={[0, 0.1, 0]}>
+      <cylinderGeometry args={[5.5, 5.5, 0.02, 32]} />
+      <meshBasicMaterial 
+        color="#3B82F6" 
+        transparent 
+        opacity={0.3}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+};
+
 // Wall-mounted floating shelf system with refined materials and layout
-const Bookshelf: React.FC<{ position?: [number, number, number]; rotation?: [number, number, number] }> = ({ position = [-9.0, 0, -8.5], rotation = [0, 0, 0] }) => {
+const Bookshelf: React.FC<{ 
+  position?: [number, number, number]; 
+  rotation?: [number, number, number];
+  onProximityChange?: (isNear: boolean) => void;
+  isHighlighted?: boolean;
+}> = ({ position = [-9.0, 0, -8.5], rotation = [0, 0, 0], onProximityChange, isHighlighted = false }) => {
+  const { camera } = useThree();
+  const [isNear, setIsNear] = useState(false);
+  
   const woodColor = '#9c6b3c';
   const metalColor = '#444444';
   const shelfWidth = 3.2;
@@ -1388,8 +1424,100 @@ const Bookshelf: React.FC<{ position?: [number, number, number]; rotation?: [num
   // Deterministic jitter per index for pleasant variation
   const jitter = (seed: number, scale: number) => Math.sin(seed * 12.9898) * 43758.5453 % 1 * scale - scale / 2;
 
+  // Proximity detection
+  useFrame(() => {
+    if (onProximityChange) {
+      const distance = camera.position.distanceTo(new THREE.Vector3(...position));
+      const nearThreshold = 5.0; // Increased distance threshold for proximity
+      const newIsNear = distance < nearThreshold;
+      
+      if (newIsNear !== isNear) {
+        setIsNear(newIsNear);
+        onProximityChange(newIsNear);
+      }
+    }
+  });
+
 	return (
 		<group position={position} rotation={rotation}>
+      {/* Interactive area indicator - always visible when near */}
+      {isNear && <InteractiveAreaIndicator />}
+      
+      {/* Subtle initial highlighting - only for interactive bookshelves */}
+      {onProximityChange && (
+        <>
+          <mesh position={[0, 3.5, 0.08]}>
+            <boxGeometry args={[shelfWidth + 0.2, 7.0, shelfDepth + 0.1]} />
+            <meshBasicMaterial 
+              color="#93C5FD" 
+              transparent 
+              opacity={0.15}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          
+          <mesh position={[0, 3.5, -0.03]}>
+            <boxGeometry args={[shelfWidth + 0.3, 7.1, 0.01]} />
+            <meshBasicMaterial 
+              color="#93C5FD" 
+              transparent 
+              opacity={0.2}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </>
+      )}
+      
+      {/* Enhanced highlighting when near */}
+      {(isHighlighted || isNear) && (
+        <mesh position={[0, 3.5, 0.12]}>
+          <boxGeometry args={[shelfWidth + 0.6, 7.4, shelfDepth + 0.2]} />
+          <meshBasicMaterial 
+            color="#3B82F6" 
+            transparent 
+            opacity={0.4}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+      
+      {/* Glowing outline effect for entire bookshelf when near */}
+      {(isHighlighted || isNear) && (
+        <mesh position={[0, 3.5, -0.05]}>
+          <boxGeometry args={[shelfWidth + 0.8, 7.6, 0.02]} />
+          <meshBasicMaterial 
+            color="#1D4ED8" 
+            transparent 
+            opacity={0.6}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+      
+      {/* Side highlighting for depth when near */}
+      {(isHighlighted || isNear) && (
+        <>
+          <mesh position={[-shelfWidth/2 - 0.3, 3.5, 0.05]}>
+            <boxGeometry args={[0.02, 7.4, shelfDepth + 0.2]} />
+            <meshBasicMaterial 
+              color="#3B82F6" 
+              transparent 
+              opacity={0.3}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          <mesh position={[shelfWidth/2 + 0.3, 3.5, 0.05]}>
+            <boxGeometry args={[0.02, 7.4, shelfDepth + 0.2]} />
+            <meshBasicMaterial 
+              color="#3B82F6" 
+              transparent 
+              opacity={0.3}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </>
+      )}
+      
       {/* Mounting rails against the wall (thin, subtle) */}
       <mesh position={[-shelfWidth/2 + 0.12, 3.5, -shelfDepth/2 + 0.015]}>
         <boxGeometry args={[0.06, 7, 0.03]} />
@@ -2075,7 +2203,11 @@ const LawyerOfficeScene: React.FC<{
   onProximityChange?: (isNear: boolean) => void;
   onDeskProximity?: () => void;
   onDeskProximityChange?: (isNear: boolean) => void;
-}> = ({ onPaperClick, onPaperProximity, onProximityChange, onDeskProximity, onDeskProximityChange }) => {
+  onLeftBookshelfProximity?: (isNear: boolean) => void;
+  onRightBookshelfProximity?: (isNear: boolean) => void;
+  isNearLeftBookshelf?: boolean;
+  isNearRightBookshelf?: boolean;
+}> = ({ onPaperClick, onPaperProximity, onProximityChange, onDeskProximity, onDeskProximityChange, onLeftBookshelfProximity, onRightBookshelfProximity, isNearLeftBookshelf, isNearRightBookshelf }) => {
   const [dpr, setDpr] = useState(1.5);
 
   // Animate the sea waves
@@ -2137,8 +2269,18 @@ const LawyerOfficeScene: React.FC<{
       <Desk onPaperClick={onPaperClick} onPaperProximity={onPaperProximity} onProximityChange={onProximityChange} onDeskProximity={onDeskProximity} onDeskProximityChange={onDeskProximityChange} />
       <Chair />
       {/* Multiple bookshelves */}
-      <Bookshelf position={[-9.0, 0, -8.5]} rotation={[0, 0, 0]} />
-      <Bookshelf position={[9.0, 0, -8.5]} rotation={[0, Math.PI, 0]} />
+      <Bookshelf 
+        position={[-9.0, 0, -8.5]} 
+        rotation={[0, 0, 0]} 
+        onProximityChange={onLeftBookshelfProximity}
+        isHighlighted={isNearLeftBookshelf}
+      />
+      <Bookshelf 
+        position={[9.0, 0, -8.5]} 
+        rotation={[0, Math.PI, 0]} 
+        onProximityChange={onRightBookshelfProximity}
+        isHighlighted={isNearRightBookshelf}
+      />
       <Bookshelf position={[0, 0, 8.5]} rotation={[0, Math.PI, 0]} />
       <FilingCabinet />
       
@@ -2422,6 +2564,95 @@ const IframeModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
       }}
       title="Legal Network Communication Modal"
     />
+  );
+};
+
+// Blog Exploration Modal Component
+const BlogExplorationModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  const router = useRouter();
+
+  const handleExploreBlogs = () => {
+    router.push('/blog');
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">📚 Blog Exploration</h2>
+            <button 
+              onClick={onClose} 
+              className="text-white hover:text-gray-200 text-2xl"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-4">📖</div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Discover Our Legal Blog
+            </h3>
+            <p className="text-gray-600 text-sm">
+              Explore our collection of legal insights, case studies, and industry updates.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl">⚖️</div>
+                <div>
+                  <div className="font-medium text-blue-800">Legal Insights</div>
+                  <div className="text-sm text-blue-600">Expert analysis and commentary</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl">📋</div>
+                <div>
+                  <div className="font-medium text-green-800">Case Studies</div>
+                  <div className="text-sm text-green-600">Real-world legal scenarios</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl">📰</div>
+                <div>
+                  <div className="font-medium text-purple-800">Industry News</div>
+                  <div className="text-sm text-purple-600">Latest legal developments</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button 
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Maybe Later
+            </button>
+            <button 
+              onClick={handleExploreBlogs}
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-colors"
+            >
+              Explore Blogs
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -2739,9 +2970,12 @@ export default function MiniversePage() {
   const router = useRouter();
   const [dpr, setDpr] = useState(1.5);
   const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
+  const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
   const [controlsType, setControlsType] = useState<'loading' | 'pointer-lock' | 'orbit'>('loading');
   const [isNearPaper, setIsNearPaper] = useState(false);
   const [isNearDesk, setIsNearDesk] = useState(false);
+  const [isNearLeftBookshelf, setIsNearLeftBookshelf] = useState(false);
+  const [isNearRightBookshelf, setIsNearRightBookshelf] = useState(false);
 
   const handleExit = useCallback(() => {
     router.push('/');
@@ -2825,6 +3059,20 @@ export default function MiniversePage() {
           onProximityChange={setIsNearPaper}
           onDeskProximity={() => setIsMemoModalOpen(true)}
           onDeskProximityChange={setIsNearDesk}
+          onLeftBookshelfProximity={(isNear) => {
+            setIsNearLeftBookshelf(isNear);
+            if (isNear) {
+              setIsBlogModalOpen(true);
+            }
+          }}
+          onRightBookshelfProximity={(isNear) => {
+            setIsNearRightBookshelf(isNear);
+            if (isNear) {
+              setIsBlogModalOpen(true);
+            }
+          }}
+          isNearLeftBookshelf={isNearLeftBookshelf}
+          isNearRightBookshelf={isNearRightBookshelf}
         />
         <SpawnAtDoor />
         <KeyboardMovement disabled={isMemoModalOpen} />
@@ -2851,6 +3099,11 @@ export default function MiniversePage() {
         {isNearDesk && !isNearPaper && !isMemoModalOpen && (
           <div className="text-xs text-blue-600 mb-2 animate-pulse">
             🏢 <strong>Near Desk Area</strong> - Legal memo available
+          </div>
+        )}
+        {(isNearLeftBookshelf || isNearRightBookshelf) && !isMemoModalOpen && !isBlogModalOpen && (
+          <div className="text-xs text-blue-600 mb-2 animate-pulse">
+            📚 <strong>Near Bookshelf Area</strong> - Blog exploration available
           </div>
         )}
         
@@ -2940,6 +3193,9 @@ export default function MiniversePage() {
           {isNearDesk && !isNearPaper && !isMemoModalOpen && (
             <div className="text-blue-600 font-medium animate-pulse">🏢 Desk area detected - Walk closer for memo!</div>
           )}
+          {(isNearLeftBookshelf || isNearRightBookshelf) && !isMemoModalOpen && !isBlogModalOpen && (
+            <div className="text-blue-600 font-medium animate-pulse">📚 Bookshelf area detected - Blog exploration available!</div>
+          )}
         </div>
       </div>
 
@@ -2964,9 +3220,12 @@ export default function MiniversePage() {
             <div className="w-1 h-1 bg-purple-400 rounded-full" title="Door (Start)"></div>
             </div>
           <div className="absolute" style={{ top: '25%', left: '12%' }}>
-            <div className="w-1 h-1.5 bg-orange-400 rounded" title="Bookshelf"></div>
+            <div className={`w-1 h-1.5 rounded ${isNearLeftBookshelf ? 'bg-blue-400' : 'bg-orange-400'}`} title="Left Bookshelf"></div>
             </div>
           <div className="absolute" style={{ top: '25%', right: '12%' }}>
+            <div className={`w-1 h-1.5 rounded ${isNearRightBookshelf ? 'bg-blue-400' : 'bg-orange-400'}`} title="Right Bookshelf"></div>
+            </div>
+          <div className="absolute" style={{ top: '25%', right: '25%' }}>
             <div className="w-1 h-1 bg-gray-400 rounded" title="Filing"></div>
         </div>
 
@@ -2986,6 +3245,12 @@ export default function MiniversePage() {
       <IframeModal 
         isOpen={isMemoModalOpen} 
         onClose={() => setIsMemoModalOpen(false)} 
+      />
+      
+      {/* Blog Exploration Modal */}
+      <BlogExplorationModal 
+        isOpen={isBlogModalOpen} 
+        onClose={() => setIsBlogModalOpen(false)} 
       />
     </div>
   );
