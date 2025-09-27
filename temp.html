@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The First Miniverse - UX Enhanced</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #f4f4f4; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex;
+            height: 100vh;
+        }
+
+        /* --- Configuration Panel Styles (Builder Side) --- */
+        #miniverse-config {
+            width: 350px;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            flex-shrink: 0;
+            transition: transform 0.3s ease-in-out; /* Added for smooth hide/show */
+        }
+        .config-hidden {
+            transform: translateX(-100%); /* Hides the panel off-screen */
+            display: none; /* Fallback and removes from layout */
+        }
+        .config-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ecf0f1;
+            border-radius: 5px;
+            background-color: #fafbfc;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        input[type="text"], input[type="url"], textarea, input[type="color"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        textarea { height: 80px; resize: vertical; }
+        input[type="color"] { padding: 2px; height: 40px; }
+        button {
+            padding: 12px 20px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+            width: 100%;
+        }
+        button:hover { background-color: #2980b9; }
+
+        /* --- Miniverse Preview Container (Client Side Wrapper) --- */
+        #miniverse-preview-container {
+            flex-grow: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .miniverse-placeholder {
+            text-align: center;
+            color: #95a5a6;
+        }
+
+        /* =======================================================
+            --- Three.js Scene Specific Styles (Client View) --- 
+            ======================================================= */
+        
+        /* NEW: Button to return to the builder view */
+        .floating-close-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 90;
+        }
+        .floating-close-btn button {
+            background: rgba(192, 57, 43, 0.9);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        .floating-close-btn button:hover {
+            background: rgba(150, 40, 27, 1);
+            transform: scale(1.1);
+        }
+
+        .miniverse-loader {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 100;
+            transition: opacity 1s ease-out;
+        }
+        
+        /* Tooltip (Follows Mouse) */
+        .miniverse-tooltip {
+            position: fixed; 
+            background-color: rgba(44, 62, 80, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: none;
+            z-index: 400; /* Ensure above all overlays */
+            font-family: sans-serif;
+            font-size: 14px;
+            pointer-events: none;
+            transform: translate(15px, -50%);
+            white-space: nowrap;
+        }
+
+        /* Content Overlay (Modal) */
+        .miniverse-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 350;
+        }
+        .miniverse-overlay-content {
+            background-color: #f9f6f2;
+            color: black;
+            padding: 40px;
+            max-width: 600px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* AUDIO CONTROLS */
+        #audio-control-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        .audio-controls > button {
+            background: rgba(44, 62, 80, 0.9);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            width: 50px;
+            height: 50px;
+        }
+        #audio-menu {
+            position: absolute;
+            bottom: 60px;
+            right: 0;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            min-width: 250px;
+            color: black;
+        }
+        #audio-menu.hidden { display: none; }
+
+        /* External Music Player */
+        #external-music-player .music-player-overlay {
+            position: absolute;
+            bottom: 60px;
+            right: 0;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            color: black;
+            z-index: 300; /* BUG FIX: Ensure player is on top */
+        }
+
+        /* =======================================================
+            --- Enhancement 4: Additional CSS Styling --- 
+            ======================================================= */
+
+        /* INSTRUCTIONS PANEL (Enhancement 1) */
+        #client-instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 150;
+            max-width: 600px;
+            color: black;
+        }
+        .controls-guide kbd {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            border: 1px solid #ccc;
+        }
+        #client-instructions ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        /* HELP INSTRUCTION ENHANCEMENTS */
+        .instruction-content {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .tip-box {
+            background: #e8f4f8;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .primary-btn {
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            width: auto;
+        }
+        .secondary-btn {
+            background: #95a5a6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: auto;
+        }
+        .secondary-btn:hover {
+            background-color: #7f8c8d;
+        }
+
+        /* Pinned state (specific styling overrides for absolute positioning) */
+        #client-instructions.pinned {
+            max-width: 300px;
+            max-height: 400px;
+            opacity: 0.9;
+        }
+
+        /* Animations */
+        @keyframes fadeInCentered {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        
+        .fade-in-centered {
+            animation: fadeInCentered 0.3s ease-in;
+        }
+
+        /* Persistent Help Button (Enhancement 1) */
+        .floating-help-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 90;
+        }
+        .floating-help-btn button {
+            background: rgba(52, 152, 219, 0.9);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        .floating-help-btn button:hover {
+            background: rgba(41, 128, 185, 1);
+            transform: scale(1.1);
+        }
+
+
+        /* FRONT DESK DIALOG (Enhancement 2) */
+        #front-desk-dialog {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 120;
+            max-width: 500px;
+        }
+        .desk-dialog-content {
+            text-align: center;
+        }
+        .receptionist-avatar {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .help-options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0 0 0;
+        }
+        .help-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 10px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .help-option:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .help-option.secondary {
+            background: rgba(0,0,0,0.2);
+        }
+        .option-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .option-text {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* COMFORT POPUP (Enhancement 3) */
+        #comfort-popup {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .comfort-popup-content {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: center;
+            color: black;
+        }
+        .comfort-section {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .music-options, .reading-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .comfort-btn {
+            padding: 12px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+            width: 100%;
+        }
+        .comfort-btn:hover {
+            background: #2980b9;
+        }
+        .comfort-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        /* Temporary Message Overlay (Used by various actions) */
+        #temporary-message-overlay {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(46, 204, 113, 0.95);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 500;
+            transition: opacity 0.5s ease-out;
+            text-align: center;
+        }
+
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="miniverse-config" class="config-panel">
+        <h2>Miniverse Customization (Builder)</h2>
+            
+        <section class="config-section">
+            <h3>Branding</h3>
+            <label for="miniverse-name">Miniverse Name:</label>
+            <input type="text" id="miniverse-name" placeholder="The First Miniverse tm" />
+            <label for="logo-url">Logo Image URL:</label>
+            <input type="url" id="logo-url" placeholder="https://example.com/logo.png" />
+            <label for="primary-color">Primary Color:</label>
+            <input type="color" id="primary-color" value="#2c3e50" />
+        </section>
+
+        <section class="config-section">
+            <h3>Audio Configuration</h3>
+            <label for="default-music-preset">Default Music Preset:</label>
+            <select id="default-music-preset">
+                <option value="">No Music</option>
+                <option value="classical">Soft Classical</option>
+                <option value="acoustic">Soft Acoustic</option>
+                <option value="jazz">Soft Jazz</option>
+            </select>
+        </section>
+            
+        <section class="config-section">
+            <h3>Interactive Content</h3>
+            <label for="welcome-video-url">Welcome Video URL:</label>
+            <input type="url" id="welcome-video-url" />
+            <label for="client-forms-url">Client Forms URL:</label>
+            <input type="url" id="client-forms-url" />
+            <label for="brochure-url">Company Brochure URL:</label>
+            <input type="url" id="brochure-url" />
+            <label for="newsletter-url">Newsletter/Insights URL:</label>
+            <input type="url" id="newsletter-url" />
+            <label for="greeting-message">Receptionist Greeting Message:</label>
+            <textarea id="greeting-message"></textarea>
+        </section>
+
+        <section class="config-section">
+            <h3>Artwork & Decor</h3>
+            <label for="firm-art-url-1">Firm Art URL 1:</label>
+            <input type="url" id="firm-art-url-1" placeholder="https://example.com/art1.jpg" />
+            <label for="firm-art-url-2">Firm Art URL 2:</label>
+            <input type="url" id="firm-art-url-2" placeholder="https://example.com/art2.jpg" />
+        </section>
+
+        <section class="config-section">
+            <h3>Room Appearance</h3>
+            <label for="wall-color">Wall Color:</label>
+            <input type="color" id="wall-color" value="#f5f5dc">
+            <label for="floor-color">Floor Color:</label>
+            <input type="color" id="floor-color" value="#654321">
+            <label for="rug-color">Rug Color:</label>
+            <input type="color" id="rug-color" value="#d2b48c">
+        </section>
+            
+        <section class="config-section">
+            <h3>Deployment</h3>
+            <button id="preview-miniverse">Launch Client View</button>
+        </section>
+    </div>
+
+    <div id="miniverse-preview-container">
+        <div class="miniverse-placeholder">
+            <h1>Customize Your Miniverse</h1>
+            <p>Click "Launch Client View" to see the user experience.</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration Management System (Builder Side)
+        class MiniverseConfigurator {
+            constructor() {
+                this.config = this.getDefaultConfig();
+                this.loadConfig();
+                this.bindUI();
+            }
+
+            getDefaultConfig() {
+                return {
+                    branding: { name: "The First Miniverse tm", logoUrl: "", primaryColor: "#2c3e50" },
+                    audio: { defaultPreset: "" },
+                    content: {
+                        welcomeVideoUrl: "", clientFormsUrl: "", brochureUrl: "",
+                        newsletterUrl: "", greetingMessage: "Welcome! Please have a seat while you wait.",
+                        firmArtUrl1: "", firmArtUrl2: ""
+                    },
+                    appearance: { wallColor: "#f5f5dc", floorColor: "#654321", rugColor: "#d2b48c" }
+                };
+            }
+
+            bindUI() {
+                const inputs = {
+                    'miniverse-name': { section: 'branding', key: 'name' },
+                    'logo-url': { section: 'branding', key: 'logoUrl' },
+                    'primary-color': { section: 'branding', key: 'primaryColor' },
+                    'default-music-preset': { section: 'audio', key: 'defaultPreset' },
+                    'welcome-video-url': { section: 'content', key: 'welcomeVideoUrl' },
+                    'client-forms-url': { section: 'content', key: 'clientFormsUrl' },
+                    'brochure-url': { section: 'content', key: 'brochureUrl' },
+                    'newsletter-url': { section: 'content', key: 'newsletterUrl' },
+                    'greeting-message': { section: 'content', key: 'greetingMessage' },
+                    'firm-art-url-1': { section: 'content', key: 'firmArtUrl1' },
+                    'firm-art-url-2': { section: 'content', key: 'firmArtUrl2' },
+                    'wall-color': { section: 'appearance', key: 'wallColor' },
+                    'floor-color': { section: 'appearance', key: 'floorColor' },
+                    'rug-color': { section: 'appearance', key: 'rugColor' }
+                };
+                for (const id in inputs) {
+                    const element = document.getElementById(id);
+                    const { section, key } = inputs[id];
+                    element.value = this.config[section][key] || '';
+                    element.addEventListener('change', (e) => this.updateConfig(section, key, e.target.value));
+                }
+                document.getElementById('preview-miniverse').addEventListener('click', () => this.launchPreview());
+            }
+
+            updateConfig(section, key, value) { this.config[section][key] = value; this.saveConfig(); }
+
+            saveConfig() { localStorage.setItem('miniverse-config', JSON.stringify(this.config)); }
+
+            loadConfig() {
+                const saved = localStorage.getItem('miniverse-config');
+                if (saved) {
+                    const loadedConfig = JSON.parse(saved);
+                    this.config.branding = { ...this.getDefaultConfig().branding, ...(loadedConfig.branding || {}) };
+                    this.config.audio = { ...this.getDefaultConfig().audio, ...(loadedConfig.audio || {}) };
+                    this.config.content = { ...this.getDefaultConfig().content, ...(loadedConfig.content || {}) };
+                    this.config.appearance = { ...this.getDefaultConfig().appearance, ...(loadedConfig.appearance || {}) };
+                }
+            }
+
+            launchPreview() {
+                if (window.activeMiniverse) { window.activeMiniverse.destroy(); }
+                
+                // BUG FIX: Hide the config panel when launching the preview
+                document.getElementById('miniverse-config').style.display = 'none';
+
+                window.activeMiniverse = new Miniverse(this.config, 'miniverse-preview-container');
+            }
+        }
+    </script>
+
+    <script>
+    // Music System Implementation
+    class MiniverseAudioSystem {
+        constructor(container, defaultPreset) {
+            this.container = container;
+            this.currentTrack = null;
+            this.volume = 0.3;
+            this.musicPresets = {
+                'classical': 'https://example.com/placeholder-classical.mp3',
+                'acoustic': 'https://example.com/placeholder-acoustic.mp3',
+                'jazz': 'https://example.com/placeholder-jazz.mp3'
+            };
+            this.defaultPreset = defaultPreset;
+            this.initialized = false;
+        }
+
+        async initializeAudio() {
+            if (this.initialized) return;
+            try {
+                this.createAudioControls();
+                if (this.defaultPreset) { this.playPresetMusic(this.defaultPreset); }
+                this.initialized = true;
+            } catch (error) { console.log('Audio initialization failed:', error); }
+        }
+
+        createAudioControls() {
+            const audioPanel = document.createElement('div');
+            audioPanel.id = 'audio-control-panel';
+            audioPanel.innerHTML = `
+                <div class="audio-controls">
+                    <button id="audio-toggle" title="Music Settings">🎵</button>
+                    <div id="audio-menu" class="hidden">
+                        <h4>Background Music</h4>
+                        <select id="music-preset"><option value="">No Music</option><option value="classical">Soft Classical</option><option value="acoustic">Soft Acoustic</option><option value="jazz">Soft Jazz</option></select>
+                        <h4>External Music Service</h4>
+                        <input type="url" id="custom-music-url" placeholder="Your music service URL">
+                        <button id="connect-external-service">Connect</button>
+                        <h4>Volume</h4>
+                        <input type="range" id="volume-slider" min="0" max="100" value="30">
+                    </div>
+                </div>`;
+            this.container.appendChild(audioPanel);
+            if (this.defaultPreset) { document.getElementById('music-preset').value = this.defaultPreset; }
+            this.bindAudioEvents();
+        }
+
+        bindAudioEvents() {
+            document.getElementById('audio-toggle').onclick = () => this.toggleMenu();
+            document.getElementById('music-preset').onchange = (e) => this.playPresetMusic(e.target.value);
+            document.getElementById('volume-slider').oninput = (e) => this.setVolume(e.target.value / 100);
+            document.getElementById('connect-external-service').onclick = () => this.connectExternalService();
+        }
+
+        toggleMenu(open = null) {
+            const menu = document.getElementById('audio-menu');
+            if (!menu) return;
+            if (open === true) { menu.classList.remove('hidden'); }
+            else if (open === false) { menu.classList.add('hidden'); }
+            else { menu.classList.toggle('hidden'); }
+        }
+
+        playPresetMusic(preset) {
+            if (this.currentTrack) { this.currentTrack.pause(); this.currentTrack = null; }
+            if (preset && this.musicPresets[preset]) {
+                this.currentTrack = new Audio(this.musicPresets[preset]);
+                this.currentTrack.loop = true;
+                this.currentTrack.volume = this.volume;
+                this.currentTrack.play().catch(e => console.warn('Audio playback failed.', e.message));
+            }
+        }
+
+        stopMusic() {
+            if (this.currentTrack) { this.currentTrack.pause(); this.currentTrack = null; }
+            const presetSelect = document.getElementById('music-preset');
+            if (presetSelect) presetSelect.value = "";
+        }
+
+        setVolume(vol) {
+            this.volume = vol;
+            if (this.currentTrack) { this.currentTrack.volume = this.volume; }
+        }
+
+        connectExternalService(url = null) {
+            if (!url) { const input = document.getElementById('custom-music-url'); if (input) url = input.value; }
+            if (url && url.startsWith('http')) { this.showExternalMusicPlayer(url); this.toggleMenu(false); }
+            else if (url) { alert("Please enter a valid URL starting with http."); }
+        }
+
+        showExternalMusicPlayer(url) {
+            this.closeExternalPlayer();
+            const musicFrame = document.createElement('div');
+            musicFrame.id = 'external-music-player';
+            musicFrame.innerHTML = `
+                <div class="music-player-overlay">
+                    <h4>External Music Player</h4>
+                    <iframe src="${url}" width="300" height="150" frameborder="0" 
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                            loading="lazy"></iframe>
+                    <button id="close-external-player-btn">Close</button>
+                </div>`;
+            this.container.appendChild(musicFrame);
+            document.getElementById('close-external-player-btn').onclick = () => this.closeExternalPlayer();
+        }
+
+        closeExternalPlayer() {
+            const player = document.getElementById('external-music-player');
+            if (player) player.remove();
+        }
+
+        destroy() { if (this.currentTrack) { this.currentTrack.pause(); } }
+    }
+
+
+    // Miniverse (Client Implementation)
+    class Miniverse {
+        constructor(config, containerId) {
+            this.config = config;
+            this.container = document.getElementById(containerId);
+            if (!this.container) return;
+
+            this.container.innerHTML = '';
+            this.scene = null;
+            this.camera = null;
+            this.renderer = null;
+            this.controls = null;
+            this.avatar = null;
+            this.keys = {};
+            this.interactables = [];
+            this.raycaster = new THREE.Raycaster();
+            this.mouse = new THREE.Vector2();
+            this.intersectedObject = null;
+            this.isTransitioning = false;
+            this.isSeated = false;
+            this.prevTime = performance.now();
+            this.clockPivots = { hour: null, minute: null };
+            this.materials = { wall: null, floor: null, rug: null };
+            this.instructionsPinned = false;
+            this.isShowingDeskDialog = false;
+            this.DESK_POSITION = new THREE.Vector3(0, 0, -10);
+            this.AVATAR_HEIGHT = 1.8;
+            this.ROOM_SIZE = { width: 20, height: 6, depth: 25 };
+            this.MOVE_SPEED = 6.0;
+            this.ROTATE_SPEED = 2.0;
+
+            this.initUI();
+            this.audioSystem = new MiniverseAudioSystem(this.container, this.config.audio.defaultPreset);
+            this.init();
+        }
+
+        initUI() {
+            this.loaderEl = this.createUIElement('div', 'loader-container', 'miniverse-loader');
+            this.loaderEl.style.backgroundColor = this.config.branding.primaryColor || '#2c3e50';
+            this.loaderEl.innerHTML = `<h1>${this.config.branding.name || 'Loading...'}</h1><p>Loading Virtual Waiting Room...</p>`;
+
+            this.tooltipEl = document.createElement('div');
+            this.tooltipEl.className = 'miniverse-tooltip';
+            document.body.appendChild(this.tooltipEl);
+
+            this.overlayEl = this.createUIElement('div', 'overlay', 'miniverse-overlay');
+            const overlayContent = document.createElement('div');
+            overlayContent.className = 'miniverse-overlay-content';
+            this.overlayTitleEl = document.createElement('h2');
+            this.overlayTextEl = document.createElement('p');
+            this.overlayCloseEl = document.createElement('button');
+            this.overlayCloseEl.className = 'primary-btn';
+            this.overlayCloseEl.textContent = 'Close';
+            
+            overlayContent.appendChild(this.overlayTitleEl);
+            overlayContent.appendChild(this.overlayTextEl);
+            overlayContent.appendChild(this.overlayCloseEl);
+            this.overlayEl.appendChild(overlayContent);
+
+            this.createInstructionPanel();
+            this.createHelpButton();
+
+            // NEW: Create the button to return to the builder
+            this.createCloseButton();
+        }
+
+        // NEW FUNCTION: Create the close button
+        createCloseButton() {
+            const closeButtonContainer = document.createElement('div');
+            closeButtonContainer.className = 'floating-close-btn';
+            closeButtonContainer.innerHTML = `<button id="close-miniverse-btn" title="Return to Builder">X</button>`;
+            this.container.appendChild(closeButtonContainer);
+            document.getElementById('close-miniverse-btn').addEventListener('click', () => {
+                if (window.activeMiniverse) {
+                    window.activeMiniverse.destroy();
+                }
+            });
+        }
+
+        createHelpButton() {
+            const helpButtonContainer = document.createElement('div');
+            helpButtonContainer.id = 'help-button';
+            helpButtonContainer.className = 'floating-help-btn';
+            helpButtonContainer.innerHTML = `<button id="show-instructions-btn" title="Show Controls Help">?</button>`;
+            this.container.appendChild(helpButtonContainer);
+            document.getElementById('show-instructions-btn').addEventListener('click', () => this.showInstructions());
+        }
+
+        createInstructionPanel() {
+            const firmName = this.config.branding.name || "Our Firm";
+            this.instructionsPanel = document.createElement('div');
+            this.instructionsPanel.id = 'client-instructions';
+            this.instructionsPanel.className = 'floating-panel';
+            this.instructionsPanel.innerHTML = `
+             <div class="instruction-content">
+                 <h3>Welcome to ${firmName}'s Virtual Waiting Room</h3>
+                 <div class="controls-guide">
+                     <h4>🚶‍♂️ Movement Controls:</h4>
+                     <p><kbd>W A S D</kbd> or <kbd>↑ ↓ ← →</kbd> - Walk around</p>
+                     <p><kbd>Q</kbd> / <kbd>E</kbd> - Turn left/right</p>
+                     <p>Hold <b>Right-Click</b> & Drag Mouse - Look around</p>
+                     <h4>🎯 What You Can Do:</h4>
+                     <ul>
+                         <li>🏢 <strong>Approach Front Desk</strong> - Get help from receptionist</li>
+                         <li>🪑 <strong>Sit in Chairs</strong> - Relax and customize your experience</li>
+                         <li>🖼️ <strong>View Artwork & Panels</strong> - See firm info and art</li>
+                         <li>📰 <strong>Read Materials</strong> - Browse firm information</li>
+                         <li>🕐 <strong>Check Clock</strong> - See current time</li>
+                         <li>🎵 <strong>Audio Controls</strong> - Adjust background music</li>
+                     </ul>
+                     <div class="tip-box">
+                         <strong>💡 Tip:</strong> Look for highlighted objects when you get close. Use Left-Click to interact.
+                     </div>
+                 </div>
+             </div>
+             <div class="button-group">
+                 <button id="hide-instructions" class="primary-btn">Got it!</button>
+                 <button id="pin-toggle" class="secondary-btn">Keep Open</button>
+             </div>`;
+            this.container.appendChild(this.instructionsPanel);
+            document.getElementById('hide-instructions').addEventListener('click', () => this.hideInstructions());
+            document.getElementById('pin-toggle').addEventListener('click', () => this.toggleInstructionPin());
+        }
+
+        showInstructions() {
+            if (this.instructionsPanel) {
+                this.instructionsPanel.style.display = 'block';
+                if (this.instructionsPinned) { this.toggleInstructionPin(); }
+                this.instructionsPanel.classList.add('fade-in-centered');
+            }
+        }
+
+        hideInstructions() {
+             if (this.instructionsPanel && !this.instructionsPinned) { this.instructionsPanel.style.display = 'none'; }
+             this.audioSystem.initializeAudio();
+        }
+
+        toggleInstructionPin() {
+            this.instructionsPinned = !this.instructionsPinned;
+            const panel = this.instructionsPanel;
+            const pinButton = document.getElementById('pin-toggle');
+            if (this.instructionsPinned) {
+                panel.classList.add('pinned');
+                pinButton.textContent = 'Unpin';
+                Object.assign(panel.style, { position: 'absolute', top: '20px', left: '20px', transform: 'none' });
+                panel.classList.remove('fade-in-centered');
+            } else {
+                panel.classList.remove('pinned');
+                pinButton.textContent = 'Keep Open';
+                Object.assign(panel.style, { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
+            }
+        }
+
+        createUIElement(tag, idSuffix, className) {
+            const element = document.createElement(tag);
+            element.className = className;
+            this.container.appendChild(element);
+            return element;
+        }
+
+        init() {
+            try {
+                this.setupScene();
+                this.setupRenderer();
+                this.setupCamera();
+                this.setupLighting();
+                this.createAvatar();
+                this.setupControls();
+                this.createRoom();
+                this.createFurnitureAndInteractives();
+                this.createBranding();
+                this.bindEvents();
+                this.animate();
+                this.hideLoader();
+            } catch (error) {
+                console.error('Miniverse Initialization failed:', error);
+                this.loaderEl.innerHTML = `<h1>Loading Error</h1><p>${error.message}</p>`;
+                this.loaderEl.style.backgroundColor = '#e74c3c';
+            }
+        }
+
+        setupScene() {
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x87CEEB);
+            this.scene.fog = new THREE.Fog(0xeeeeee, 30, 50);
+        }
+
+        setupRenderer() {
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            this.renderer.setPixelRatio(window.devicePixelRatio);
+            this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            this.container.appendChild(this.renderer.domElement);
+        }
+
+        setupCamera() {
+            this.camera = new THREE.PerspectiveCamera(60, this.container.clientWidth / this.container.clientHeight, 0.1, 100);
+            this.camera.position.set(0, this.AVATAR_HEIGHT + 3, 18);
+        }
+
+        createAvatar() {
+            this.avatar = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x334455 });
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xFFDBAC });
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16), bodyMat);
+            body.position.y = 1.1;
+            body.castShadow = true;
+            this.avatar.add(body);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 32, 32), headMat);
+            head.position.y = 2.1;
+            this.avatar.add(head);
+            const nose = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.2), bodyMat);
+            nose.position.set(0, 2.1, 0.35);
+            this.avatar.add(nose);
+            this.avatar.position.set(0, 0, 10);
+            this.scene.add(this.avatar);
+        }
+
+        setupLighting() {
+            const ambientLight = new THREE.AmbientLight(0xfff8e1, 0.8);
+            this.scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            directionalLight.position.set(-20, 30, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            this.scene.add(directionalLight);
+        }
+
+        createBranding() {
+            const position = new THREE.Vector3(0, 5, -this.ROOM_SIZE.depth / 2 + 0.11);
+            const { logoUrl, name } = this.config.branding;
+            const wallColor = this.config.appearance.wallColor;
+
+            if (logoUrl) {
+                new THREE.TextureLoader().load(logoUrl,
+                    (texture) => {
+                        const aspect = texture.image.width / texture.image.height;
+                        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(8, 2 * aspect), 2), new THREE.MeshStandardMaterial({ map: texture, transparent: true }));
+                        mesh.position.copy(position);
+                        this.scene.add(mesh);
+                    }, undefined, () => this.createTextBranding(position, name, wallColor));
+            } else {
+                this.createTextBranding(position, name, wallColor);
+            }
+        }
+
+        createTextBranding(position, text, wallColor) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 256;
+            const context = canvas.getContext('2d');
+            context.fillStyle = wallColor;
+            context.fillRect(0, 0, 1024, 256);
+            context.fillStyle = '#2c3e50';
+            context.font = 'bold 90px Arial, sans-serif';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 512, 128);
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(canvas) }));
+            mesh.position.copy(position);
+            this.scene.add(mesh);
+        }
+
+        createRoom() {
+            this.materials.floor = new THREE.MeshStandardMaterial({ color: this.config.appearance.floorColor, roughness: 0.3 });
+            this.materials.rug = new THREE.MeshStandardMaterial({ color: this.config.appearance.rugColor, roughness: 0.8 });
+            this.materials.wall = new THREE.MeshStandardMaterial({ color: this.config.appearance.wallColor });
+            
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(this.ROOM_SIZE.width, this.ROOM_SIZE.depth), this.materials.floor);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            this.scene.add(floor);
+            
+            const rug = new THREE.Mesh(new THREE.PlaneGeometry(10, 15), this.materials.rug);
+            rug.rotation.x = -Math.PI / 2;
+            rug.position.set(0, 0.01, 2);
+            this.scene.add(rug);
+            
+            const createWall = (w, h, x, y, z, rotY) => {
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.2), this.materials.wall);
+                wall.position.set(x, y, z);
+                wall.rotation.y = rotY;
+                wall.receiveShadow = true;
+                this.scene.add(wall);
+            };
+            const { width: W, height: H, depth: D } = this.ROOM_SIZE;
+            createWall(W, H, 0, H/2, -D/2, 0);
+            createWall(D, H, W/2, H/2, 0, Math.PI/2);
+            createWall(W, H, 0, H/2, D/2, 0);
+            createWall(D, H, -W/2, H/2, 0, Math.PI/2);
+            
+            this.createDecorations();
+        }
+
+        createDecorations() {
+            const { content } = this.config;
+            const { width: W } = this.ROOM_SIZE;
+            this.createWallPanel(new THREE.Vector3(W/2-0.1, 3, 0), -Math.PI/2, "Welcome Videos", content.welcomeVideoUrl, "Welcome videos by firm members coming soon.", 5, 3);
+            this.createWallPanel(new THREE.Vector3(-W/2+0.1, 3, 0), Math.PI/2, "Client Forms", content.clientFormsUrl, "Forms to be filled out accessible and fillable here.", 5, 3);
+            this.createWallPanel(new THREE.Vector3(W/2-0.1, 3, 6), -Math.PI/2, "Firm Certificates", '', "Firm awards and certifications will be displayed here.", 5, 3);
+            this.createWallPanel(new THREE.Vector3(-W/2+0.1, 3.5, 5), Math.PI/2, "Firm Art", content.firmArtUrl1, "Upload custom art to display here.", 3, 4);
+            this.createWallPanel(new THREE.Vector3(-W/2+0.1, 3.5, -5), Math.PI/2, "Firm Art", content.firmArtUrl2, "Upload custom art to display here.", 3, 4);
+            this.createClock();
+        }
+
+        createTextCanvasMaterial(text, width, height) {
+            const canvas = document.createElement('canvas');
+            const canvasWidth = width * 100, canvasHeight = height * 100;
+            canvas.width = canvasWidth; canvas.height = canvasHeight;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#FFFFFF';
+            context.fillRect(0, 0, canvasWidth, canvasHeight);
+            context.fillStyle = '#555555';
+            context.font = `bold ${canvasHeight / 8}px sans-serif`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            const words = text.split(' ');
+            let line = '';
+            let y = canvasHeight/2 - (words.length > 5 ? (canvasHeight/8) : 0);
+            for(let n=0; n<words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                if (context.measureText(testLine).width > canvasWidth * 0.9 && n > 0) {
+                    context.fillText(line, canvasWidth/2, y);
+                    line = words[n] + ' ';
+                    y += (canvasHeight/8);
+                } else {
+                    line = testLine;
+                }
+            }
+            context.fillText(line, canvasWidth/2, y);
+            return new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(canvas) });
+        }
+
+        createWallPanel(position, rotationY, title, contentUrl, placeholderText, width, height) {
+            const group = new THREE.Group();
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(width+0.2, height+0.2, 0.1), new THREE.MeshStandardMaterial({color: 0xaaaaaa}));
+            const board = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.05), new THREE.MeshStandardMaterial({color: 0xffffff}));
+            board.position.z = 0.03;
+
+            if (contentUrl && contentUrl.startsWith('http')) {
+                new THREE.TextureLoader().load(contentUrl, 
+                    (texture) => { board.material = new THREE.MeshStandardMaterial({ map: texture }); },
+                    undefined, 
+                    () => { board.material = this.createTextCanvasMaterial(`Image not found.\n${title}`, width, height); }
+                );
+            } else {
+                board.material = this.createTextCanvasMaterial(placeholderText, width, height);
+            }
+            group.add(frame, board);
+            group.position.copy(position);
+            group.rotation.y = rotationY;
+            this.scene.add(group);
+            
+            group.userData = {
+                interactive: true,
+                type: 'panel',
+                title: title,
+                name: (contentUrl && contentUrl.startsWith('http')) ? 'View ' + title : 'View Info',
+                clickAction: (contentUrl && !title.includes("Art")) ? () => window.open(contentUrl, '_blank') : null,
+                content: (contentUrl && title.includes("Art")) ? `<img src="${contentUrl}" style="max-width:100%; max-height: 70vh;" alt="${title}">` : placeholderText
+            };
+            this.interactables.push(group);
+        }
+
+        createClock() {
+            const clockPosition = new THREE.Vector3(0, 3.5, -this.ROOM_SIZE.depth / 2 + 0.1);
+            const clockGroup = new THREE.Group();
+            const frame = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 32), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+            frame.rotation.x = Math.PI/2;
+            clockGroup.add(frame);
+            const face = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.1, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            face.position.z += 0.06;
+            face.rotation.x = Math.PI/2;
+            clockGroup.add(face);
+            const handMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const createHand = (w, l, p) => {
+                const pivot = new THREE.Object3D();
+                pivot.position.z += 0.15;
+                const hand = new THREE.Mesh(new THREE.BoxGeometry(w, l, 0.02), handMat);
+                hand.position.y = l/2;
+                pivot.add(hand);
+                clockGroup.add(pivot);
+                this.clockPivots[p] = pivot;
+            };
+            createHand(0.08, 0.6, 'hour');
+            createHand(0.05, 1.0, 'minute');
+            clockGroup.position.copy(clockPosition);
+            this.scene.add(clockGroup);
+            clockGroup.userData = { interactive: true, type: 'clock', name: 'Check Time', title: 'Current Time', content: 'This is the real time in your location.' };
+            this.interactables.push(clockGroup);
+        }
+
+        updateClock() {
+            if (!this.clockPivots.hour || !this.clockPivots.minute) return;
+            const now = new Date();
+            const totalMinutes = now.getMinutes() + now.getSeconds() / 60;
+            this.clockPivots.minute.rotation.z = -(totalMinutes / 60) * Math.PI * 2;
+            this.clockPivots.hour.rotation.z = -(((now.getHours() % 12) + totalMinutes/60) / 12) * Math.PI * 2;
+        }
+
+        createFurnitureAndInteractives() {
+            const tableMat = new THREE.MeshStandardMaterial({ color: 0x4a2311, roughness: 0.4 });
+            const tableTop = new THREE.Mesh(new THREE.BoxGeometry(5, 0.3, 3), tableMat);
+            tableTop.position.set(0, 0.8, 2);
+            tableTop.castShadow = true;
+            this.scene.add(tableTop);
+            const chairMat = new THREE.MeshStandardMaterial({ color: 0x5C4033, roughness: 0.5 });
+            this.createChair(new THREE.Vector3(-4, 0, -2), Math.PI/3, chairMat);
+            this.createChair(new THREE.Vector3(4, 0, -2), -Math.PI/3, chairMat);
+            this.createChair(new THREE.Vector3(-4, 0, 6), Math.PI/6 + Math.PI/2, chairMat);
+            this.createChair(new THREE.Vector3(4, 0, 6), -Math.PI/6 - Math.PI/2, chairMat);
+            const deskMat = new THREE.MeshStandardMaterial({ color: 0x604020, roughness: 0.4 });
+            const desk = new THREE.Mesh(new THREE.BoxGeometry(8, 1.2, 1.5), deskMat);
+            desk.position.set(this.DESK_POSITION.x, 0.6, this.DESK_POSITION.z);
+            desk.castShadow = true;
+            this.scene.add(desk);
+            this.createReceptionist();
+            this.createMagazines();
+        }
+
+        createChair(position, rotationY, material) {
+            const chair = new THREE.Group();
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 1.5), material);
+            seat.position.y = 0.6;
+            seat.castShadow = true;
+            chair.add(seat);
+            const back = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.3), material);
+            back.position.set(0, 1.5, -0.6);
+            chair.add(back);
+            chair.position.copy(position);
+            chair.rotation.y = rotationY;
+            this.scene.add(chair);
+            chair.userData = { interactive: true, type: 'chair', name: 'Sit Down (Customize Experience)', sittingPosition: position.clone(), facingDirection: rotationY };
+            this.interactables.push(chair);
+        }
+
+        createReceptionist() {
+            const receptionist = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 1.8, 16), new THREE.MeshStandardMaterial({ color: 0x003366 }));
+            body.position.y = 0.9;
+            receptionist.add(body);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFFDBAC }));
+            head.position.y = 2.2;
+            receptionist.add(head);
+            receptionist.position.set(this.DESK_POSITION.x, 0, this.DESK_POSITION.z - 1.5);
+            receptionist.rotation.y = Math.PI;
+            this.scene.add(receptionist);
+            receptionist.userData = { interactive: true, type: 'receptionist', name: 'Talk to Receptionist (Approach Desk)' };
+            this.interactables.push(receptionist);
+        }
+
+        createMagazines() {
+            const createMagazine = (pos, rotY, color, title, url, placeholder, key) => {
+                const mag = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.03, 0.8), new THREE.MeshStandardMaterial({ color, roughness: 0.3 }));
+                mag.position.copy(pos);
+                mag.rotation.y = rotY;
+                mag.castShadow = true;
+                this.scene.add(mag);
+                mag.userData = {
+                    interactive: true, type: 'magazine', title, key,
+                    name: (url && url.startsWith('http')) ? 'Open ' + title : 'View ' + title,
+                    clickAction: (url && url.startsWith('http')) ? () => window.open(url, '_blank') : null,
+                    content: placeholder
+                };
+                this.interactables.push(mag);
+            };
+            const c = this.config.content;
+            createMagazine(new THREE.Vector3(-0.8, 0.97, 2.2), 0.2, 0x4169e1, "Firm Brochure", c.brochureUrl, "Firm brochure coming soon.", "brochure");
+            createMagazine(new THREE.Vector3(0.8, 0.97, 1.8), -0.5, 0x990000, "Firm Insights", c.newsletterUrl, "Firm insights coming soon.", "newsletter");
+        }
+
+        setupControls() {
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.target.copy(this.avatar.position).y += this.AVATAR_HEIGHT;
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.minDistance = 3;
+            this.controls.maxDistance = 15;
+            this.controls.maxPolarAngle = Math.PI / 2.1;
+            this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+        }
+
+        onKeyDown(e) { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') { this.keys[e.code] = true; } }
+        onKeyUp(e) { this.keys[e.code] = false; }
+
+        updateMovement(delta) {
+            if (this.isTransitioning || this.isSeated) { this.updateCameraTarget(); return; }
+            const moveDir = new THREE.Vector3();
+            let moved = false, rotated = false;
+            if (this.keys['KeyW'] || this.keys['ArrowUp']) { moveDir.z -= 1; moved = true; }
+            if (this.keys['KeyS'] || this.keys['ArrowDown']) { moveDir.z += 1; moved = true; }
+            if (this.keys['KeyA'] || this.keys['ArrowLeft']) { moveDir.x -= 1; moved = true; }
+            if (this.keys['KeyD'] || this.keys['ArrowRight']) { moveDir.x += 1; moved = true; }
+            if (this.keys['KeyQ']) { this.avatar.rotation.y += this.ROTATE_SPEED * delta; rotated = true; }
+            if (this.keys['KeyE']) { this.avatar.rotation.y -= this.ROTATE_SPEED * delta; rotated = true; }
+            if (moved) {
+                moveDir.normalize();
+                const camDir = new THREE.Vector3();
+                this.camera.getWorldDirection(camDir);
+                camDir.y = 0;
+                camDir.normalize();
+                const camRight = new THREE.Vector3().crossVectors(this.camera.up, camDir).normalize();
+                const movement = new THREE.Vector3(0, 0, 0);
+                movement.addScaledVector(camDir, -moveDir.z * this.MOVE_SPEED * delta);
+                movement.addScaledVector(camRight, -moveDir.x * this.MOVE_SPEED * delta);
+                this.avatar.position.add(movement);
+                if (!rotated) {
+                    const targetAngle = Math.atan2(movement.x, movement.z);
+                    this.avatar.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle), 0.1);
+                }
+            }
+            const pos = this.avatar.position;
+            pos.x = Math.max(-this.ROOM_SIZE.width / 2 + 1, Math.min(this.ROOM_SIZE.width / 2 - 1, pos.x));
+            pos.z = Math.max(-this.ROOM_SIZE.depth / 2 + 1, Math.min(this.ROOM_SIZE.depth / 2 - 1, pos.z));
+            this.updateCameraTarget();
+        }
+
+        updateCameraTarget() {
+            const targetPos = this.avatar.position.clone();
+            targetPos.y += this.AVATAR_HEIGHT - (this.isSeated ? 0.5 : 0);
+            this.controls.target.lerp(targetPos, 0.1);
+        }
+
+        checkProximityInteractions() {
+            if (!this.avatar || this.isSeated || this.isTransitioning) return;
+            const dist = this.avatar.position.distanceTo(this.DESK_POSITION);
+            if (dist < 4.0 && !this.isShowingDeskDialog) {
+                this.showFrontDeskDialog();
+                this.isShowingDeskDialog = true;
+            } else if (dist >= 5.0 && this.isShowingDeskDialog) {
+                this.hideFrontDeskDialog();
+                this.isShowingDeskDialog = false;
+            }
+        }
+
+        onMouseMove(e) {
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            this.tooltipEl.style.left = e.clientX + 'px';
+            this.tooltipEl.style.top = e.clientY + 'px';
+        }
+
+        checkIntersections() {
+            if (this.isTransitioning || this.isSeated) { if (this.intersectedObject) this.resetIntersectedObject(); return; }
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            const intersects = this.raycaster.intersectObjects(this.interactables, true);
+            let target = intersects.length > 0 ? intersects[0].object : null;
+            while (target && !target.userData.interactive) { target = target.parent; }
+            if (target) {
+                if (this.intersectedObject !== target) {
+                    this.resetIntersectedObject();
+                    this.intersectedObject = target;
+                    this.highlightObject(this.intersectedObject);
+                    this.showTooltip(this.intersectedObject.userData.name);
+                }
+            } else {
+                this.resetIntersectedObject();
+            }
+        }
+
+        highlightObject(obj, color = 0x444422) {
+            if (obj === this.intersectedObject) { this.container.style.cursor = 'pointer'; }
+            obj.traverse(child => {
+                if (child.isMesh && child.material.emissive) {
+                    child.userData.originalEmissive = child.userData.originalEmissive ?? child.material.emissive.getHex();
+                    child.material.emissive.setHex(color);
+                }
+            });
+        }
+
+        resetIntersectedObject() {
+            if (!this.intersectedObject) return;
+            this.container.style.cursor = 'default';
+            this.unhighlightObject(this.intersectedObject);
+            this.intersectedObject = null;
+            this.hideTooltip();
+        }
+
+        unhighlightObject(obj) {
+            obj.traverse(child => {
+                if (child.isMesh && child.material.emissive && child.userData.originalEmissive !== undefined) {
+                    child.material.emissive.setHex(child.userData.originalEmissive);
+                }
+            });
+        }
+
+        showTooltip(text) { this.tooltipEl.textContent = text; this.tooltipEl.style.display = 'block'; }
+        hideTooltip() { this.tooltipEl.style.display = 'none'; }
+
+        onClick(e) {
+            if (e.button !== 0 || (this.instructionsPanel.style.display !== 'none' && !this.instructionsPinned)) return;
+            if (!this.isTransitioning && this.intersectedObject && !this.isSeated) {
+                if (this.avatar.position.distanceTo(this.intersectedObject.position) < 6) {
+                    this.executeAction(this.intersectedObject);
+                } else {
+                    this.showTemporaryMessage("Move closer to interact", 2000);
+                }
+            }
+        }
+
+        executeAction(obj) {
+            if (obj.userData.clickAction) { obj.userData.clickAction(); this.showTemporaryMessage("Opening link..."); return; }
+            switch (obj.userData.type) {
+                case 'chair': this.sitInChair(obj); break;
+                case 'receptionist': if (!this.isShowingDeskDialog && this.avatar.position.distanceTo(this.DESK_POSITION) < 5.0) { this.showFrontDeskDialog(); this.isShowingDeskDialog = true; } break;
+                case 'magazine': case 'panel': case 'clock': this.showOverlay(obj.userData.title, obj.userData.content); break;
+            }
+        }
+
+        showFrontDeskDialog() {
+            if (document.getElementById('front-desk-dialog')) return;
+            const dialog = document.createElement('div');
+            dialog.id = 'front-desk-dialog';
+            dialog.innerHTML = `<div class="desk-dialog-content"><div class="receptionist-avatar">👩‍💼</div><h3>How can I help you today?</h3><div class="help-options-grid"><button id="assist-general" class="help-option"><span class="option-icon">💬</span><span class="option-text">General Inquiry</span></button><button id="assist-appointment" class="help-option"><span class="option-icon">📅</span><span class="option-text">Schedule Meeting</span></button><button id="assist-forms" class="help-option"><span class="option-icon">📋</span><span class="option-text">Help with Forms</span></button><button id="assist-urgent" class="help-option"><span class="option-icon">🚨</span><span class="option-text">Urgent Matter</span></button><button id="assist-information" class="help-option"><span class="option-icon">ℹ️</span><span class="option-text">Firm Information</span></button><button id="assist-browsing" class="help-option secondary"><span class="option-icon">👋</span><span class="option-text">Just Browsing</span></button></div></div>`;
+            this.container.appendChild(dialog);
+            dialog.querySelector('#assist-general').onclick = () => this.requestAssistance('general');
+            dialog.querySelector('#assist-appointment').onclick = () => this.requestAssistance('appointment');
+            dialog.querySelector('#assist-forms').onclick = () => this.requestAssistance('forms');
+            dialog.querySelector('#assist-urgent').onclick = () => this.requestAssistance('urgent');
+            dialog.querySelector('#assist-information').onclick = () => this.requestAssistance('information');
+            dialog.querySelector('#assist-browsing').onclick = () => this.hideFrontDeskDialog();
+        }
+
+        hideFrontDeskDialog() {
+            const dialog = document.getElementById('front-desk-dialog');
+            if (dialog) dialog.remove();
+            this.isShowingDeskDialog = false;
+        }
+
+        requestAssistance(type) {
+            this.hideFrontDeskDialog();
+            const responses = {
+                general: "I'll connect you. Please have a seat; they'll be with you shortly.",
+                appointment: "I'll open our scheduling system for you.",
+                forms: "You can access forms on the whiteboard to your left.",
+                urgent: "I understand. Let me get someone immediately.",
+                information: "Feel free to explore the materials. Is there anything specific you need?"
+            };
+            this.showTemporaryMessage(responses[type] || "Thank you for visiting.");
+        }
+
+        sitInChair(chairObj) {
+            this.resetIntersectedObject();
+            this.avatar.position.copy(chairObj.userData.sittingPosition);
+            this.avatar.position.y = 0;
+            this.avatar.rotation.y = chairObj.userData.facingDirection;
+            this.isSeated = true;
+            this.showComfortOptionsPopup();
+        }
+
+        showComfortOptionsPopup() {
+            const popup = document.createElement('div');
+            popup.id = 'comfort-popup';
+            popup.innerHTML = `<div class="comfort-popup-content"><h3>Make Yourself Comfortable</h3><p>While you wait, would you like to customize your experience?</p><div class="comfort-section"><h4>🎵 Music</h4><div class="music-options"><button id="music-keep" class="comfort-btn">Current is fine</button><button id="music-change" class="comfort-btn">Change style</button><button id="music-off" class="comfort-btn">Turn music off</button><button id="music-custom" class="comfort-btn">Use my own</button></div></div><div class="comfort-section"><h4>📖 Reading</h4><div class="reading-options"><button id="read-none" class="comfort-btn">No thanks</button><button id="read-newsletter" class="comfort-btn">📰 Newsletter</button><button id="read-brochure" class="comfort-btn">📋 Brochure</button><button id="read-cases" class="comfort-btn">⚖️ Case Studies</button></div></div><div class="comfort-actions"><button id="stand-up-btn" class="secondary-btn">Stand Up</button><button id="close-comfort-popup-btn" class="primary-btn">I'm All Set</button></div></div>`;
+            this.container.appendChild(popup);
+            popup.querySelector('#stand-up-btn').onclick = () => this.standUp();
+            popup.querySelector('#close-comfort-popup-btn').onclick = () => this.closeComfortPopup();
+            popup.querySelector('#music-keep').onclick = () => this.handleMusicPreference('keep');
+            popup.querySelector('#music-change').onclick = () => this.handleMusicPreference('change');
+            popup.querySelector('#music-off').onclick = () => this.handleMusicPreference('off');
+            popup.querySelector('#music-custom').onclick = () => this.handleMusicPreference('custom');
+            popup.querySelector('#read-none').onclick = () => this.handleReadingRequest('none');
+            popup.querySelector('#read-newsletter').onclick = () => this.handleReadingRequest('newsletter');
+            popup.querySelector('#read-brochure').onclick = () => this.handleReadingRequest('brochure');
+            popup.querySelector('#read-cases').onclick = () => this.handleReadingRequest('cases');
+        }
+
+        closeComfortPopup() { const popup = document.getElementById('comfort-popup'); if (popup) popup.remove(); }
+
+        handleMusicPreference(choice) {
+            this.audioSystem.initializeAudio();
+            if (choice === 'keep') this.showTemporaryMessage("Enjoying the current music selection.");
+            else if (choice === 'change') this.showMusicSelector();
+            else if (choice === 'off') { this.audioSystem.stopMusic(); this.showTemporaryMessage("Music turned off."); }
+            else if (choice === 'custom') this.showCustomMusicOptions();
+        }
+
+        handleReadingRequest(material) {
+            const msgs = { none: "No problem! Relax and someone will be with you soon.", newsletter: "Opening our latest newsletter...", brochure: "Here's our firm brochure...", cases: "Here are some successful cases (Demo)..." };
+            this.showTemporaryMessage(msgs[material]);
+            if (material !== 'none') {
+                const target = this.interactables.find(obj => obj.userData.key === material);
+                if (target) { this.highlightReadingMaterial(target); setTimeout(() => this.executeAction(target), 1500); }
+                else if (material === 'cases') { setTimeout(() => this.showOverlay(`Reading: ${material}`, `Placeholder for ${material}.`), 1500); }
+            }
+        }
+
+        highlightReadingMaterial(target) { this.highlightObject(target, 0x888800); setTimeout(() => this.unhighlightObject(target), 2500); }
+        showMusicSelector() { this.closeComfortPopup(); this.audioSystem.toggleMenu(true); this.showTemporaryMessage("Music controls are open on the bottom right."); }
+        showCustomMusicOptions() {
+            const url = prompt("Enter your custom music stream URL:");
+            if (url) { this.audioSystem.connectExternalService(url); this.closeComfortPopup(); this.showTemporaryMessage("Connecting to custom music..."); }
+        }
+
+        standUp() {
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.avatar.quaternion);
+            this.avatar.position.add(forward.multiplyScalar(1.5));
+            this.avatar.position.y = 0;
+            this.isSeated = false;
+            this.closeComfortPopup();
+        }
+
+        showTemporaryMessage(msg, duration = 4000) {
+            const existing = document.getElementById('temporary-message-overlay');
+            if (existing) existing.remove();
+            const overlay = document.createElement('div');
+            overlay.id = 'temporary-message-overlay';
+            overlay.textContent = msg;
+            this.container.appendChild(overlay);
+            setTimeout(() => {
+                overlay.style.opacity = 0;
+                setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 500);
+            }, duration);
+        }
+
+        showOverlay(title, text) {
+            this.isTransitioning = true;
+            this.controls.enabled = false;
+            this.overlayTitleEl.textContent = title;
+            this.overlayTextEl.innerHTML = text;
+            this.overlayEl.style.display = 'flex';
+            this.hideTooltip();
+            if (this.intersectedObject) this.resetIntersectedObject();
+        }
+
+        closeOverlay() {
+            this.overlayEl.style.display = 'none';
+            this.isTransitioning = false;
+            if (!this.isSeated) { this.controls.enabled = true; }
+        }
+
+        hideLoader() {
+            setTimeout(() => {
+                this.loaderEl.style.opacity = '0';
+                setTimeout(() => this.loaderEl.style.display = 'none', 1000);
+            }, 500);
+        }
+
+        bindEvents() {
+            this.boundOnResize = this.onWindowResize.bind(this);
+            this.boundOnMouseMove = this.onMouseMove.bind(this);
+            this.boundOnClick = this.onClick.bind(this);
+            this.boundOnKeyDown = this.onKeyDown.bind(this);
+            this.boundOnKeyUp = this.onKeyUp.bind(this);
+            window.addEventListener('resize', this.boundOnResize);
+            this.renderer.domElement.addEventListener('mousemove', this.boundOnMouseMove);
+            this.renderer.domElement.addEventListener('click', this.boundOnClick);
+            document.addEventListener('keydown', this.boundOnKeyDown);
+            document.addEventListener('keyup', this.boundOnKeyUp);
+            this.overlayCloseEl.addEventListener('click', this.closeOverlay.bind(this));
+        }
+
+        onWindowResize() {
+            if (!this.renderer || !this.camera) return;
+            const { clientWidth: w, clientHeight: h } = this.container;
+            if (w === 0 || h === 0) return;
+            this.camera.aspect = w / h;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(w, h);
+        }
+
+        animate() {
+            this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
+            const currentTime = performance.now();
+            const delta = (currentTime - this.prevTime) / 1000;
+            this.updateMovement(delta);
+            this.controls.update();
+            this.checkIntersections();
+            this.checkProximityInteractions();
+            this.updateClock();
+            this.renderer.render(this.scene, this.camera);
+            this.prevTime = currentTime;
+        }
+
+        destroy() {
+            if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+            window.removeEventListener('resize', this.boundOnResize);
+            document.removeEventListener('keydown', this.boundOnKeyDown);
+            document.removeEventListener('keyup', this.boundOnKeyUp);
+            if (this.renderer?.domElement) {
+                this.renderer.domElement.removeEventListener('mousemove', this.boundOnMouseMove);
+                this.renderer.domElement.removeEventListener('click', this.boundOnClick);
+            }
+            this.renderer?.dispose();
+            this.audioSystem?.destroy();
+            this.tooltipEl?.remove();
+            
+            // BUG FIX: Show the config panel again when destroying the preview
+            document.getElementById('miniverse-config').style.display = 'block';
+
+            this.container.innerHTML = `<div class="miniverse-placeholder"><h1>Miniverse Preview Reset</h1><p>Click "Launch Client View" to start again.</p></div>`;
+        }
+    }
+
+    // Initialize the Configurator
+    const configurator = new MiniverseConfigurator();
+    </script>
+</body>
+</html>
