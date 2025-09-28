@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useToast } from '@/app/components/ui/use-toast'
+import { useSession } from 'next-auth/react'
 import Layout from '@/app/components/Layout'
 import ChatSidebar from '@/app/components/chat/ChatSidebar'
 import QuickPrompts from '@/app/components/chat/QuickPrompts'
@@ -11,6 +12,7 @@ import ChatInput from '@/app/components/chat/ChatInput'
 import { Message } from '@/app/components/chat/types'
 
 export default function ApprenticePage() {
+  const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -302,6 +304,21 @@ export default function ApprenticePage() {
 
           {/* Main Chat Panel */}
           <div className="flex-1 flex flex-col bg-white min-h-0 relative">
+          {/* User Status Indicator */}
+          {!session?.user && (
+            <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-sm text-blue-700">
+              <div className="flex items-center justify-between">
+                <span>You're using the free apprentice tier. Sign in to save your chat history.</span>
+                <a 
+                  href="/login" 
+                  className="text-blue-600 hover:text-blue-800 font-medium underline"
+                >
+                  Sign In
+                </a>
+              </div>
+            </div>
+          )}
+          
           {/* Messages Area */}
           <div className="flex-1 min-h-0 overflow-hidden">
             <ChatMessages

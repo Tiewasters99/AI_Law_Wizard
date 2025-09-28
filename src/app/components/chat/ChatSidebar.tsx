@@ -46,6 +46,13 @@ export default function ChatSidebar({
       setIsLoading(true)
       setError(null)
       
+      // Only fetch chat history for authenticated users
+      if (!session?.user) {
+        setChatHistory([])
+        setIsLoading(false)
+        return
+      }
+      
       const response = await fetch('/api/chat/sessions')
       if (!response.ok) {
         throw new Error('Failed to fetch chat history')
@@ -61,10 +68,10 @@ export default function ChatSidebar({
     }
   }
 
-  // Load chat history on component mount
+  // Load chat history on component mount and when session changes
   useEffect(() => {
     fetchChatHistory()
-  }, [])
+  }, [session?.user])
 
   const formatTime = (date: Date | string) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date
@@ -217,8 +224,17 @@ export default function ChatSidebar({
                {!isLoading && !error && chatHistory.length === 0 && (
                  <div className="text-center py-8">
                    <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                   <p className="text-sm text-gray-500">No chat history yet</p>
-                   <p className="text-xs text-gray-400 mt-1">Start a new conversation to see it here</p>
+                   {session?.user ? (
+                     <>
+                       <p className="text-sm text-gray-500">No chat history yet</p>
+                       <p className="text-xs text-gray-400 mt-1">Start a new conversation to see it here</p>
+                     </>
+                   ) : (
+                     <>
+                       <p className="text-sm text-gray-500">Sign in to save your chat history</p>
+                       <p className="text-xs text-gray-400 mt-1">Your conversations will be saved when you're logged in</p>
+                     </>
+                   )}
                  </div>
                )}
              </div>

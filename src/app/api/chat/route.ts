@@ -36,6 +36,15 @@ export async function POST(request: NextRequest) {
       userId: userId ? 'authenticated' : 'anonymous'
     })
 
+    // For apprentice tier, allow anonymous users to use chat
+    // For other tiers, require authentication
+    if (chatType !== 'apprentice' && !userId) {
+      return NextResponse.json(
+        { error: 'Authentication required for this chat type' },
+        { status: 401 }
+      )
+    }
+
     let currentSessionId = sessionId
     let isNewSession = false
 

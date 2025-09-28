@@ -9,8 +9,9 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
 
+    // For apprentice tier, allow anonymous users but return empty sessions
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ sessions: [] })
     }
 
     const { searchParams } = new URL(request.url)
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, chatType } = body
 
+    // For apprentice tier, allow anonymous users
     const sessionId = await ChatService.createSession(userId, title, chatType)
     
     return NextResponse.json({ sessionId })
