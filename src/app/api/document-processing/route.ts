@@ -11,6 +11,7 @@ import { prisma } from '../../../lib/prisma'
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents'
 import { ChatPromptTemplate } from '@langchain/core/prompts'
 import { searchChunksBySummary, getChunksWithSummaries } from '../../lib/summaryService'
+import { openapi, pineIndex } from '../../lib/pineConfig'
 
 interface ProcessingRequest {
   userPrompt: string
@@ -58,35 +59,148 @@ interface OperationStep {
   confidence?: number
 }
 
+// Vector-first search approach: search vector database first, then fetch summaries
+const searchVectorDatabaseFirst = async (
+  query: string,
+  limit: number
+): Promise<Array<{
+  id: string;
+  content: string;
+  summary: string;
+  metadata: any;
+  chunkIndex: number;
+  relevanceScore: number;
+  jobId: string;
+  jobFileName: string;
+}>> => {
+  try {
+    // Step 1: Search vector database across ALL chunks at once
+    const vectorResults = await searchAllChunksInVectorDB(query, limit * 2) // Get more results for better filtering
+    
+    if (vectorResults.length === 0) {
+      return []
+    }
+
+    // Step 2: Get database chunks using embeddingId to find jobId and summaries
+    const embeddingIds = vectorResults.map(result => result.embeddingId)
+    
+    const databaseChunks = await prisma.embeddingChunk.findMany({
+      where: {
+        embeddingId: { in: embeddingIds },
+        status: 'COMPLETED'
+      },
+      select: {
+        id: true,
+        jobId: true,
+        summary: true,
+        metadata: true,
+        embeddingId: true,
+        content: true
+      }
+    })
+
+    // Step 3: Get job information for the found chunks
+    const jobIds = [...new Set(databaseChunks.map(chunk => chunk.jobId))]
+    
+    const jobs = await prisma.embeddingJob.findMany({
+      where: { 
+        id: { in: jobIds },
+        status: 'COMPLETED' 
+      },
+      select: { id: true, fileName: true }
+    })
+    
+    const jobMap = new Map(jobs.map(job => [job.id, job.fileName]))
+
+    // Step 4: Create mapping from embeddingId to database chunk
+    const chunkMap = new Map(
+      databaseChunks.map(chunk => [chunk.embeddingId, chunk])
+    )
+
+    // Step 5: Combine vector results with database chunk info and job info
+    const enrichedResults = vectorResults
+      .map(vectorResult => {
+        const databaseChunk = chunkMap.get(vectorResult.embeddingId)
+        const jobFileName = databaseChunk ? jobMap.get(databaseChunk.jobId) : null
+        
+        return {
+          id: vectorResult.id,
+          content: vectorResult.content,
+          summary: databaseChunk?.summary || 'No summary available',
+          metadata: databaseChunk?.metadata || vectorResult.metadata || {},
+          chunkIndex: vectorResult.chunkIndex,
+          relevanceScore: vectorResult.relevanceScore,
+          jobId: databaseChunk?.jobId || 'unknown',
+          jobFileName: jobFileName || `Document ${databaseChunk?.jobId || 'unknown'}`
+        }
+      })
+      .filter(result => result.jobId !== 'unknown') // Only include chunks with valid jobId
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, limit)
+
+    console.log(`🚀 Vector-first search: Found ${enrichedResults.length} relevant chunks from ${vectorResults.length} vector results`)
+    return enrichedResults
+
+  } catch (error) {
+    console.error('Error in vector-first search:', error)
+    return []
+  }
+}
+
+// Search all chunks in vector database across all jobs
+const searchAllChunksInVectorDB = async (
+  query: string,
+  limit: number
+): Promise<Array<{
+  id: string;
+  content: string;
+  metadata: any;
+  chunkIndex: number;
+  relevanceScore: number;
+  fileId: string;
+  embeddingId: string;
+}>> => {
+  try {
+    // Create embedding for the query
+    const queryEmbedding = await openapi.embedQuery(query)
+    
+    // Search across ALL chunks without job filtering
+    const searchResults = await pineIndex.query({
+      vector: queryEmbedding,
+      topK: limit,
+      includeMetadata: true,
+      includeValues: false
+      // No filter - search across all chunks
+    })
+    
+    if (!searchResults.matches || searchResults.matches.length === 0) {
+      return []
+    }
+
+    // Convert results to our format based on actual ingestion structure
+    return searchResults.matches.map((match: any) => ({
+      id: match.id, // This is the vector DB ID: `${fileId}__${chunkIndex}`
+      content: match.metadata?.text || '', // Content is stored as 'text' in metadata
+      metadata: match.metadata || {},
+      chunkIndex: match.metadata?.chunkIndex || 0,
+      relevanceScore: match.score || 0,
+      fileId: match.metadata?.fileId || 'unknown',
+      embeddingId: match.id // Vector DB ID matches embeddingId in database
+    }))
+
+  } catch (error) {
+    console.error('Error searching vector database:', error)
+    return []
+  }
+}
+
 // Quick summary-based search tool for fast retrieval
 const quickSummarySearchTool = tool(
   async (input) => {
     const { query, limit = 5 } = input as { query: string; limit?: number }
     try {
-      // First try to get all jobs to search across
-      const jobs = await prisma.embeddingJob.findMany({
-        where: { status: 'COMPLETED' },
-        select: { id: true, fileName: true }
-      })
-
-      if (jobs.length === 0) {
-        return { success: false, files: [], error: "No processed documents found" }
-      }
-
-      // Search across all jobs for relevant chunks with summaries
-      const allRelevantChunks = []
-      for (const job of jobs) {
-        try {
-          const chunks = await searchChunksBySummary(job.id, query, limit)
-          allRelevantChunks.push(...chunks.map(chunk => ({
-            ...chunk,
-            jobId: job.id,
-            jobFileName: job.fileName
-          })))
-        } catch (error) {
-          console.warn(`Failed to search job ${job.id}:`, error)
-        }
-      }
+      // Vector-first approach: search vector database first, then get summaries
+      const allRelevantChunks = await searchVectorDatabaseFirst(query, limit)
 
       if (allRelevantChunks.length === 0) {
         return { success: false, files: [], error: "No relevant chunks found in summaries" }

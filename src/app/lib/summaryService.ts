@@ -1,6 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { prisma } from '../../lib/database';
+import { pineIndex, openapi } from './pineConfig';
 
 // Initialize OpenAI for summary generation
 const summaryModel = new ChatOpenAI({
@@ -246,6 +247,131 @@ export async function getChunksWithSummaries(
 }
 
 // Search chunks by summary content
+// Helper function to calculate fuzzy string similarity
+function calculateFuzzySimilarity(str1: string, str2: string): number {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+  
+  if (longer.length === 0) return 1.0;
+  
+  const editDistance = levenshteinDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+}
+
+// Helper function to calculate Levenshtein distance
+function levenshteinDistance(str1: string, str2: string): number {
+  const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+  
+  for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+  for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+  
+  for (let j = 1; j <= str2.length; j++) {
+    for (let i = 1; i <= str1.length; i++) {
+      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[j][i] = Math.min(
+        matrix[j][i - 1] + 1,
+        matrix[j - 1][i] + 1,
+        matrix[j - 1][i - 1] + indicator
+      );
+    }
+  }
+  
+  return matrix[str2.length][str1.length];
+}
+
+// Helper function to extract meaningful words (remove common stop words)
+function extractMeaningfulWords(text: string): string[] {
+  const stopWords = new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+    'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those'
+  ]);
+  
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.has(word));
+}
+
+// Helper function to calculate semantic similarity using word overlap
+function calculateSemanticSimilarity(queryWords: string[], textWords: string[]): number {
+  const querySet = new Set(queryWords);
+  const textSet = new Set(textWords);
+  
+  const intersection = new Set([...querySet].filter(word => textSet.has(word)));
+  const union = new Set([...querySet, ...textSet]);
+  
+  return intersection.size / union.size;
+}
+
+// Helper function to find fuzzy word matches
+function findFuzzyMatches(queryWords: string[], textWords: string[], threshold: number = 0.7): number {
+  let matches = 0;
+  
+  for (const queryWord of queryWords) {
+    for (const textWord of textWords) {
+      const similarity = calculateFuzzySimilarity(queryWord, textWord);
+      if (similarity >= threshold) {
+        matches += similarity; // Weight by similarity score
+        break; // Only count the best match for each query word
+      }
+    }
+  }
+  
+  return matches;
+}
+
+// Helper function to search using vector database directly
+async function searchVectorDatabase(query: string, jobId: string, limit: number = 5): Promise<Array<{
+  id: string;
+  content: string;
+  summary: string | null;
+  metadata: any;
+  chunkIndex: number;
+  relevanceScore: number;
+}>> {
+  try {
+    // Create embedding for the query
+    const queryEmbedding = await openapi.embedQuery(query);
+    
+    // Prepare query parameters with jobId filter
+    const queryParams: {
+      vector: number[];
+      topK: number;
+      includeMetadata: boolean;
+      includeValues: boolean;
+      filter?: Record<string, unknown>;
+    } = {
+      vector: queryEmbedding,
+      topK: limit * 2, // Get more results to filter by jobId
+      includeMetadata: true,
+      includeValues: false,
+      filter: { jobId } // Filter by specific job
+    };
+
+    // Perform similarity search
+    const searchResults = await pineIndex.query(queryParams);
+    
+    if (!searchResults.matches || searchResults.matches.length === 0) {
+      return [];
+    }
+
+    // Convert vector search results to our format
+    return searchResults.matches.map((match: any) => ({
+      id: match.id,
+      content: match.metadata?.content || '',
+      summary: match.metadata?.summary || null,
+      metadata: match.metadata || {},
+      chunkIndex: match.metadata?.chunkIndex || 0,
+      relevanceScore: match.score || 0
+    }));
+  } catch (error) {
+    console.error('Vector database search error:', error);
+    return [];
+  }
+}
+
 export async function searchChunksBySummary(
   jobId: string,
   query: string,
@@ -259,7 +385,8 @@ export async function searchChunksBySummary(
   relevanceScore: number;
 }>> {
   try {
-    const chunks = await prisma.embeddingChunk.findMany({
+    // First, try to find chunks with summaries using enhanced text matching
+    const chunksWithSummaries = await prisma.embeddingChunk.findMany({
       where: {
         jobId,
         summary: { not: null }
@@ -273,47 +400,124 @@ export async function searchChunksBySummary(
       }
     });
 
-    // Simple text-based relevance scoring
-    const queryLower = query.toLowerCase();
-    const scoredChunks = chunks.map(chunk => {
-      const summaryLower = chunk.summary!.toLowerCase();
-      const contentLower = chunk.content.toLowerCase();
-      
-      let score = 0;
-      
-      // Check for exact matches in summary (higher weight)
-      if (summaryLower.includes(queryLower)) {
-        score += 10;
-      }
-      
-      // Check for partial matches in summary
-      const summaryWords = queryLower.split(' ');
-      const summaryMatches = summaryWords.filter(word => 
-        summaryLower.includes(word)
-      ).length;
-      score += summaryMatches * 2;
-      
-      // Check for matches in content (lower weight)
-      if (contentLower.includes(queryLower)) {
-        score += 5;
-      }
-      
-      const contentMatches = summaryWords.filter(word => 
-        contentLower.includes(word)
-      ).length;
-      score += contentMatches;
-      
-      return {
-        ...chunk,
-        summary: chunk.summary!,
-        relevanceScore: score
-      };
-    });
+    let results: Array<{
+      id: string;
+      content: string;
+      summary: string;
+      metadata: any;
+      chunkIndex: number;
+      relevanceScore: number;
+    }> = [];
 
-    return scoredChunks
-      .filter(chunk => chunk.relevanceScore > 0)
-      .sort((a, b) => b.relevanceScore - a.relevanceScore)
-      .slice(0, limit);
+    // If we have chunks with summaries, use enhanced text matching
+    if (chunksWithSummaries.length > 0) {
+      const queryWords = extractMeaningfulWords(query);
+      
+      const scoredChunks = chunksWithSummaries.map(chunk => {
+        const summary = chunk.summary!;
+        const content = chunk.content;
+        
+        // Extract meaningful words from summary and content
+        const summaryWords = extractMeaningfulWords(summary);
+        const contentWords = extractMeaningfulWords(content);
+        
+        let score = 0;
+        
+        // 1. Exact phrase match in summary (highest weight)
+        if (summary.toLowerCase().includes(query.toLowerCase())) {
+          score += 20;
+        }
+        
+        // 2. Exact phrase match in content (high weight)
+        if (content.toLowerCase().includes(query.toLowerCase())) {
+          score += 15;
+        }
+        
+        // 3. Semantic similarity in summary (high weight)
+        const summarySemanticScore = calculateSemanticSimilarity(queryWords, summaryWords);
+        score += summarySemanticScore * 15;
+        
+        // 4. Semantic similarity in content (medium weight)
+        const contentSemanticScore = calculateSemanticSimilarity(queryWords, contentWords);
+        score += contentSemanticScore * 10;
+        
+        // 5. Fuzzy matching in summary (medium weight)
+        const summaryFuzzyScore = findFuzzyMatches(queryWords, summaryWords, 0.6);
+        score += summaryFuzzyScore * 8;
+        
+        // 6. Fuzzy matching in content (lower weight)
+        const contentFuzzyScore = findFuzzyMatches(queryWords, contentWords, 0.6);
+        score += contentFuzzyScore * 5;
+        
+        // 7. Word boundary exact matches in summary (medium weight)
+        const summaryExactMatches = queryWords.filter(word => 
+          summaryWords.some(summaryWord => summaryWord === word)
+        ).length;
+        score += summaryExactMatches * 6;
+        
+        // 8. Word boundary exact matches in content (lower weight)
+        const contentExactMatches = queryWords.filter(word => 
+          contentWords.some(contentWord => contentWord === word)
+        ).length;
+        score += contentExactMatches * 3;
+        
+        // 9. Bonus for longer summaries that match (indicates more relevant content)
+        if (summary.length > 100 && score > 5) {
+          score += 2;
+        }
+        
+        return {
+          ...chunk,
+          summary: chunk.summary!,
+          relevanceScore: Math.round(score * 100) / 100 // Round to 2 decimal places
+        };
+      });
+
+      results = scoredChunks
+        .filter(chunk => chunk.relevanceScore > 0)
+        .sort((a, b) => b.relevanceScore - a.relevanceScore)
+        .slice(0, limit);
+    }
+
+    // If we don't have enough results from summary-based search, fall back to vector database
+    if (results.length < limit) {
+      console.log(`📊 Summary-based search found ${results.length} results, falling back to vector database for job ${jobId}`);
+      
+      const vectorResults = await searchVectorDatabase(query, jobId, limit);
+      
+      // Filter out results we already have and add new ones
+      const existingIds = new Set(results.map(r => r.id));
+      const newResults = vectorResults
+        .filter(result => !existingIds.has(result.id) && result.summary !== null)
+        .map(result => ({
+          ...result,
+          summary: result.summary! // We know it's not null from filter
+        }));
+
+      // Combine results and sort by relevance score
+      results = [...results, ...newResults]
+        .sort((a, b) => b.relevanceScore - a.relevanceScore)
+        .slice(0, limit);
+    }
+
+    // If still no results, try vector search without summary requirement
+    if (results.length === 0) {
+      console.log(`🔍 No summary-based results found, using vector database fallback for job ${jobId}`);
+      
+      const vectorResults = await searchVectorDatabase(query, jobId, limit);
+      
+      // For vector results without summaries, we'll use the vector score directly
+      results = vectorResults
+        .filter(result => result.content) // Ensure we have content
+        .map(result => ({
+          ...result,
+          summary: result.summary || 'No summary available', // Provide fallback
+          relevanceScore: result.relevanceScore * 0.8 // Slightly reduce score for non-summary results
+        }))
+        .slice(0, limit);
+    }
+
+    return results;
   } catch (error) {
     console.error('Error searching chunks by summary:', error);
     throw error;
