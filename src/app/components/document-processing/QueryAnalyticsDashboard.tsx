@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { DocumentQuery, useQueryHistory } from '../../hooks/useQueryHistory'
-import { QueryDetailModal } from './QueryDetailModal'
+import { QueryDetailsModal } from './QueryDetailsModal'
 import { format, formatDistanceToNow } from '../../utils/dateUtils'
 import { 
   ClockIcon,
@@ -19,7 +19,7 @@ interface RecentQueriesDashboardProps {
   onViewAllHistory?: () => void
 }
 
-export const RecentQueriesDashboard: React.FC<RecentQueriesDashboardProps> = ({
+export const QueryAnalyticsDashboard: React.FC<RecentQueriesDashboardProps> = ({
   onViewAllHistory
 }) => {
   const {
@@ -310,7 +310,7 @@ export const RecentQueriesDashboard: React.FC<RecentQueriesDashboardProps> = ({
       </div>
 
       {/* Query Detail Modal */}
-      <QueryDetailModal
+      <QueryDetailsModal
         query={selectedQuery}
         isOpen={isModalOpen}
         onClose={() => {

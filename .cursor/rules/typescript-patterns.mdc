@@ -1,0 +1,72 @@
+---
+globs: *.ts,*.tsx
+description: TypeScript coding patterns and conventions
+---
+
+# TypeScript Patterns for AI Wizard
+
+## Interface Design
+
+### Processing Interfaces
+```typescript
+interface ProcessingRequest {
+  userPrompt: string
+  searchQuery?: string
+}
+
+interface ProcessingResponse {
+  success: boolean
+  result?: string
+  error?: string
+  processedFiles?: ProcessedFileInfo[]
+  confidence?: number
+  operationChain?: OperationStep[]
+  totalSteps?: number
+  completedSteps?: number
+  queryId?: string
+  responseMode?: 'question_answering' | 'action_performance'
+  editedFiles?: EditedFileInfo[]
+}
+```
+
+## Function Patterns
+
+### Async Function Structure
+- Use proper error handling with try-catch blocks
+- Implement timeout protection with Promise.race
+- Return consistent response structures
+- Log all operations for debugging
+
+### Helper Function Design
+- Single responsibility principle
+- Clear input/output types
+- Comprehensive error handling
+- Database integration where needed
+
+## Error Handling
+
+### Database Operations
+- Always wrap database operations in try-catch
+- Log errors but don't fail main operations
+- Provide fallback responses
+- Track error patterns for improvement
+
+### API Responses
+- Consistent response structure
+- Proper HTTP status codes
+- User-friendly error messages
+- Debug information in development
+
+## Performance Patterns
+
+### Model Usage
+- Use GPT-4o-mini for simple tasks
+- Reserve Grok-4 for complex operations
+- Implement timeout protection
+- Monitor token usage and costs
+
+### File Processing
+- Smart deduplication for file fetching
+- Chunk-based processing for questions
+- Full file processing for actions
+- Efficient content extraction

@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card'
 import { Button } from '../ui/button'
 import { FolderOpen, ArrowRight, FileText, CheckCircle, Brain } from 'lucide-react'
-import { GrokProcessingInterface } from '../document-processing/GrokProcessingInterface'
+import { DocumentAnalysisInterface } from '../document-processing/DocumentAnalysisInterface'
 
 interface ServerFile {
   id: string
@@ -119,7 +119,7 @@ export const AnalysisSection = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <GrokProcessingInterface
+          <DocumentAnalysisInterface
             onBeforeStart={onAnalysisStart}
             onComplete={(result, generatedFile) => {
               onAnalysisComplete(result)

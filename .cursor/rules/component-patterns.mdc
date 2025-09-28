@@ -1,0 +1,88 @@
+---
+globs: src/app/components/**/*.tsx,src/components/**/*.tsx
+description: React component patterns and UI conventions
+---
+
+# Component Patterns for AI Wizard
+
+## Component Structure
+
+### Document Processing Components
+Located in [src/app/components/document-processing/](mdc:src/app/components/document-processing/):
+- `GrokProcessingInterface.tsx`: Main processing interface
+- `ProgressComponents.tsx`: Progress tracking components
+- `QueryHistory.tsx`: Query history management
+- `RecentQueriesDashboard.tsx`: Dashboard for recent queries
+
+### Chat Components
+Located in [src/app/components/chat/](mdc:src/app/components/chat/):
+- `ChatInput.tsx`: Input handling
+- `ChatMessage.tsx`: Message display
+- `ChatMessages.tsx`: Message list
+- `ChatSidebar.tsx`: Sidebar navigation
+
+## Component Patterns
+
+### State Management
+- Use React hooks for local state
+- Implement proper loading states
+- Handle error states gracefully
+- Provide user feedback
+
+### Props Interface
+```typescript
+interface ComponentProps {
+  data: ProcessingData
+  onUpdate: (data: ProcessingData) => void
+  loading?: boolean
+  error?: string
+}
+```
+
+### Error Handling
+- Display user-friendly error messages
+- Implement retry mechanisms
+- Provide fallback UI
+- Log errors for debugging
+
+## UI/UX Patterns
+
+### Loading States
+- Show progress indicators
+- Provide estimated completion times
+- Display current operation status
+- Allow cancellation where appropriate
+
+### User Feedback
+- Success/error notifications
+- Progress updates
+- Interactive elements
+- Clear action buttons
+
+## Integration Patterns
+
+### API Integration
+- Use custom hooks for API calls
+- Implement proper error handling
+- Provide loading states
+- Cache results when appropriate
+
+### Real-time Updates
+- WebSocket connections for live updates
+- Polling for status changes
+- Event-driven updates
+- Optimistic UI updates
+
+## Accessibility
+
+### ARIA Labels
+- Proper labeling for screen readers
+- Keyboard navigation support
+- Focus management
+- Color contrast compliance
+
+### User Experience
+- Clear visual hierarchy
+- Intuitive navigation
+- Responsive design
+- Mobile-friendly interfaces

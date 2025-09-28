@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { QueryHistory } from './QueryHistory'
-import { RecentQueriesDashboard } from './RecentQueriesDashboard'
-import { QueryDetailModal } from './QueryDetailModal'
+import { QueryHistoryList } from './QueryHistoryList'
+import { QueryAnalyticsDashboard } from './QueryAnalyticsDashboard'
+import { QueryDetailsModal } from './QueryDetailsModal'
 import { DocumentQuery } from '../../hooks/useQueryHistory'
 import { useRouter } from 'next/navigation'
 import { 
@@ -15,7 +15,7 @@ import {
   HomeIcon
 } from '@heroicons/react/24/outline'
 
-export const QueryHistoryPage: React.FC = () => {
+export const QueryHistoryDashboard: React.FC = () => {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'dashboard' | 'history'>('dashboard')
   const [selectedQuery, setSelectedQuery] = useState<DocumentQuery | null>(null)
@@ -113,13 +113,13 @@ export const QueryHistoryPage: React.FC = () => {
       {/* Tab Content */}
       <div className="min-h-screen">
         {activeTab === 'dashboard' && (
-          <RecentQueriesDashboard 
+          <QueryAnalyticsDashboard 
             onViewAllHistory={() => setActiveTab('history')}
           />
         )}
         
         {activeTab === 'history' && (
-          <QueryHistory 
+            <QueryHistoryList
             onSelectQuery={handleQuerySelect}
             showStats={false}
           />
@@ -128,7 +128,7 @@ export const QueryHistoryPage: React.FC = () => {
       </div>
 
       {/* Query Detail Modal */}
-      <QueryDetailModal
+        <QueryDetailsModal
         query={selectedQuery}
         isOpen={isModalOpen}
         onClose={() => {

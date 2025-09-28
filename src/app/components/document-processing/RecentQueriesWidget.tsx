@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { DocumentQuery, useQueryHistory } from '../../hooks/useQueryHistory'
-import { QueryDetailModal } from './QueryDetailModal'
+import { QueryDetailsModal } from './QueryDetailsModal'
 import { format } from '../../utils/dateUtils'
 import { 
   ClockIcon,
@@ -18,7 +18,7 @@ interface QueryHistoryWidgetProps {
   className?: string
 }
 
-export const QueryHistoryWidget: React.FC<QueryHistoryWidgetProps> = ({
+export const RecentQueriesWidget: React.FC<QueryHistoryWidgetProps> = ({
   onViewFullHistory,
   className = ''
 }) => {
@@ -169,7 +169,7 @@ export const QueryHistoryWidget: React.FC<QueryHistoryWidgetProps> = ({
       </div>
 
       {/* Query Detail Modal */}
-      <QueryDetailModal
+      <QueryDetailsModal
         query={selectedQuery}
         isOpen={isModalOpen}
         onClose={() => {

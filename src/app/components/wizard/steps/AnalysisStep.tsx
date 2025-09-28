@@ -9,8 +9,8 @@ import {
   Download,
   Coins
 } from 'lucide-react'
-import { GrokProcessingInterface } from '../../document-processing/GrokProcessingInterface'
-import { QueryHistoryWidget } from '../../document-processing/QueryHistoryWidget'
+import { DocumentAnalysisInterface } from '../../document-processing/DocumentAnalysisInterface'
+import { RecentQueriesWidget } from '../../document-processing/RecentQueriesWidget'
 import { Wallet } from '../../../lib/stripe'
 import { useRouter } from 'next/navigation'
 
@@ -143,7 +143,7 @@ export const AnalysisStep = ({
           <div className="lg:col-span-3">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
               <div className="p-6 md:p-8 lg:p-12">
-                <GrokProcessingInterface
+                <DocumentAnalysisInterface
                   onBeforeStart={onAnalysisStart}
                   onComplete={(result, generatedFile) => {
                     onAnalysisComplete(result)
@@ -155,7 +155,7 @@ export const AnalysisStep = ({
           
           {/* Query History Sidebar */}
           <div className="lg:col-span-1">
-            <QueryHistoryWidget 
+            <RecentQueriesWidget 
               onViewFullHistory={() => router.push('/query-history')}
               className="sticky top-6"
             />

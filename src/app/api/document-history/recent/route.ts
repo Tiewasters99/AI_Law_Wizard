@@ -16,9 +16,13 @@ export async function GET(request: NextRequest) {
         userQuery: true,
         aiResponse: true,
         success: true,
+        error: true,
         confidence: true,
         processingTime: true,
+        totalSteps: true,
+        completedSteps: true,
         toolsUsed: true,
+        filesProcessed: true,
         createdAt: true
       }
     })
@@ -34,6 +38,8 @@ export async function GET(request: NextRequest) {
         error: true,
         confidence: true,
         processingTime: true,
+        totalSteps: true,
+        completedSteps: true,
         toolsUsed: true,
         filesProcessed: true,
         createdAt: true

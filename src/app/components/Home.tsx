@@ -174,12 +174,12 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
           The Future Awaits
         </h1>
-        <p className="text-gray-600 mb-4">
+        <p className="text-sm sm:text-base text-gray-600 mb-4">
           Get instant legal guidance, manage and manipulate your documents with AI agents, generate and read custom blogs, create your own legal Miniverse™ — tomorrow today!
         </p>
       </div>

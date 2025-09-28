@@ -51,6 +51,8 @@ model EmbeddingChunk {
   contentLength Int
   status        ChunkStatus @default(PENDING)
   embeddingId   String?  // Pinecone vector ID
+  summary       String?  @db.Text // Document summary for quick retrieval
+  metadata      Json?    // Additional metadata for enhanced search
   error         String?
   processedAt   DateTime?
   createdAt     DateTime @default(now())
@@ -67,22 +69,29 @@ model EmbeddingChunk {
 model ChatSession {
   id        String   @id @default(cuid())
   title     String?
+  userId    String?  // Link to user for user-specific chats
+  isActive  Boolean  @default(true)
+  metadata  Json?    // Store additional context like system prompts, chat type, etc.
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
+  user     User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
 
   @@map("chat_sessions")
 }
 
-// Chat messages
+// Chat messages with enhanced LangChain support
 model ChatMessage {
-  id        String   @id @default(cuid())
-  sessionId String
-  role      MessageRole
-  content   String   @db.Text
-  createdAt DateTime @default(now())
+  id          String      @id @default(cuid())
+  sessionId   String
+  role        MessageRole
+  content     String      @db.Text
+  metadata    Json?       // Store LangChain message metadata, tool calls, etc.
+  tokenCount  Int?        // Track token usage for billing
+  modelUsed   String?     // Track which model was used
+  createdAt   DateTime    @default(now())
 
   // Relations
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -216,6 +225,7 @@ model User {
   customerProfile  CustomerProfile?
   wallet           Wallet?
   purchases        Purchase[]
+  chatSessions     ChatSession[]
 
   @@map("users")
 }

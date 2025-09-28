@@ -20,7 +20,7 @@ interface QueryHistoryProps {
   showStats?: boolean
 }
 
-export const QueryHistory: React.FC<QueryHistoryProps> = ({ 
+export const QueryHistoryList: React.FC<QueryHistoryProps> = ({ 
   onSelectQuery, 
   showStats = true 
 }) => {

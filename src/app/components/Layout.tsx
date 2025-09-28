@@ -1,10 +1,9 @@
 'use client'
 
-
+import { useState } from 'react'
 import { Badge } from '@/app/components/ui/badge'
 import { 
   Home, 
-  MessageCircle,
   Clock,
   WandSparkles,
   Cloud,
@@ -15,7 +14,9 @@ import {
   User,
   GraduationCap,
   Crown,
-  Coins
+  Coins,
+  Menu,
+  X
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -26,6 +27,8 @@ import { Button } from '@/app/components/ui/button'
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
@@ -49,6 +52,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Top navigation bar */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b">
         <div className="flex items-center justify-between px-4 py-3">
+          {/* Left side - Logo and Desktop Navigation */}
           <div className="flex items-center space-x-6">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
@@ -65,8 +69,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </span>
             </Link>
             
-            {/* Navigation links */}
-            <nav className="flex items-center space-x-1">
+            {/* Desktop Navigation links */}
+            <nav className="hidden lg:flex items-center space-x-1">
               {navigation.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
@@ -107,8 +111,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           
           {/* Right side items */}
-          <div className="flex items-center space-x-4">
-            <Badge variant="secondary" className="text-xs">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Date badge - hidden on small mobile */}
+            <Badge variant="secondary" className="text-xs hidden sm:flex">
               <Clock className="w-3 h-3 mr-1" />
               {new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -116,17 +121,114 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 day: 'numeric'
               })}
             </Badge>
+            
+            {/* Auth button */}
             {session ? (
-              <Button variant="outline" onClick={() => signOut()}>Sign Out</Button>
+              <Button variant="outline" onClick={() => signOut()} className="hidden sm:inline-flex">
+                Sign Out
+              </Button>
             ) : (
-              <Button onClick={() => signIn()}>Sign In</Button>
+              <Button onClick={() => signIn()} className="hidden sm:inline-flex">
+                Sign In
+              </Button>
             )}
+            
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </Button>
           </div>
         </div>
+        
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden border-t bg-white/95 backdrop-blur-sm">
+            <div className="px-4 py-2 space-y-1">
+              {/* Navigation links */}
+              {navigation.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="text-sm font-medium">{item.name}</span>
+                  </Link>
+                )
+              })}
+              
+              {/* Authenticated navigation */}
+              {session && authenticatedNavigation.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="text-sm font-medium">{item.name}</span>
+                  </Link>
+                )
+              })}
+              
+              {/* Mobile auth buttons */}
+              <div className="pt-2 border-t">
+                {session ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      signOut()
+                      setIsMobileMenuOpen(false)
+                    }}
+                    className="w-full justify-start"
+                  >
+                    <User className="w-5 h-5 mr-3" />
+                    Sign Out
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => {
+                      signIn()
+                      setIsMobileMenuOpen(false)
+                    }}
+                    className="w-full justify-start"
+                  >
+                    <User className="w-5 h-5 mr-3" />
+                    Sign In
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Page content */}
-      <main className="p-4">
+      <main className="p-2 sm:p-4">
         {children}
       </main>
     </div>

@@ -1,0 +1,55 @@
+---
+globs: src/app/api/document-processing/*.ts,src/app/lib/*.ts
+description: Document processing patterns and best practices
+---
+
+# Document Processing Patterns
+
+## Agentic Flow Implementation
+
+The document processing system uses a sophisticated agentic flow with the following patterns:
+
+### Response Mode Detection
+- Use keyword-based detection for instant classification
+- Fallback to GPT-4o-mini for ambiguous cases
+- Implement 2-second timeout protection
+
+### Question Answering Flow
+1. **Chunk-based processing**: Use search results directly without full file fetching
+2. **GPT-4o-mini**: Cost-effective model for simple questions
+3. **Fast response**: Sub-3 second response times
+4. **Database logging**: Save all interactions for analytics
+
+### Action Performance Flow
+1. **Full file fetching**: Smart deduplication to avoid duplicate fetches
+2. **Grok-4 agent**: Complex agentic workflows for file operations
+3. **File editing capabilities**: Support for various file formats
+4. **Change tracking**: Monitor and report file modifications
+
+## Code Organization
+
+### Function Breakdown
+- **Single Responsibility**: Each function handles one specific task
+- **Error Handling**: Comprehensive error handling with database logging
+- **Timeout Protection**: All operations have timeout mechanisms
+- **Resource Management**: Smart caching and deduplication
+
+### Performance Optimizations
+- **Model Selection**: Use appropriate models for task complexity
+- **Chunk Processing**: Avoid unnecessary full file fetches
+- **Smart Caching**: Prevent duplicate file processing
+- **Timeout Management**: Prevent hanging operations
+
+## Database Integration
+
+### Query Logging
+- Save all processing attempts (success and failure)
+- Track processing time and resource usage
+- Store file metadata and processing results
+- Enable analytics and performance monitoring
+
+### Error Handling
+- Graceful degradation on failures
+- Comprehensive error logging
+- User-friendly error messages
+- Recovery mechanisms where possible

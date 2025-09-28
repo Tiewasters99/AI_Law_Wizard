@@ -132,6 +132,7 @@ export const useDocumentProcessing = (): ProcessingHookResult => {
 
       const data = await response.json()
       console.log('API Response:', data) // Debug logging
+      console.log('Processed Files from API:', data.processedFiles) // Debug processed files
 
       if (data.success && data.result) {
         // Map processed files to expected format
@@ -139,10 +140,17 @@ export const useDocumentProcessing = (): ProcessingHookResult => {
           fileId: file.fileId || `file-${index}`,
           fileName: file.fileName || 'Unknown',
           originalName: file.originalName || file.fileName || 'Unknown',
-          contentLength: file.contentLength || 0,
           fileSize: file.fileSize || 0,
-          url: file.url || ''
+          downloadUrl: file.downloadUrl || '',
+          fileType: file.fileType || 'txt',
+          jobId: file.jobId,
+          totalChunks: file.totalChunks,
+          processedChunks: file.processedChunks,
+          isOneDriveFile: file.isOneDriveFile,
+          oneDriveId: file.oneDriveId
         })) || []
+        
+        console.log('Mapped Processed Files:', processedFiles) // Debug mapped files
 
         // Calculate processing time
         const processingTime = (Date.now() - startTimeRef.current) / 1000

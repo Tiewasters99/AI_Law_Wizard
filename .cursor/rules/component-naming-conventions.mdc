@@ -1,0 +1,126 @@
+---
+alwaysApply: true
+description: Component naming conventions and file organization
+---
+
+# Component Naming Conventions
+
+## File Naming Based on Functionality
+
+### Interface Components
+- **Main interfaces**: `[Feature]Interface.tsx`
+- **Legacy components**: `Legacy[Feature].tsx`
+- **Example**: `DocumentAnalysisInterface.tsx`, `LegacyDocumentProcessor.tsx`
+
+### List Components
+- **List displays**: `[Feature]List.tsx`
+- **Example**: `QueryHistoryList.tsx`
+
+### Dashboard Components
+- **Main dashboards**: `[Feature]Dashboard.tsx`
+- **Example**: `QueryHistoryDashboard.tsx`, `QueryAnalyticsDashboard.tsx`
+
+### Widget Components
+- **Reusable widgets**: `[Feature]Widget.tsx`
+- **Example**: `RecentQueriesWidget.tsx`
+
+### Modal Components
+- **Modal dialogs**: `[Feature]Modal.tsx`
+- **Example**: `QueryDetailsModal.tsx`
+
+### Status Components
+- **Status indicators**: `[Feature]StatusIndicators.tsx`
+- **Example**: `ProcessingStatusIndicators.tsx`
+
+## Component Export Naming
+
+### Export Names Match File Names
+```typescript
+// File: DocumentAnalysisInterface.tsx
+export function DocumentAnalysisInterface() { }
+
+// File: QueryHistoryList.tsx
+export const QueryHistoryList: React.FC = () => { }
+
+// File: RecentQueriesWidget.tsx
+export const RecentQueriesWidget: React.FC = () => { }
+```
+
+### Interface Naming
+```typescript
+// Props interfaces match component names
+interface DocumentAnalysisInterfaceProps { }
+interface QueryHistoryListProps { }
+interface RecentQueriesWidgetProps { }
+```
+
+## Import/Export Patterns
+
+### Consistent Import Structure
+```typescript
+// Main component imports
+import { DocumentAnalysisInterface } from './DocumentAnalysisInterface'
+import { QueryHistoryList } from './QueryHistoryList'
+import { RecentQueriesWidget } from './RecentQueriesWidget'
+
+// Hook imports
+import { useDocumentProcessing } from '../../hooks/useDocumentProcessing'
+import { useQueryHistory } from '../../hooks/useQueryHistory'
+```
+
+### Re-export Pattern
+```typescript
+// In index files or main components
+export { DocumentAnalysisInterface } from './DocumentAnalysisInterface'
+export { QueryHistoryList } from './QueryHistoryList'
+export { RecentQueriesWidget } from './RecentQueriesWidget'
+```
+
+## File Organization Rules
+
+### Directory Structure
+```
+src/app/components/document-processing/
+├── DocumentAnalysisInterface.tsx      # Main interface
+├── LegacyDocumentProcessor.tsx        # Legacy component
+├── QueryHistoryList.tsx              # List component
+├── QueryHistoryDashboard.tsx         # Dashboard page
+├── RecentQueriesWidget.tsx           # Widget component
+├── QueryAnalyticsDashboard.tsx       # Analytics dashboard
+├── QueryDetailsModal.tsx             # Modal component
+└── ProcessingStatusIndicators.tsx    # Status components
+```
+
+### Naming Consistency
+- **PascalCase** for component names
+- **camelCase** for props and variables
+- **kebab-case** for CSS classes
+- **UPPER_CASE** for constants
+
+## Component Responsibility
+
+### Single Responsibility
+- Each component has one clear purpose
+- File names reflect the component's main function
+- Components are focused and cohesive
+
+### Clear Separation
+- **Interface components**: Main user-facing interfaces
+- **List components**: Data display and interaction
+- **Widget components**: Reusable UI elements
+- **Modal components**: Overlay dialogs
+- **Status components**: Progress and status indicators
+
+## Best Practices
+
+### Naming Guidelines
+1. **Be descriptive**: Names should clearly indicate purpose
+2. **Be consistent**: Follow established patterns
+3. **Be specific**: Avoid generic names like "Component" or "Widget"
+4. **Be functional**: Names should reflect what the component does
+
+### File Organization
+1. **Group by feature**: Related components in same directory
+2. **Separate concerns**: Different types of components in different files
+3. **Maintain hierarchy**: Clear parent-child relationships
+4. **Avoid duplication**: Don't create multiple files for similar functionality

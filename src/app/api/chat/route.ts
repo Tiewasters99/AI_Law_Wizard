@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { ChatService } from '@/app/lib/chatService'
 
 interface ChatRequest {
   message: string
+  sessionId?: string
+  chatType?: 'general' | 'apprentice' | 'wizard' | 'grand-wizard'
 }
 
 export async function POST(request: NextRequest) {
   try {
     console.log('Chat API called - checking environment...')
     
-    // Debug: Check if API key is available
+    // Check if API key is available
     if (!process.env.GROK_API_KEY) {
       console.error('GROK_API_KEY is not set in environment variables')
       return NextResponse.json(
@@ -17,72 +22,47 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+
     console.log('API key found, parsing request body...')
     const body: ChatRequest = await request.json()
-    const { message } = body
+    const { message, sessionId, chatType = 'general' } = body
     
-    console.log('Request parsed:', { message: message.substring(0, 50) + '...' })
-
-    // Build messages array for Grok API
-    const messages = [
-      {
-        role: 'system' as const,
-        content: 'You are a helpful legal assistant powered by Grok. Provide clear, accurate legal information and advice. Always remind users to consult with qualified legal professionals for specific legal matters.'
-      },
-      {
-        role: 'user' as const,
-        content: message
-      }
-    ]
-
-    console.log('Messages built, calling Grok API...')
-    console.log('API Key (first 10 chars):', process.env.GROK_API_KEY?.substring(0, 10) + '...')
-
-    // Call Grok API
-    const response = await fetch('https://api.x.ai/v1/chat/completions', {
-      method: 'POST',
-              headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GROK_API_KEY}`
-        },
-      body: JSON.stringify({
-        messages,
-        model: 'grok-4-latest',
-        stream: false,
-        temperature: 0.7
-      })
+    console.log('Request parsed:', { 
+      message: message.substring(0, 50) + '...', 
+      sessionId, 
+      chatType,
+      userId: userId ? 'authenticated' : 'anonymous'
     })
 
-    console.log('Grok API response status:', response.status)
-    
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error('Grok API error:', response.status, errorData)
-      
-      // Provide specific error messages based on status code
-      if (response.status === 401) {
-        throw new Error('Invalid API key. Please check your GROK_API_KEY environment variable.')
-      } else if (response.status === 403) {
-        throw new Error('No credits available. Please purchase credits on https://console.x.ai/')
-      } else if (response.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.')
-      } else {
-        throw new Error(`Grok API error: ${response.status} - ${errorData}`)
-      }
+    let currentSessionId = sessionId
+    let isNewSession = false
+
+    // Create new session if none provided
+    if (!currentSessionId) {
+      currentSessionId = await ChatService.createSession(userId, undefined, chatType)
+      isNewSession = true
+      console.log('Created new session:', currentSessionId)
+    } else {
+      console.log('Using existing session:', currentSessionId)
     }
 
-    console.log('Grok API call successful, parsing response...')
-    const data = await response.json()
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid response format:', data)
-      throw new Error('Invalid response format from Grok API')
+    // Update session title if it's a new session
+    if (isNewSession) {
+      await ChatService.updateSessionTitle(currentSessionId, message)
     }
 
-    const responseText = data.choices[0].message.content
-    console.log('Response text (first 100 chars):', responseText.substring(0, 100) + '...')
+    // Send message and get response using ChatService
+    const result = await ChatService.sendMessage(currentSessionId, message, userId)
+    
+    console.log('Response generated successfully')
 
-    return NextResponse.json({ response: responseText })
+    return NextResponse.json({ 
+      response: result.response,
+      sessionId: currentSessionId,
+      tokenCount: result.tokenCount
+    })
   } catch (error) {
     console.error('Chat API error:', error)
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')

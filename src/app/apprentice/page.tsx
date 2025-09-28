@@ -1,26 +1,44 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { canUserChat, getCurrentUsage, incrementChatCount, FREE_CHAT_LIMIT } from '@/app/lib/pricing'
-import UpgradeModal from '@/app/components/UpgradeModal'
 import { motion } from 'framer-motion'
 import { useToast } from '@/app/components/ui/use-toast'
 import Layout from '@/app/components/Layout'
+import ChatSidebar from '@/app/components/chat/ChatSidebar'
 import QuickPrompts from '@/app/components/chat/QuickPrompts'
 import ChatMessages from '@/app/components/chat/ChatMessages'
 import ChatInput from '@/app/components/chat/ChatInput'
 import { Message } from '@/app/components/chat/types'
-import { GraduationCap, BookOpen, Lightbulb } from 'lucide-react'
 
 export default function ApprenticePage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [currentUsage, setCurrentUsage] = useState(0)
   const [isClient, setIsClient] = useState(false)
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const [showScrollDown, setShowScrollDown] = useState(false)
+  const [currentChatId, setCurrentChatId] = useState<string>('current')
+  const [currentChatTitle, setCurrentChatTitle] = useState<string>('Legal Apprentice')
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if mobile on mount
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = window.innerWidth < 1024 // lg breakpoint
+      setIsMobile(isMobileDevice)
+      // Keep sidebar collapsed on mobile, expanded on desktop
+      if (isMobileDevice) {
+        setIsSidebarCollapsed(true) // Start collapsed on mobile
+      } else {
+        setIsSidebarCollapsed(false) // Start expanded on desktop
+      }
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
@@ -50,11 +68,7 @@ export default function ApprenticePage() {
   const sendMessageWithText = useCallback(async (messageText: string) => {
     if (!messageText.trim() || isLoading) return
 
-    // Check if user can still chat
-    if (!canUserChat()) {
-      setShowUpgradeModal(true)
-      return
-    }
+    // Apprentice tier is now completely free - no usage limits
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -66,21 +80,19 @@ export default function ApprenticePage() {
     setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
 
-    // Increment chat count
-    const newUsage = incrementChatCount()
-    setCurrentUsage(newUsage)
-
     try {
       // Call Grok 3 API
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage.content
-        })
-      })
+         const response = await fetch('/api/chat', {
+           method: 'POST',
+           headers: {
+             'Content-Type': 'application/json',
+           },
+           body: JSON.stringify({
+             message: userMessage.content,
+             sessionId: currentChatId !== 'current' ? currentChatId : null,
+             chatType: 'apprentice'
+           })
+         })
 
       if (!response.ok) {
         const errorData = await response.text()
@@ -88,20 +100,25 @@ export default function ApprenticePage() {
         throw new Error(`API Error: ${response.status} - ${errorData}`)
       }
 
-      const data = await response.json()
-      
-      if (data.error) {
-        throw new Error(data.error)
-      }
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.response,
-        role: 'assistant',
-        timestamp: new Date()
-      }
+             const data = await response.json()
 
-      setMessages(prev => [...prev, assistantMessage])
+             if (data.error) {
+               throw new Error(data.error)
+             }
+
+             // Update session ID if this was a new session
+             if (data.sessionId && currentChatId === 'current') {
+               setCurrentChatId(data.sessionId)
+             }
+
+             const assistantMessage: Message = {
+               id: (Date.now() + 1).toString(),
+               content: data.response,
+               role: 'assistant',
+               timestamp: new Date()
+             }
+
+             setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
       console.error('Error sending message:', error)
       
@@ -132,12 +149,11 @@ export default function ApprenticePage() {
     } finally {
       setIsLoading(false)
     }
-  }, [isLoading, setShowUpgradeModal, setCurrentUsage])
+  }, [isLoading, currentChatId])
 
   // Initialize client-side state
   useEffect(() => {
     setIsClient(true)
-    setCurrentUsage(getCurrentUsage())
     
     // Check for initial message from consultation form
     const initialMessage = localStorage.getItem('initialChatMessage')
@@ -177,8 +193,54 @@ export default function ApprenticePage() {
     }
   }
 
-  const remainingChats = FREE_CHAT_LIMIT - currentUsage
-  const isLimitReached = isClient && remainingChats <= 0
+  const handleNewChat = () => {
+    setMessages([])
+    setCurrentChatId('current')
+    setCurrentChatTitle('Legal Apprentice')
+    setInputMessage('')
+  }
+
+  const handleSelectChat = (chatId: string) => {
+    setCurrentChatId(chatId)
+    setCurrentChatTitle('Legal Apprentice')
+  }
+
+  const handleLoadChatHistory = async (chatId: string) => {
+    try {
+      const response = await fetch(`/api/chat/sessions/${chatId}`)
+      if (!response.ok) {
+        throw new Error('Failed to load chat history')
+      }
+      
+      const data = await response.json()
+      const chatMessages: Message[] = data.messages.map((msg: any) => ({
+        id: msg.id,
+        content: msg.content,
+        role: msg.role.toLowerCase() as 'user' | 'assistant',
+        timestamp: new Date(msg.createdAt)
+      }))
+      
+      setMessages(chatMessages)
+      
+      // Update chat title from the session
+      const selectedChat = data.session
+      if (selectedChat && selectedChat.title) {
+        setCurrentChatTitle(selectedChat.title)
+      }
+      
+    } catch (error) {
+      console.error('Error loading chat history:', error)
+      toast({ 
+        title: 'Error loading chat', 
+        description: 'Failed to load chat history. Please try again.',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed)
+  }
 
   const apprenticePrompts = [
     'Explain basic contract law concepts',
@@ -191,86 +253,99 @@ export default function ApprenticePage() {
 
   return (
     <Layout>
-      <motion.div 
-        className="flex flex-col h-[calc(100vh-100px)] bg-white/90 backdrop-blur-sm shadow-2xl rounded-lg mx-auto max-w-6xl"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Apprentice Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <GraduationCap className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Legal Apprentice</h1>
-              <p className="text-sm text-gray-600">Learn the fundamentals of law with AI guidance</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1 text-sm text-gray-600">
-              <BookOpen className="w-4 h-4" />
-              <span>Learning Mode</span>
-            </div>
-            {isClient && (
-              <div className="text-sm text-gray-600">
-                {remainingChats} questions remaining
-              </div>
-            )}
-          </div>
+      <div className="h-[calc(100vh-120px)] bg-gray-100 flex overflow-hidden rounded-lg shadow-lg">
+        {/* Mobile Menu Button - Only visible on mobile */}
+        <div className="lg:hidden fixed top-4 right-4 z-50">
+          <button
+            onClick={toggleSidebar}
+            className="p-2 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </div>
 
-        {/* Learning Tips */}
-        <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-b">
-          <div className="flex items-start space-x-3">
-            <Lightbulb className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-gray-700">
-              <p className="font-medium text-gray-900 mb-1">Learning Tips:</p>
-              <p>Ask questions about legal concepts, terminology, and basic procedures. This is your space to build foundational legal knowledge!</p>
+          {/* Sidebar - Fixed, always visible on desktop */}
+          <div className="hidden lg:block">
+            <ChatSidebar
+              onNewChat={handleNewChat}
+              onSelectChat={handleSelectChat}
+              onLoadChatHistory={handleLoadChatHistory}
+              currentChatId={currentChatId}
+              isCollapsed={false}
+              onToggleCollapse={() => {}}
+              chatType="apprentice"
+            />
+          </div>
+
+          {/* Mobile Sidebar - Overlay when needed */}
+          <div className={`lg:hidden ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
+            <ChatSidebar
+              onNewChat={handleNewChat}
+              onSelectChat={handleSelectChat}
+              onLoadChatHistory={handleLoadChatHistory}
+              currentChatId={currentChatId}
+              isCollapsed={false}
+              onToggleCollapse={() => {}}
+              chatType="apprentice"
+            />
+          </div>
+
+          {/* Mobile Overlay - Only on mobile when sidebar is open */}
+          {!isSidebarCollapsed && (
+            <div 
+              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={toggleSidebar}
+            />
+          )}
+
+          {/* Main Chat Panel */}
+          <div className="flex-1 flex flex-col bg-white min-h-0 relative">
+          {/* Messages Area */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ChatMessages
+              messages={messages}
+              isLoading={isLoading}
+              isClient={isClient}
+              remainingChats={999} // Apprentice tier is free
+              showScrollDown={showScrollDown}
+              scrollAreaRef={scrollAreaRef}
+              messagesEndRef={messagesEndRef}
+              copiedMessageId={copiedMessageId}
+              onCopy={handleCopy}
+              onScrollToBottom={scrollToBottom}
+            />
+          </div>
+
+          {/* Quick Prompts - Only show when no messages */}
+          {messages.length === 0 && (
+            <div className="px-4 py-2 border-t border-gray-100 flex-shrink-0">
+              <QuickPrompts
+                prompts={apprenticePrompts}
+                onSelectPrompt={(prompt) => {
+                  setInputMessage(prompt)
+                  setTimeout(() => sendMessageWithText(prompt), 100)
+                }}
+              />
             </div>
+          )}
+
+          {/* Input Area */}
+          <div className="flex-shrink-0">
+            <ChatInput
+              inputMessage={inputMessage}
+              setInputMessage={setInputMessage}
+              onSendMessage={sendMessage}
+              onKeyPress={handleKeyPress}
+              isLoading={isLoading}
+              isClient={isClient}
+              isLimitReached={false} // Apprentice tier is free
+              onUpgrade={() => {}} // No upgrade needed for free tier
+            />
           </div>
         </div>
-
-        {/* Quick prompts */}
-        <QuickPrompts
-          prompts={apprenticePrompts}
-          onSelectPrompt={setInputMessage}
-        />
-
-        {/* Messages */}
-        <ChatMessages
-          messages={messages}
-          isLoading={isLoading}
-          isClient={isClient}
-          remainingChats={remainingChats}
-          showScrollDown={showScrollDown}
-          scrollAreaRef={scrollAreaRef}
-          messagesEndRef={messagesEndRef}
-          copiedMessageId={copiedMessageId}
-          onCopy={handleCopy}
-          onScrollToBottom={scrollToBottom}
-        />
-
-        {/* Upgrade Modal */}
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-          currentUsage={currentUsage}
-        />
-
-        {/* Input */}
-        <ChatInput
-          inputMessage={inputMessage}
-          setInputMessage={setInputMessage}
-          onSendMessage={sendMessage}
-          onKeyPress={handleKeyPress}
-          isLoading={isLoading}
-          isClient={isClient}
-          isLimitReached={isLimitReached}
-          onUpgrade={() => setShowUpgradeModal(true)}
-        />
-      </motion.div>
+      </div>
     </Layout>
   )
 }

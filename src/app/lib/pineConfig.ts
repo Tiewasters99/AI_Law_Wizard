@@ -9,7 +9,7 @@ const pine  = new Pinecone({
 const pineIndex = pine.index('ai-wizard-open-ai');
 
 const openapi = new OpenAIEmbeddings({
-    openAIApiKey: process.env.OPEN_API_KEY ?? 'api-key',
+    openAIApiKey: process.env.OPENAI_API_KEY ?? 'api-key',
     modelName: 'text-embedding-3-small',
 });
 

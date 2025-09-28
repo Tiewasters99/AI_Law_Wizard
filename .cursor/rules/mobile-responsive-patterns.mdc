@@ -1,0 +1,232 @@
+---
+globs: src/app/components/document-processing/*.tsx,src/app/components/Layout.tsx
+description: Mobile-responsive design patterns and responsive component guidelines
+---
+
+# Mobile-Responsive Design Patterns
+
+## Responsive Grid Layout
+
+### Main Content Grid
+```typescript
+// Mobile-first responsive grid
+<div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+  <div className="xl:col-span-2 space-y-4 sm:space-y-6">
+    {/* Main content - 2 columns on desktop, 1 on mobile */}
+  </div>
+  <div className="space-y-4 sm:space-y-6">
+    {/* Sidebar - 1 column on desktop, 1 on mobile */}
+  </div>
+</div>
+```
+
+### Tab Navigation
+```typescript
+// Responsive tab buttons
+<Button
+  variant={activeTab === 'search' ? 'default' : 'outline'}
+  size="sm"
+  className="flex items-center space-x-1 px-2 sm:px-3"
+>
+  <Search className="w-4 h-4" />
+  <span className="hidden sm:inline">Search</span>
+</Button>
+```
+
+## Mobile-Optimized Components
+
+### Header with Responsive Sizing
+```typescript
+<div className="flex items-center space-x-2 sm:space-x-4">
+  <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+  <h1 className="text-lg sm:text-2xl font-bold text-gray-900">AI Document Wizard</h1>
+</div>
+```
+
+### Responsive Statistics
+```typescript
+{queryHistory.statistics && (
+  <div className="hidden lg:flex items-center space-x-4 text-sm text-gray-600">
+    <div className="flex items-center space-x-1">
+      <BarChart3 className="w-4 h-4" />
+      <span>{queryHistory.statistics.total} queries</span>
+    </div>
+  </div>
+)}
+```
+
+## Form Elements
+
+### Responsive Textarea
+```typescript
+<Textarea
+  value={userPrompt}
+  onChange={(e) => setUserPrompt(e.target.value)}
+  placeholder="Describe what you want to analyze..."
+  rows={4} // Reduced from 6 for mobile
+  className="text-base sm:text-lg resize-none border-2 border-gray-200 focus:border-blue-500 rounded-xl p-3 sm:p-4 shadow-sm"
+/>
+```
+
+### Responsive Buttons
+```typescript
+<Button 
+  onClick={handleProcess} 
+  disabled={isProcessing || !userPrompt.trim()}
+  className="flex-1 h-12 sm:h-14 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg"
+  size="lg"
+>
+  {isProcessing ? (
+    <>
+      <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+      Processing...
+    </>
+  ) : (
+    <>
+      <Play className="w-5 h-5 mr-3" />
+      Start Analysis
+    </>
+  )}
+</Button>
+```
+
+## Mobile Navigation
+
+### Compact Header
+```typescript
+<div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+  <div className="max-w-7xl mx-auto px-4 py-3"> {/* Reduced padding on mobile */}
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-2 sm:space-x-4">
+        {/* Logo and title */}
+      </div>
+      <div className="flex items-center space-x-1"> {/* Compact spacing */}
+        {/* Tab navigation */}
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### Mobile-First Tab Design
+```typescript
+<div className="flex items-center space-x-1">
+  <Button
+    variant={activeTab === 'search' ? 'default' : 'outline'}
+    size="sm"
+    className="flex items-center space-x-1 px-2 sm:px-3"
+  >
+    <Search className="w-4 h-4" />
+    <span className="hidden sm:inline">Search</span>
+  </Button>
+</div>
+```
+
+## Content Spacing
+
+### Responsive Spacing
+```typescript
+// Main content with responsive spacing
+<div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+    <div className="xl:col-span-2 space-y-4 sm:space-y-6">
+      {/* Content with responsive spacing */}
+    </div>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Sidebar with responsive spacing */}
+    </div>
+  </div>
+</div>
+```
+
+### Card Responsive Design
+```typescript
+<Card className="shadow-sm">
+  <CardHeader>
+    <CardTitle className="text-lg sm:text-xl"> {/* Responsive text size */}
+      <Search className="w-5 h-5" />
+      <span>AI Document Analysis</span>
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4 sm:space-y-6"> {/* Responsive spacing */}
+    {/* Content */}
+  </CardContent>
+</Card>
+```
+
+## Mobile-Specific Patterns
+
+### Hidden Elements on Mobile
+```typescript
+// Hide statistics on mobile, show on large screens
+<div className="hidden lg:flex items-center space-x-4 text-sm text-gray-600">
+  <div className="flex items-center space-x-1">
+    <BarChart3 className="w-4 h-4" />
+    <span>{queryHistory.statistics.total} queries</span>
+  </div>
+</div>
+```
+
+### Mobile-Optimized Text
+```typescript
+// Responsive text sizing
+<h1 className="text-lg sm:text-2xl font-bold text-gray-900">AI Document Wizard</h1>
+<p className="text-sm sm:text-base text-gray-600">Description text</p>
+```
+
+### Touch-Friendly Buttons
+```typescript
+// Minimum touch target size (44px)
+<Button
+  className="h-12 sm:h-14 px-6 sm:px-8" // Minimum 48px height
+  size="lg"
+>
+  Button Text
+</Button>
+```
+
+## Layout Breakpoints
+
+### Tailwind CSS Breakpoints
+- **sm**: 640px and up
+- **md**: 768px and up  
+- **lg**: 1024px and up
+- **xl**: 1280px and up
+
+### Component Breakpoint Strategy
+```typescript
+// Mobile-first approach
+className="
+  text-sm sm:text-base lg:text-lg    // Text sizing
+  p-3 sm:p-4 lg:p-6                  // Padding
+  space-y-2 sm:space-y-4 lg:space-y-6 // Spacing
+  grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 // Grid layout
+"
+```
+
+## Performance Considerations
+
+### Conditional Rendering
+```typescript
+// Only render heavy components on larger screens
+{isLargeScreen && (
+  <ComplexAnalyticsComponent />
+)}
+
+// Use CSS to hide/show instead of conditional rendering when possible
+<div className="hidden lg:block">
+  <AnalyticsWidget />
+</div>
+```
+
+### Mobile-Optimized Images
+```typescript
+// Responsive image sizing
+<Image
+  src="/images/logo.svg"
+  alt="Logo"
+  width={24}
+  height={24}
+  className="w-6 h-6 sm:w-8 sm:h-8"
+/>
+```

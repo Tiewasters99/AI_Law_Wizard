@@ -2,6 +2,7 @@ import { openapi, pineIndex } from "./pineConfig";
 import { chunkTextWithOverlap } from "./chunking";
 import { prisma, ChunkStatus } from "../../lib/database";
 import type { EmbeddingChunk } from "@prisma/client";
+import { generateChunkSummary, generateChunkMetadata } from "./summaryService";
 
 export async function ingestPlainText(
   fileId: string,
@@ -31,12 +32,29 @@ export async function ingestPlainText(
     try {
       const embedding = await openapi.embedQuery(chunk.text);
       
-      // Update chunk status to completed with embedding ID
+      // Generate summary and metadata for the chunk
+      let summary: string | null = null;
+      let metadata: any = null;
+      
+      try {
+        summary = await generateChunkSummary(chunk.text, {
+          maxLength: 200,
+          includeKeywords: true
+        });
+        metadata = await generateChunkMetadata(chunk.text, summary);
+      } catch (summaryError) {
+        console.warn(`Failed to generate summary for chunk ${chunk.chunkIndex}:`, summaryError);
+        // Continue without summary if generation fails
+      }
+      
+      // Update chunk status to completed with embedding ID, summary, and metadata
       await prisma.embeddingChunk.update({
         where: { id: createdChunks[index].id },
         data: {
           status: ChunkStatus.COMPLETED,
           embeddingId: `${fileId}__${chunk.chunkIndex}`,
+          summary,
+          metadata,
           processedAt: new Date(),
           updatedAt: new Date(),
         },

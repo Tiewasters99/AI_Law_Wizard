@@ -1,0 +1,42 @@
+---
+alwaysApply: true
+description: AI Wizard project architecture and core patterns
+---
+
+# AI Wizard Project Architecture
+
+## Core Document Processing System
+
+The main document processing system is located in [src/app/api/document-processing/route.ts](mdc:src/app/api/document-processing/route.ts) and follows these key patterns:
+
+### Performance Strategy
+- **Fast keyword-based mode detection** (instant for common patterns)
+- **Question answering using chunks** (no full file fetching needed)
+- **Action performance with full file fetching** for editing capabilities
+- **Timeout protection** for all operations
+
+### Model Strategy
+- **GPT-4o-mini**: Basic tasks (mode detection, question answering, simple file editing)
+- **Grok-4**: Complex agentic workflows and advanced reasoning
+
+### Key Functions
+- `detectResponseMode()`: Fast response mode detection with timeout protection
+- `searchRelevantFiles()`: Find relevant files using search tool
+- `processQuestionAnswering()`: Handle question answering with chunk-based context
+- `fetchFileContent()`: Smart file fetching with deduplication
+- `processActionPerformance()`: Handle action performance with agentic workflow
+- `saveFailedQuery()`: Save failed queries to database
+
+## Database Schema
+The project uses Prisma with schema defined in [prisma/schema.prisma](mdc:prisma/schema.prisma). Key models include:
+- `DocumentQuery`: Stores processing results and metadata
+- `User`: User authentication and management
+- `TokenPackage`: Token-based pricing system
+
+## Chat System
+The chat system is implemented in [src/app/lib/chatService.ts](mdc:src/app/lib/chatService.ts) with optimization utilities in [src/app/lib/chatOptimizationUtils.ts](mdc:src/app/lib/chatOptimizationUtils.ts).
+
+## Naming Conventions
+- Avoid words like "enhanced", "optimized", "refactored" in naming
+- Use descriptive names based on actual functionality
+- Keep naming simple and clear

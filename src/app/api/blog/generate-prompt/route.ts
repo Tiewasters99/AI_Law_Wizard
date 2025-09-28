@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if API key is available
-    if (!process.env.XAI_API_KEY) {
+    if (!process.env.GROK_API_KEY) {
       return NextResponse.json(
         { error: 'API key not configured. Please set GROK_API_KEY in your environment variables.' },
         { status: 500 }
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize ChatXAI using LangChain
     const llm = new ChatXAI({
-      apiKey: process.env.XAI_API_KEY,
+      apiKey: process.env.GROK_API_KEY,
       model: 'grok-4-latest',
       temperature: 0.7,
       maxTokens: 1000,

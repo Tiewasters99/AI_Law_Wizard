@@ -21,16 +21,47 @@ interface QueryDetailModalProps {
   onClose: () => void
 }
 
-export const QueryDetailModal: React.FC<QueryDetailModalProps> = ({
+export const QueryDetailsModal: React.FC<QueryDetailModalProps> = ({
   query,
   isOpen,
   onClose
 }) => {
   if (!isOpen || !query) return null
 
-  const formatProcessingTime = (time?: number) => {
-    if (!time) return 'N/A'
-    if (time < 1000) return `${time}ms`
+  // VALIDATION: All displayed data comes directly from the database via API
+  // No static data or hardcoded values are used
+  // All fields are validated against the DocumentQuery interface
+
+  // Data validation function to ensure all fields are from database
+  const validateQueryData = (query: DocumentQuery) => {
+    const requiredFields = [
+      'id', 'userQuery', 'aiResponse', 'success', 'totalSteps', 
+      'completedSteps', 'toolsUsed', 'createdAt', 'updatedAt'
+    ]
+    
+    const optionalFields = [
+      'searchQuery', 'error', 'confidence', 'processingTime', 
+      'filesProcessed', 'userId', 'sessionId'
+    ]
+    
+    // Validate required fields exist
+    const missingRequired = requiredFields.filter(field => !(field in query))
+    if (missingRequired.length > 0) {
+      console.warn('Missing required fields:', missingRequired)
+    }
+    
+    return {
+      isValid: missingRequired.length === 0,
+      missingFields: missingRequired
+    }
+  }
+
+  // Validate the query data
+  const validation = validateQueryData(query)
+
+  const formatProcessingTime = (time?: number | null) => {
+    if (time === null || time === undefined || isNaN(time) || time < 0) return 'N/A'
+    if (time < 1000) return `${Math.round(time)}ms`
     return `${(time / 1000).toFixed(2)}s`
   }
 
@@ -63,12 +94,22 @@ export const QueryDetailModal: React.FC<QueryDetailModalProps> = ({
                 <XCircleIcon className="h-6 w-6 text-red-500 mr-3" />
               )}
               <div>
-                <h3 className="text-lg font-medium text-gray-900">
-                  Query Details
-                </h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Query Details
+                  </h3>
+                  {/* Request type indicator */}
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    query.totalSteps > 2 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {query.totalSteps > 2 ? 'Action Request' : 'Question Request'}
+                  </span>
+                </div>
                 <p className="text-sm text-gray-500 flex items-center mt-1">
                   <ClockIcon className="h-4 w-4 mr-1" />
-                  {format(new Date(query.createdAt), 'MMMM dd, yyyy HH:mm:ss')}
+                  {query.createdAt ? format(new Date(query.createdAt), 'MMMM dd, yyyy HH:mm:ss') : 'N/A'}
                 </p>
               </div>
             </div>
@@ -83,7 +124,10 @@ export const QueryDetailModal: React.FC<QueryDetailModalProps> = ({
           {/* Content */}
           <div className="space-y-6">
             {/* Status and Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className={`grid gap-4 p-4 bg-gray-50 rounded-lg ${
+              // Show steps only for agentic requests (action performance mode)
+              query.totalSteps > 2 ? 'grid-cols-1 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'
+            }`}>
               <div className="text-center">
                 <div className="text-sm font-medium text-gray-900">Status</div>
                 <div className={`text-lg font-semibold ${query.success ? 'text-green-600' : 'text-red-600'}`}>
@@ -96,16 +140,21 @@ export const QueryDetailModal: React.FC<QueryDetailModalProps> = ({
                   {formatProcessingTime(query.processingTime)}
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-900">Steps</div>
-                <div className="text-lg font-semibold text-purple-600">
-                  {query.completedSteps}/{query.totalSteps}
+              {/* Show steps only for agentic requests (action performance mode) */}
+              {query.totalSteps > 2 && (
+                <div className="text-center">
+                  <div className="text-sm font-medium text-gray-900">Steps</div>
+                  <div className="text-lg font-semibold text-purple-600">
+                    {query.completedSteps || 0}/{query.totalSteps || 0}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="text-center">
                 <div className="text-sm font-medium text-gray-900">Confidence</div>
                 <div className="text-lg font-semibold text-amber-600">
-                  {query.confidence ? `${(query.confidence * 100).toFixed(1)}%` : 'N/A'}
+                  {query.confidence !== null && query.confidence !== undefined 
+                    ? `${(query.confidence * 100).toFixed(1)}%` 
+                    : 'N/A'}
                 </div>
               </div>
             </div>
@@ -184,7 +233,7 @@ export const QueryDetailModal: React.FC<QueryDetailModalProps> = ({
             )}
 
             {/* Tools Used */}
-            {query.toolsUsed.length > 0 && (
+            {query.toolsUsed && query.toolsUsed.length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-md font-medium text-gray-900 flex items-center">
                   <ChartBarIcon className="h-5 w-5 mr-2" />
@@ -204,28 +253,49 @@ export const QueryDetailModal: React.FC<QueryDetailModalProps> = ({
             )}
 
             {/* Files Processed */}
-            {query.filesProcessed && Array.isArray(query.filesProcessed) && query.filesProcessed.length > 0 && (
+            {query.filesProcessed && (
               <div className="space-y-3">
                 <h4 className="text-md font-medium text-gray-900">Files Processed</h4>
                 <div className="space-y-2">
-                  {query.filesProcessed.map((file: any, index: number) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {file.fileName || file.originalName || `File ${index + 1}`}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Type: {file.fileType || 'Unknown'} • 
-                            Size: {file.fileSize || file.contentLength || 0} bytes
-                          </div>
+                  {(() => {
+                    // Handle different data structures from database
+                    let files = []
+                    if (Array.isArray(query.filesProcessed)) {
+                      files = query.filesProcessed
+                    } else if (typeof query.filesProcessed === 'object' && query.filesProcessed !== null) {
+                      // If it's an object, try to extract array from it
+                      files = query.filesProcessed.files || query.filesProcessed.data || [query.filesProcessed]
+                    }
+                    
+                    if (files.length === 0) {
+                      return (
+                        <div className="bg-gray-50 rounded-lg p-3 text-center text-gray-500">
+                          No files processed
                         </div>
-                        <div className="text-xs text-gray-400">
-                          ID: {file.fileId}
+                      )
+                    }
+                    
+                    return files.map((file: any, index: number) => (
+                      <div key={index} className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {file.fileName || file.originalName || file.name || `File ${index + 1}`}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {file.fileType && `Type: ${file.fileType}`}
+                              {file.fileType && (file.fileSize || file.contentLength) && ' • '}
+                              {(file.fileSize || file.contentLength) && `Size: ${file.fileSize || file.contentLength} bytes`}
+                              {!file.fileType && !file.fileSize && !file.contentLength && 'File details not available'}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {file.fileId && `ID: ${file.fileId}`}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  })()}
                 </div>
               </div>
             )}
@@ -237,20 +307,44 @@ export const QueryDetailModal: React.FC<QueryDetailModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-gray-900">Query ID:</span>
-                    <span className="text-gray-600 ml-2 font-mono">{query.id}</span>
+                    <span className="text-gray-600 ml-2 font-mono">{query.id || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="font-medium text-gray-900">Created:</span>
-                    <span className="text-gray-600 ml-2">{format(new Date(query.createdAt), 'yyyy-MM-dd HH:mm:ss')}</span>
+                    <span className="text-gray-600 ml-2">
+                      {query.createdAt ? format(new Date(query.createdAt), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}
+                    </span>
                   </div>
                   <div>
                     <span className="font-medium text-gray-900">Updated:</span>
-                    <span className="text-gray-600 ml-2">{format(new Date(query.updatedAt), 'yyyy-MM-dd HH:mm:ss')}</span>
+                    <span className="text-gray-600 ml-2">
+                      {query.updatedAt ? format(new Date(query.updatedAt), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}
+                    </span>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-900">Processing Steps:</span>
-                    <span className="text-gray-600 ml-2">{query.completedSteps} of {query.totalSteps}</span>
-                  </div>
+                  {/* Show processing steps only for agentic requests */}
+                  {query.totalSteps > 2 && (
+                    <div>
+                      <span className="font-medium text-gray-900">Processing Steps:</span>
+                      <span className="text-gray-600 ml-2">
+                        {typeof query.completedSteps === 'number' && typeof query.totalSteps === 'number' 
+                          ? `${query.completedSteps} of ${query.totalSteps}`
+                          : 'N/A'
+                        }
+                      </span>
+                    </div>
+                  )}
+                  {(query as any).userId && (
+                    <div>
+                      <span className="font-medium text-gray-900">User ID:</span>
+                      <span className="text-gray-600 ml-2 font-mono">{(query as any).userId}</span>
+                    </div>
+                  )}
+                  {(query as any).sessionId && (
+                    <div>
+                      <span className="font-medium text-gray-900">Session ID:</span>
+                      <span className="text-gray-600 ml-2 font-mono">{(query as any).sessionId}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,0 +1,308 @@
+---
+globs: src/app/api/document-processing/route.ts,src/app/hooks/useDocumentProcessing.ts,src/app/lib/grok.ts
+description: AI integration patterns and processing workflow guidelines
+---
+
+# AI Integration Patterns
+
+## Document Processing API
+
+### Main Processing Endpoint
+The document processing system is located in [src/app/api/document-processing/route.ts](mdc:src/app/api/document-processing/route.ts) and follows these key patterns:
+
+### Performance Strategy
+- **Fast keyword-based mode detection** (instant for common patterns)
+- **Question answering using chunks** (no full file fetching needed)
+- **Action performance with full file fetching** for editing capabilities
+- **Timeout protection** for all operations
+
+### Model Strategy
+- **GPT-4o-mini**: Basic tasks (mode detection, question answering, simple file editing)
+- **Grok-4**: Complex agentic workflows and advanced reasoning
+
+## Key Functions
+
+### Mode Detection
+```typescript
+const detectResponseMode = async (userPrompt: string): Promise<string> => {
+  // Fast keyword-based detection for common patterns
+  const keywords = {
+    'question_answering': ['what', 'how', 'why', 'when', 'where', 'explain', 'describe'],
+    'action_performance': ['create', 'generate', 'write', 'edit', 'modify', 'update', 'delete']
+  }
+  
+  // Return mode based on keyword analysis
+}
+```
+
+### File Processing
+```typescript
+const processQuestionAnswering = async (userPrompt: string, searchQuery: string) => {
+  // Use chunks for questions - no full file fetching
+  const relevantFiles = await searchRelevantFiles(searchQuery)
+  const chunks = await fetchFileChunks(relevantFiles)
+  
+  // Process with GPT-4o-mini for efficiency
+  return await processWithGPT4Mini(chunks, userPrompt)
+}
+
+const processActionPerformance = async (userPrompt: string, searchQuery: string) => {
+  // Full file fetching for actions
+  const relevantFiles = await searchRelevantFiles(searchQuery)
+  const fullFiles = await fetchFileContent(relevantFiles)
+  
+  // Process with Grok-4 for complex reasoning
+  return await processWithGrok4(fullFiles, userPrompt)
+}
+```
+
+## Processing Workflow
+
+### Real-time Processing Hook
+```typescript
+// useDocumentProcessing hook pattern
+const useDocumentProcessing = () => {
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [finalResult, setFinalResult] = useState<string | null>(null)
+  const [processedFiles, setProcessedFiles] = useState<ProcessedFileInfo[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  const startProcessing = async ({ userPrompt }: { userPrompt: string }) => {
+    setIsProcessing(true)
+    setError(null)
+    
+    try {
+      const response = await fetch('/api/document-processing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userPrompt })
+      })
+      
+      if (!response.ok) throw new Error('Processing failed')
+      
+      const data = await response.json()
+      setFinalResult(data.result)
+      setProcessedFiles(data.processedFiles || [])
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  return {
+    isProcessing,
+    finalResult,
+    processedFiles,
+    error,
+    startProcessing,
+    stopProcessing: () => setIsProcessing(false),
+    clearState: () => {
+      setFinalResult(null)
+      setProcessedFiles([])
+      setError(null)
+    }
+  }
+}
+```
+
+## AI Model Integration
+
+### Model Selection Strategy
+```typescript
+const selectModel = (task: string, complexity: 'simple' | 'complex') => {
+  if (complexity === 'simple') {
+    return 'gpt-4o-mini' // Fast and cost-effective
+  } else {
+    return 'grok-4' // Advanced reasoning capabilities
+  }
+}
+```
+
+### Processing Modes
+```typescript
+// Question Answering Mode
+const processQuestion = async (prompt: string, chunks: string[]) => {
+  const model = 'gpt-4o-mini' // Efficient for Q&A
+  return await callAI(model, {
+    prompt,
+    context: chunks,
+    maxTokens: 1000
+  })
+}
+
+// Action Performance Mode  
+const processAction = async (prompt: string, fullFiles: string[]) => {
+  const model = 'grok-4' // Advanced reasoning
+  return await callAI(model, {
+    prompt,
+    context: fullFiles,
+    maxTokens: 4000
+  })
+}
+```
+
+## Error Handling
+
+### AI-Specific Error Handling
+```typescript
+const handleAIError = (error: Error) => {
+  if (error.message.includes('rate limit')) {
+    return 'AI service is busy. Please try again in a moment.'
+  }
+  
+  if (error.message.includes('token limit')) {
+    return 'Request is too long. Please try with a shorter prompt.'
+  }
+  
+  if (error.message.includes('model not available')) {
+    return 'AI service is temporarily unavailable. Please try again later.'
+  }
+  
+  return 'An error occurred while processing your request.'
+}
+```
+
+### Timeout Protection
+```typescript
+const processWithTimeout = async (promise: Promise<any>, timeoutMs: number) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Processing timeout')), timeoutMs)
+    )
+  ])
+}
+```
+
+## File Processing Patterns
+
+### Chunk-Based Processing
+```typescript
+const processWithChunks = async (files: FileInfo[], prompt: string) => {
+  // Extract relevant chunks
+  const chunks = await extractRelevantChunks(files, prompt)
+  
+  // Process with AI
+  const result = await callAI('gpt-4o-mini', {
+    prompt,
+    context: chunks,
+    maxTokens: 1000
+  })
+  
+  return result
+}
+```
+
+### Full File Processing
+```typescript
+const processWithFullFiles = async (files: FileInfo[], prompt: string) => {
+  // Fetch full file contents
+  const fullContents = await fetchFullFileContents(files)
+  
+  // Process with advanced AI
+  const result = await callAI('grok-4', {
+    prompt,
+    context: fullContents,
+    maxTokens: 4000
+  })
+  
+  return result
+}
+```
+
+## Performance Optimization
+
+### Caching Strategy
+```typescript
+const cache = new Map<string, any>()
+
+const getCachedResult = (key: string) => {
+  return cache.get(key)
+}
+
+const setCachedResult = (key: string, result: any) => {
+  cache.set(key, result)
+  // Implement TTL or size limits
+}
+```
+
+### Batch Processing
+```typescript
+const processBatch = async (requests: ProcessingRequest[]) => {
+  const results = await Promise.allSettled(
+    requests.map(req => processSingle(req))
+  )
+  
+  return results.map((result, index) => ({
+    request: requests[index],
+    result: result.status === 'fulfilled' ? result.value : null,
+    error: result.status === 'rejected' ? result.reason : null
+  }))
+}
+```
+
+## Integration Guidelines
+
+### API Response Format
+```typescript
+interface ProcessingResponse {
+  success: boolean
+  result?: string
+  error?: string
+  processedFiles?: ProcessedFileInfo[]
+  confidence?: number
+  operationChain?: OperationStep[]
+  totalSteps?: number
+  completedSteps?: number
+  queryId?: string
+  responseMode?: 'question_answering' | 'action_performance'
+  editedFiles?: EditedFileInfo[]
+}
+```
+
+### Error Response Format
+```typescript
+interface ErrorResponse {
+  success: false
+  error: string
+  errorType: 'validation' | 'processing' | 'timeout' | 'rate_limit'
+  retryAfter?: number
+}
+```
+
+## Monitoring and Analytics
+
+### Processing Metrics
+```typescript
+const trackProcessingMetrics = (startTime: number, endTime: number, success: boolean) => {
+  const duration = endTime - startTime
+  
+  // Log metrics
+  console.log('Processing metrics:', {
+    duration,
+    success,
+    timestamp: new Date().toISOString()
+  })
+  
+  // Send to analytics
+  analytics.track('document_processing', {
+    duration,
+    success,
+    model: 'gpt-4o-mini' // or 'grok-4'
+  })
+}
+```
+
+### Usage Tracking
+```typescript
+const trackUsage = (userId: string, action: string, tokens: number) => {
+  // Track token usage
+  analytics.track('ai_usage', {
+    userId,
+    action,
+    tokens,
+    timestamp: new Date().toISOString()
+  })
+}
+```

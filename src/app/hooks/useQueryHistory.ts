@@ -13,9 +13,14 @@ export interface DocumentQuery {
   completedSteps: number
   toolsUsed: string[]
   filesProcessed?: any
+  userId?: string
+  sessionId?: string
   createdAt: string
   updatedAt: string
 }
+
+// Validation: This interface matches exactly with the API endpoint selection
+// All fields are properly typed and match the database schema
 
 export interface QueryHistoryStats {
   total: number

@@ -46,11 +46,7 @@ interface UserProfile {
   lastActive: string;
   totalQueries: number;
   totalDocuments: number;
-  subscription?: {
-    plan: string;
-    status: string;
-    expiresAt?: string;
-  };
+  // Removed subscription - apprentice is completely free
 }
 
 export default function ProfilePage() {
@@ -85,11 +81,7 @@ export default function ProfilePage() {
             lastActive: new Date().toISOString(),
             totalQueries: 47,
             totalDocuments: 23,
-            subscription: {
-              plan: 'Professional',
-              status: 'active',
-              expiresAt: '2024-12-31'
-            }
+            // Removed subscription - apprentice is completely free
           };
           
           setProfile(mockProfile);
@@ -249,30 +241,26 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Subscription Info */}
-                {profile.subscription && (
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold text-blue-900 mb-2">Subscription</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-blue-700">Plan:</span>
-                        <span className="font-medium">{profile.subscription.plan}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-blue-700">Status:</span>
-                        <Badge variant={profile.subscription.status === 'active' ? 'default' : 'secondary'}>
-                          {profile.subscription.status}
-                        </Badge>
-                      </div>
-                      {profile.subscription.expiresAt && (
-                        <div className="flex justify-between">
-                          <span className="text-blue-700">Expires:</span>
-                          <span className="font-medium">{new Date(profile.subscription.expiresAt).toLocaleDateString()}</span>
-                        </div>
-                      )}
+                {/* Apprentice Access Info */}
+                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                  <h4 className="font-semibold text-green-900 mb-2">Access Level</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-green-700">Plan:</span>
+                      <span className="font-medium">Apprentice (Free)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-700">Status:</span>
+                      <Badge variant="default" className="bg-green-600">
+                        Active
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-700">Access:</span>
+                      <span className="font-medium">Unlimited</span>
                     </div>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </div>

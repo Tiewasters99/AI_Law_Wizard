@@ -79,13 +79,13 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+    <div className="min-h-[60vh] sm:min-h-screen bg-white flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-3xl mx-auto">
         {/* Main Heading */}
         <div
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
+          <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold text-gray-900 mb-4 leading-tight">
             What <span className="text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text">problem</span> can I help you <span className="text-transparent bg-gradient-to-r from-amber-500 to-yellow-500 bg-clip-text">solve</span> today?
           </h1>
         </div>
@@ -98,61 +98,67 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
         >
           <Card className="border border-gray-200 shadow-lg bg-white">
             <form onSubmit={handleSubmit} className="relative">
-              <div className="p-4">
+              <div className="p-3 sm:p-4">
                 <Textarea
                   value={issue}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setIssue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Describe your issue, tell me your concerns, outline your questions."
-                  className="min-h-[120px] border-none resize-none text-base placeholder:italic placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
+                  className="min-h-[100px] sm:min-h-[120px] border-none resize-none text-sm sm:text-base placeholder:italic placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
                   disabled={isLoading}
                 />
               </div>
               
               {/* Bottom toolbar */}
-              <div className="flex items-center justify-between p-4 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 mr-2">
-                    {uploadingFiles ? 'Uploading files...' : 'Upload a Contract, Invoice or Email--Or Even an Image or Video'}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border-t border-gray-100 gap-3 sm:gap-0">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                  <span className="text-xs sm:text-sm text-gray-500">
+                    {uploadingFiles ? 'Uploading files...' : 'Upload files:'}
                   </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 h-auto"
-                    onClick={() => triggerFileInput('document')}
-                    disabled={uploadingFiles}
-                  >
-                    <FileText className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 h-auto"
-                    onClick={() => triggerFileInput('image')}
-                    disabled={uploadingFiles}
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-2 h-auto"
-                    onClick={() => triggerFileInput('video')}
-                    disabled={uploadingFiles}
-                  >
-                    <Video className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 sm:p-2 h-auto"
+                      onClick={() => triggerFileInput('document')}
+                      disabled={uploadingFiles}
+                      title="Upload Document"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 sm:p-2 h-auto"
+                      onClick={() => triggerFileInput('image')}
+                      disabled={uploadingFiles}
+                      title="Upload Image"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 sm:p-2 h-auto"
+                      onClick={() => triggerFileInput('video')}
+                      disabled={uploadingFiles}
+                      title="Upload Video"
+                    >
+                      <Video className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 
                 <Button
                   type="submit"
                   disabled={!issue.trim() || isLoading}
-                  className="bg-gray-900 hover:bg-gray-800 text-white rounded-full p-2 h-auto min-w-[40px] disabled:opacity-50"
+                  className="bg-gray-900 hover:bg-gray-800 text-white rounded-full p-2 h-auto min-w-[40px] disabled:opacity-50 w-full sm:w-auto"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4 mr-2 sm:mr-0" />
+                  <span className="sm:hidden">Send</span>
                 </Button>
               </div>
               
@@ -170,9 +176,9 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
 
         {/* Disclaimer */}
         <div
-          className="text-center mt-8"
+          className="text-center mt-6 sm:mt-8"
         >
-          <p className="text-sm text-gray-500 max-w-2xl mx-auto">
+          <p className="text-xs sm:text-sm text-gray-500 max-w-2xl mx-auto px-4">
             This AI provides general legal information only and does not constitute legal advice. 
             For specific legal matters, consult with a qualified attorney.
           </p>

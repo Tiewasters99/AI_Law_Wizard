@@ -1,0 +1,313 @@
+---
+globs: src/app/hooks/useDocumentProcessing.ts,src/app/hooks/useQueryHistory.ts,src/app/components/document-processing/*.tsx
+description: State management patterns and hook usage guidelines
+---
+
+# State Management Patterns
+
+## Hook-Based State Management
+
+### Document Processing Hook
+```typescript
+// Real-time processing hook
+const processingState = useDocumentProcessing()
+
+// State access
+const isProcessing = processingState.isProcessing
+const finalResult = processingState.finalResult || ''
+const processedFiles = processingState.processedFiles
+const error = processingState.error
+
+// Actions
+processingState.startProcessing({ userPrompt })
+processingState.stopProcessing()
+processingState.clearState()
+```
+
+### Query History Hook
+```typescript
+// Query history hook
+const queryHistory = useQueryHistory()
+
+// State access
+const queries = queryHistory.queries
+const statistics = queryHistory.statistics
+const loading = queryHistory.loading
+const error = queryHistory.error
+
+// Actions
+queryHistory.fetchQueries(page, limit, searchTerm, showSuccessOnly)
+queryHistory.fetchRecentQueries(limit)
+queryHistory.deleteQuery(queryId)
+```
+
+## Component State Patterns
+
+### Local UI State
+```typescript
+// Input state
+const [userPrompt, setUserPrompt] = useState('')
+const [searchQuery, setSearchQuery] = useState('')
+
+// UI state
+const [showFileEditor, setShowFileEditor] = useState(false)
+const [editedFile, setEditedFile] = useState('')
+const [generatedFile, setGeneratedFile] = useState('')
+const [showFileManager, setShowFileManager] = useState(false)
+const [showQueryHistory, setShowQueryHistory] = useState(false)
+const [activeTab, setActiveTab] = useState<'search' | 'files' | 'history'>('search')
+```
+
+### Tab State Management
+```typescript
+const [activeTab, setActiveTab] = useState<'search' | 'files' | 'history'>('search')
+
+// Tab switching
+<Button
+  variant={activeTab === 'search' ? 'default' : 'outline'}
+  onClick={() => setActiveTab('search')}
+>
+  Search
+</Button>
+```
+
+## Effect Patterns
+
+### Processing Completion Effect
+```typescript
+useEffect(() => {
+  if (!processingState.isProcessing && processingState.finalResult && !processingState.error) {
+    // Processing completed successfully
+    toast({
+      title: 'Analysis Complete',
+      description: `Successfully processed ${processingState.processedFiles?.length || 0} relevant documents`
+    })
+
+    if (onComplete) {
+      onComplete(processingState.finalResult, processingState.finalResult)
+    }
+  } else if (processingState.error) {
+    // Handle processing errors
+    handleProcessingError(processingState.error)
+  }
+}, [processingState.isProcessing, processingState.finalResult, processingState.error, processingState.processedFiles])
+```
+
+### Data Loading Effect
+```typescript
+// Load recent queries on mount
+useEffect(() => {
+  queryHistory.fetchRecentQueries(5)
+}, [])
+
+// Load files when authenticated
+useEffect(() => {
+  if (isAuthenticated) {
+    loadFiles()
+  }
+}, [currentFolder, searchTerm, isAuthenticated])
+```
+
+## State Clearing Patterns
+
+### Clear All State
+```typescript
+const handleClearAll = () => {
+  setUserPrompt('')
+  setGeneratedFile('')
+  setEditedFile('')
+  setShowFileEditor(false)
+  processingState.clearState()
+}
+```
+
+### Reset Processing State
+```typescript
+const handleNewAnalysis = () => {
+  setGrokResult(null)
+  processingState.clearState()
+}
+```
+
+## Async State Management
+
+### Processing State Flow
+```typescript
+const handleProcess = async () => {
+  if (isProcessing) return
+
+  if (!userPrompt.trim()) {
+    toast({ title: 'Error', description: 'Please describe what you would like to analyze' })
+    return
+  }
+
+  // Check token requirements
+  if (onBeforeStart) {
+    try {
+      const canProceed = await onBeforeStart()
+      if (!canProceed) return
+    } catch (error) {
+      toast({ title: 'Error', description: error.message })
+      return
+    }
+  }
+
+  // Clear previous state and start processing
+  processingState.clearState()
+  
+  toast({ title: 'Starting Analysis', description: 'Processing your request...' })
+  
+  processingState.startProcessing({ userPrompt: userPrompt.trim() })
+}
+```
+
+### File Operations State
+```typescript
+const handleFileSelect = async (file: OneDriveFileInfo) => {
+  if (onFileSelect) {
+    try {
+      setLoading(true)
+      const result = await downloadOneDriveFile(file.id)
+      
+      if (result.success && result.file) {
+        const downloadedFile = base64ToFile(result.file.content, result.file.name, result.file.type)
+        onFileSelect(downloadedFile)
+        toast({ title: 'Success', description: `File "${file.name}" selected successfully` })
+      } else {
+        toast({ title: 'Error', description: result.error || 'Failed to download file' })
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to download file' })
+    } finally {
+      setLoading(false)
+    }
+  }
+}
+```
+
+## State Persistence
+
+### URL State Management
+```typescript
+// Update URL when step changes
+useEffect(() => {
+  const url = new URL(window.location.href)
+  url.searchParams.set('step', currentStep)
+  window.history.replaceState({}, '', url.toString())
+}, [currentStep])
+```
+
+### Local Storage State
+```typescript
+// Persist user preferences
+useEffect(() => {
+  const savedTab = localStorage.getItem('activeTab')
+  if (savedTab) {
+    setActiveTab(savedTab as 'search' | 'files' | 'history')
+  }
+}, [])
+
+useEffect(() => {
+  localStorage.setItem('activeTab', activeTab)
+}, [activeTab])
+```
+
+## State Validation
+
+### Input Validation
+```typescript
+const validateInput = (prompt: string) => {
+  if (!prompt.trim()) {
+    return { valid: false, error: 'Please describe what you would like to analyze' }
+  }
+  
+  if (prompt.length < 10) {
+    return { valid: false, error: 'Please provide more details about your request' }
+  }
+  
+  if (prompt.length > 1000) {
+    return { valid: false, error: 'Request is too long. Please keep it under 1000 characters' }
+  }
+  
+  return { valid: true }
+}
+```
+
+### State Consistency
+```typescript
+// Ensure state consistency
+const updateProcessingState = (newState: Partial<ProcessingState>) => {
+  setProcessingState(prev => ({
+    ...prev,
+    ...newState,
+    // Ensure mutually exclusive states
+    isProcessing: newState.isProcessing || false,
+    error: newState.isProcessing ? null : newState.error
+  }))
+}
+```
+
+## Performance Optimization
+
+### Memoization
+```typescript
+const memoizedQueries = useMemo(() => {
+  return queryHistory.queries.slice(0, 3)
+}, [queryHistory.queries])
+
+const memoizedStatistics = useMemo(() => {
+  return queryHistory.statistics
+}, [queryHistory.statistics])
+```
+
+### Debounced Search
+```typescript
+const [searchTerm, setSearchTerm] = useState('')
+const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearchTerm(searchTerm)
+  }, 300)
+
+  return () => clearTimeout(timer)
+}, [searchTerm])
+
+useEffect(() => {
+  if (debouncedSearchTerm) {
+    queryHistory.fetchQueries(1, 10, debouncedSearchTerm)
+  }
+}, [debouncedSearchTerm])
+```
+
+## Error State Management
+
+### Error State Patterns
+```typescript
+const [error, setError] = useState<string | null>(null)
+
+const handleError = (error: Error) => {
+  setError(error.message)
+  toast({ title: 'Error', description: error.message, variant: 'destructive' })
+}
+
+const clearError = () => {
+  setError(null)
+}
+```
+
+### Loading State Management
+```typescript
+const [loading, setLoading] = useState(false)
+
+const handleAsyncOperation = async () => {
+  setLoading(true)
+  try {
+    await performOperation()
+  } catch (error) {
+    handleError(error)
+  } finally {
+    setLoading(false)
+  }
+}
+```

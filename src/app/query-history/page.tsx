@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic'
 import { useEffect } from 'react'
 
 const QueryHistoryPage = dynamic(
-  () => import('../components/document-processing/QueryHistoryPage').then(mod => ({ default: mod.QueryHistoryPage })),
+  () => import('../components/document-processing/QueryHistoryDashboard').then(mod => ({ default: mod.QueryHistoryDashboard })),
   { 
     loading: () => (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

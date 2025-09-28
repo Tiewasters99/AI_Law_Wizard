@@ -1,0 +1,54 @@
+---
+alwaysApply: true
+description: Document processing system architecture and component organization
+---
+
+# Document Processing System Architecture
+
+## Core Components
+
+The document processing system is organized in [src/app/components/document-processing/](mdc:src/app/components/document-processing/) with the following key components:
+
+### Main Interface
+- **DocumentAnalysisInterface.tsx** - Main unified interface for document analysis
+- **LegacyDocumentProcessor.tsx** - Legacy Grok processing interface (deprecated)
+
+### Query Management
+- **QueryHistoryList.tsx** - List component for displaying query history
+- **QueryHistoryDashboard.tsx** - Main dashboard page for query history
+- **RecentQueriesWidget.tsx** - Widget showing recent queries
+- **QueryAnalyticsDashboard.tsx** - Dashboard with analytics and statistics
+- **QueryDetailsModal.tsx** - Modal for displaying detailed query information
+
+### Processing Components
+- **ProcessingStatusIndicators.tsx** - Components for showing processing status and progress
+
+## File Naming Conventions
+
+All files are named based on their functionality:
+- Interface components: `[Feature]Interface.tsx`
+- List components: `[Feature]List.tsx`
+- Dashboard components: `[Feature]Dashboard.tsx`
+- Widget components: `[Feature]Widget.tsx`
+- Modal components: `[Feature]Modal.tsx`
+- Status components: `[Feature]StatusIndicators.tsx`
+
+## Component Hierarchy
+
+```
+DocumentAnalysisInterface (Main)
+├── Search Tab
+├── Files Tab (OneDrive integration)
+├── History Tab
+└── Sidebar
+    ├── Quick Tools
+    ├── Recent Queries
+    └── Quick Prompts
+```
+
+## Integration Points
+
+- **OneDrive Integration**: Files tab uses OneDriveInterface component
+- **Query History**: Uses useQueryHistory hook for data management
+- **Processing**: Uses useDocumentProcessing hook for real-time processing
+- **Authentication**: Integrated with NextAuth session management
