@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
+import { DocumentViewer } from './DocumentViewer'
 import { 
   FileText, 
   Download, 
@@ -16,7 +17,9 @@ import {
   Archive,
   Hash,
   Database,
-  Layers
+  Layers,
+  Eye,
+  ExternalLink
 } from 'lucide-react'
 
 interface OriginalFileInfo {
@@ -41,13 +44,17 @@ interface ProcessedFilesListProps {
   processedFiles: any[] // Keep original interface for compatibility
   title?: string
   showContent?: boolean
+  onViewFile?: (file: any) => void // Optional callback for viewing files
 }
 
 export const ProcessedFilesList: React.FC<ProcessedFilesListProps> = ({
   processedFiles,
   title = "Processed Files",
-  showContent = false
+  showContent = false,
+  onViewFile
 }) => {
+  const [selectedFile, setSelectedFile] = useState<any>(null)
+  const [showViewer, setShowViewer] = useState(false)
   // Filter out chunk files and only show original files (those with jobId)
   const originalFiles = React.useMemo(() => {
     return processedFiles.filter(file => 
@@ -79,6 +86,34 @@ export const ProcessedFilesList: React.FC<ProcessedFilesListProps> = ({
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const getMimeType = (fileType?: string) => {
+    if (!fileType) return 'text/plain'
+    
+    const type = fileType.toLowerCase()
+    if (type.includes('pdf')) return 'application/pdf'
+    if (type.includes('word') || type.includes('doc')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    if (type.includes('excel') || type.includes('spreadsheet') || type.includes('csv')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    if (type.includes('image') || type.includes('jpg') || type.includes('png') || type.includes('gif')) return 'image/jpeg'
+    if (type.includes('video') || type.includes('mp4') || type.includes('avi')) return 'video/mp4'
+    if (type.includes('audio') || type.includes('mp3') || type.includes('wav')) return 'audio/mpeg'
+    if (type.includes('code') || type.includes('js') || type.includes('ts') || type.includes('py')) return 'text/plain'
+    if (type.includes('zip') || type.includes('rar') || type.includes('tar')) return 'application/zip'
+    if (type.includes('txt') || type.includes('text')) return 'text/plain'
+    return 'text/plain'
+  }
+
+  const handleViewFile = async (file: any) => {
+    if (onViewFile) {
+      // Use the callback if provided
+      onViewFile(file)
+      return
+    }
+
+    // Set up file for viewing in DocumentViewer
+    setSelectedFile(file)
+    setShowViewer(true)
   }
 
   const handleDownload = async (file: any) => {
@@ -156,20 +191,14 @@ export const ProcessedFilesList: React.FC<ProcessedFilesListProps> = ({
     }
   }
 
-  const getMimeType = (fileType?: string) => {
-    if (!fileType) return 'text/plain'
-    
-    const type = fileType.toLowerCase()
-    if (type.includes('pdf')) return 'application/pdf'
-    if (type.includes('word') || type.includes('doc')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    if (type.includes('excel') || type.includes('spreadsheet') || type.includes('csv')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    if (type.includes('image') || type.includes('jpg') || type.includes('png') || type.includes('gif')) return 'image/jpeg'
-    if (type.includes('video') || type.includes('mp4') || type.includes('avi')) return 'video/mp4'
-    if (type.includes('audio') || type.includes('mp3') || type.includes('wav')) return 'audio/mpeg'
-    if (type.includes('code') || type.includes('js') || type.includes('ts') || type.includes('py')) return 'text/plain'
-    if (type.includes('zip') || type.includes('rar') || type.includes('tar')) return 'application/zip'
-    if (type.includes('txt') || type.includes('text')) return 'text/plain'
-    return 'text/plain'
+  const canViewFile = (file: any) => {
+    const fileType = file.fileType?.toLowerCase() || ''
+    return fileType.includes('pdf') || 
+           fileType.includes('image') || 
+           fileType.includes('txt') || 
+           fileType.includes('text') ||
+           file.downloadUrl ||
+           file.isOneDriveFile
   }
 
   if (originalFiles.length === 0) {
@@ -177,6 +206,7 @@ export const ProcessedFilesList: React.FC<ProcessedFilesListProps> = ({
   }
 
   return (
+    <>
     <Card className="shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
@@ -229,6 +259,17 @@ export const ProcessedFilesList: React.FC<ProcessedFilesListProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 flex-shrink-0">
+                  {canViewFile(file) && (
+                    <Button
+                      onClick={() => handleViewFile(file)}
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center space-x-1"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View</span>
+                    </Button>
+                  )}
                   <Button
                     onClick={() => handleDownload(file)}
                     size="sm"
@@ -245,5 +286,29 @@ export const ProcessedFilesList: React.FC<ProcessedFilesListProps> = ({
         </div>
       </CardContent>
     </Card>
+
+    {/* Document Viewer Modal */}
+    {selectedFile && (
+      <DocumentViewer
+        fileId={selectedFile.jobId || selectedFile.fileId}
+        fileName={selectedFile.originalName || selectedFile.fileName}
+        fileType={selectedFile.fileType || 'application/octet-stream'}
+        fileSize={selectedFile.fileSize || selectedFile.contentLength || 0}
+        fileUrl={selectedFile.downloadUrl || (selectedFile.isOneDriveFile ? undefined : `/api/document-processing/file-content?fileId=${selectedFile.jobId}&fileName=${encodeURIComponent(selectedFile.fileName)}`)}
+        isOpen={showViewer}
+        onClose={() => {
+          setShowViewer(false)
+          setSelectedFile(null)
+        }}
+        onDownload={async (fileId) => {
+          // Find the file and trigger download
+          const file = originalFiles.find(f => f.jobId === fileId || f.fileId === fileId)
+          if (file) {
+            await handleDownload(file)
+          }
+        }}
+      />
+    )}
+    </>
   )
 }

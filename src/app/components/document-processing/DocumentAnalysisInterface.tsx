@@ -505,10 +505,10 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.6 }}
       >
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {/* Main Analysis Interface */}
           <motion.div 
-            className="xl:col-span-2 space-y-4 sm:space-y-6"
+            className="space-y-4 sm:space-y-6"
             layout
           >
             {/* Analysis Tab */}
@@ -1070,97 +1070,6 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
-
-          {/* Sidebar */}
-          <motion.div 
-            className="space-y-4 sm:space-y-6"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
-            {/* Quick Actions - Most Important Tools */}
-            <motion.div
-              variants={cardVariants}
-              initial="initial"
-              animate="animate"
-              whileHover={{ y: -2, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-lg">
-                  <CardTitle className="text-lg flex items-center space-x-2">
-                    <motion.div
-                      animate={{ opacity: [0.7, 1, 0.7] }}
-                      transition={{ duration: 2, repeat: Infinity, repeatDelay: 2 }}
-                    >
-                      <Settings className="w-5 h-5 text-purple-600" />
-                    </motion.div>
-                    <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      Quick Tools
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 p-6">
-                  <motion.div
-                    whileHover={buttonVariants.hover}
-                    whileTap={buttonVariants.tap}
-                  >
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start transition-all duration-300 hover:bg-blue-50 hover:border-blue-300"
-                      onClick={() => setActiveTab('files')}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Files
-                    </Button>
-                  </motion.div>
-                  <motion.div
-                    whileHover={buttonVariants.hover}
-                    whileTap={buttonVariants.tap}
-                  >
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start transition-all duration-300 hover:bg-green-50 hover:border-green-300"
-                      onClick={() => setActiveTab('history')}
-                    >
-                      <History className="w-4 h-4 mr-2" />
-                      Query History
-                    </Button>
-                  </motion.div>
-                  <motion.div
-                    whileHover={buttonVariants.hover}
-                    whileTap={buttonVariants.tap}
-                  >
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start transition-all duration-300 hover:bg-purple-50 hover:border-purple-300"
-                      onClick={() => setActiveTab('library')}
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Document Library
-                    </Button>
-                  </motion.div>
-                  <motion.div
-                    whileHover={buttonVariants.hover}
-                    whileTap={buttonVariants.tap}
-                  >
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start transition-all duration-300 hover:bg-red-50 hover:border-red-300"
-                      onClick={() => {
-                        setUserPrompt('')
-                        setGeneratedFile('')
-                        processingState.clearState()
-                      }}
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Clear All
-                    </Button>
-                  </motion.div>
-                </CardContent>
-              </Card>
-            </motion.div>
           </motion.div>
         </div>
       </motion.div>
