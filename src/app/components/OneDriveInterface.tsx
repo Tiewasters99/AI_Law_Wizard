@@ -11,6 +11,7 @@ import {
   checkSyncedOneDriveFiles,
   type OneDriveFileInfo 
 } from '../lib/onedrive'
+import { Download, ExternalLink } from 'lucide-react'
 import { graphClient } from '../lib/microsoft-graph'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
@@ -50,6 +51,12 @@ function OneDriveInterfaceContent({
   const [syncingFiles, setSyncingFiles] = useState<Set<string>>(new Set())
   const [syncedFiles, setSyncedFiles] = useState<Set<string>>(new Set())
   const [selectedForSync, setSelectedForSync] = useState<Set<string>>(new Set())
+  const [batchProcessing, setBatchProcessing] = useState(false)
+  const [batchProgress, setBatchProgress] = useState({ processed: 0, total: 0, current: '' })
+  const [batchErrors, setBatchErrors] = useState<Array<{fileName: string, error: string}>>([])
+  
+  // File selection limit
+  const MAX_SELECTION_LIMIT = 40
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -260,6 +267,87 @@ function OneDriveInterfaceContent({
     }
   }
 
+  // Handle direct download from OneDrive
+  const handleDownloadFile = async (file: OneDriveFileInfo, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    try {
+      setLoading(true)
+      const result = await downloadOneDriveFile(file.id)
+      
+      if (result.success && result.file) {
+        // Create blob and download
+        const blob = new Blob([Buffer.from(result.file.content, 'base64')], { 
+          type: result.file.type || 'application/octet-stream' 
+        })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = result.file.name
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+
+        toast({
+          title: "Download Started",
+          description: `Downloading ${file.name}...`,
+          variant: "default"
+        })
+      } else {
+        toast({
+          title: "Download Failed",
+          description: result.error || "Failed to download file",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download file",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handle open file in OneDrive
+  const handleOpenFile = async (file: OneDriveFileInfo, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    try {
+      // Get the web URL from OneDrive using Microsoft Graph API
+      const fileMetadata = await graphClient.getFileMetadata(file.id) as any
+      const webUrl = fileMetadata.webUrl || fileMetadata['@microsoft.graph.downloadUrl']
+      
+      if (webUrl) {
+        window.open(webUrl, '_blank')
+        toast({
+          title: "Opening File",
+          description: `Opening ${file.name} in OneDrive...`,
+          variant: "default"
+        })
+      } else {
+        // Fallback to direct OneDrive URL
+        const oneDriveUrl = `https://onedrive.live.com/?id=${encodeURIComponent(file.id)}`
+        window.open(oneDriveUrl, '_blank')
+        toast({
+          title: "Opening File",
+          description: `Opening ${file.name} in OneDrive...`,
+          variant: "default"
+        })
+      }
+    } catch (error) {
+      console.error('Error opening file:', error)
+      toast({
+        title: "Open Failed",
+        description: "Failed to open file. Please try downloading instead.",
+        variant: "destructive"
+      })
+    }
+  }
+
   // Handle file sync to embedding system
   const handleFileSync = async (file: OneDriveFileInfo, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -319,13 +407,28 @@ function OneDriveInterfaceContent({
 
       if (!response.ok) {
         const errorData = await response.text()
-        throw new Error(`Embedding API error: ${response.status} - ${errorData}`)
+        let errorMessage = `Server error (${response.status})`
+        
+        try {
+          const errorJson = JSON.parse(errorData)
+          errorMessage = errorJson.error || errorJson.message || errorMessage
+        } catch {
+          errorMessage = errorData || errorMessage
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
       
       if (data.error) {
         throw new Error(data.error)
+      }
+
+      // Check for failed files in the response
+      if (data.failedFiles && data.failedFiles.length > 0) {
+        const failedFile = data.failedFiles[0]
+        throw new Error(`File processing failed: ${failedFile.error}`)
       }
 
       // Mark file as synced
@@ -370,85 +473,160 @@ function OneDriveInterfaceContent({
       return
     }
 
+    if (filesToSync.length > 40) {
+      toast({
+        title: "Too Many Files",
+        description: "Please select 40 or fewer files for batch processing.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setBatchProcessing(true)
+    setBatchProgress({ processed: 0, total: filesToSync.length, current: '' })
+    setBatchErrors([])
+
     const syncedFilesList = []
+    let successCount = 0
+    let errorCount = 0
+    const errors: Array<{fileName: string, error: string}> = []
 
     for (const file of filesToSync) {
       setSyncingFiles(prev => new Set(prev).add(file.id))
     }
 
     try {
-      for (const file of filesToSync) {
-        try {
-          // Download the file from OneDrive
-          const result = await downloadOneDriveFile(file.id)
-          
-          if (!result.success || !result.file) {
-            throw new Error(result.error || "Failed to download file from OneDrive")
-          }
+      for (let i = 0; i < filesToSync.length; i++) {
+        const file = filesToSync[i]
+        
+        setBatchProgress(prev => ({ 
+          ...prev, 
+          current: file.name,
+          processed: i 
+        }))
 
-          // Convert base64 to File object
-          const downloadedFile = base64ToFile(
-            result.file.content,
-            result.file.name,
-            result.file.type
-          )
-
-          // Create FormData for the embedding API
-          const formData = new FormData()
-          formData.append('files', downloadedFile)
-          formData.append('oneDriveId', file.id)
-          formData.append('oneDriveLastModified', file.lastModified)
-
-          // Upload to embedding system
-          const response = await fetch('/api/embedding', {
-            method: 'POST',
-            body: formData
-          })
-
-          if (!response.ok) {
-            const errorData = await response.text()
-            throw new Error(`Embedding API error: ${response.status} - ${errorData}`)
-          }
-
-          const data = await response.json()
-          
-          if (data.error) {
-            throw new Error(data.error)
-          }
-
-          // Mark file as synced
-          setSyncedFiles(prev => new Set(prev).add(file.id))
-          syncedFilesList.push({ name: file.name, id: file.id })
-
-        } catch (error) {
-          console.error(`Error syncing file ${file.name}:`, error)
-          toast({
-            title: "Sync Failed",
-            description: `Failed to sync "${file.name}": ${error instanceof Error ? error.message : 'Unknown error'}`,
-            variant: "destructive"
-          })
-        } finally {
-          setSyncingFiles(prev => {
-            const newSet = new Set(prev)
-            newSet.delete(file.id)
-            return newSet
-          })
+        // Add small delay to prevent API rate limiting
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500))
         }
+
+        let retryCount = 0
+        const maxRetries = 3
+        let fileSuccess = false
+
+        while (retryCount < maxRetries && !fileSuccess) {
+          try {
+            // Download the file from OneDrive
+            const result = await downloadOneDriveFile(file.id)
+            
+            if (!result.success || !result.file) {
+              throw new Error(result.error || "Failed to download file from OneDrive")
+            }
+
+            // Convert base64 to File object
+            const downloadedFile = base64ToFile(
+              result.file.content,
+              result.file.name,
+              result.file.type
+            )
+
+            // Create FormData for the embedding API
+            const formData = new FormData()
+            formData.append('files', downloadedFile)
+            formData.append('oneDriveId', file.id)
+            formData.append('oneDriveLastModified', file.lastModified)
+
+            // Upload to embedding system with timeout
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
+            const response = await fetch('/api/embedding', {
+              method: 'POST',
+              body: formData,
+              signal: controller.signal
+            })
+
+            clearTimeout(timeoutId)
+
+            if (!response.ok) {
+              const errorData = await response.text()
+              let errorMessage = `Server error (${response.status})`
+              
+              try {
+                const errorJson = JSON.parse(errorData)
+                errorMessage = errorJson.error || errorJson.message || errorMessage
+              } catch {
+                errorMessage = errorData || errorMessage
+              }
+              
+              throw new Error(errorMessage)
+            }
+
+            const data = await response.json()
+            
+            if (data.error) {
+              throw new Error(data.error)
+            }
+
+            // Check for failed files in the response
+            if (data.failedFiles && data.failedFiles.length > 0) {
+              const failedFile = data.failedFiles[0]
+              throw new Error(`File processing failed: ${failedFile.error}`)
+            }
+
+            // Mark file as synced
+            setSyncedFiles(prev => new Set(prev).add(file.id))
+            syncedFilesList.push({ name: file.name, id: file.id })
+            successCount++
+            fileSuccess = true
+
+          } catch (error) {
+            retryCount++
+            console.error(`Error syncing file ${file.name} (attempt ${retryCount}):`, error)
+            
+            if (retryCount >= maxRetries) {
+              errorCount++
+              errors.push({
+                fileName: file.name,
+                error: error instanceof Error ? error.message : 'Unknown error'
+              })
+            } else {
+              // Wait before retry (exponential backoff)
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+            }
+          }
+        }
+        
+        setSyncingFiles(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(file.id)
+          return newSet
+        })
       }
 
-      if (syncedFilesList.length > 0) {
+      // Update batch errors state
+      setBatchErrors(errors)
+
+      // Show final results
+      if (errorCount > 0) {
+        toast({
+          title: "Bulk Sync Complete with Errors",
+          description: `Successfully synced ${successCount} files, ${errorCount} failed. Check details below.`,
+          variant: "destructive"
+        })
+      } else {
         toast({
           title: "Bulk Sync Complete",
-          description: `Successfully synced ${syncedFilesList.length} file(s) to the embedding system`
+          description: `Successfully synced ${successCount} files`
         })
+      }
 
-        // Clear selection after successful sync
-        setSelectedForSync(new Set())
+      // Clear selection after sync
+      setSelectedForSync(new Set())
 
-        // Call the onFileSync callback if provided
-        if (onFileSync) {
-          onFileSync(syncedFilesList)
-        }
+      // Call the onFileSync callback if provided
+      if (onFileSync && syncedFilesList.length > 0) {
+        onFileSync(syncedFilesList)
       }
 
     } catch (error) {
@@ -458,17 +636,42 @@ function OneDriveInterfaceContent({
         description: error instanceof Error ? error.message : "Failed to complete bulk sync",
         variant: "destructive"
       })
+    } finally {
+      setBatchProcessing(false)
+      setBatchProgress({ processed: 0, total: 0, current: '' })
     }
   }
 
   // Toggle file selection for sync
   const toggleFileSelection = (fileId: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    
+    // Find the file to check its size
+    const file = files.find(f => f.id === fileId)
+    if (file && file.size > 50 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: `"${file.name}" is ${formatFileSize(file.size)}. Maximum size is 50MB.`,
+        variant: "destructive"
+      })
+      return
+    }
+    
     setSelectedForSync(prev => {
       const newSet = new Set(prev)
       if (newSet.has(fileId)) {
+        // Removing a file - always allowed
         newSet.delete(fileId)
       } else {
+        // Adding a file - check limit
+        if (newSet.size >= MAX_SELECTION_LIMIT) {
+          toast({
+            title: "Selection Limit Reached",
+            description: `You can only select up to ${MAX_SELECTION_LIMIT} files at once. Please deselect some files first.`,
+            variant: "destructive"
+          })
+          return prev
+        }
         newSet.add(fileId)
       }
       return newSet
@@ -477,8 +680,41 @@ function OneDriveInterfaceContent({
 
   // Select all unsync files
   const selectAllForSync = () => {
-    const unsyncedFiles = files.filter(file => !file.isFolder && !syncedFiles.has(file.id))
-    setSelectedForSync(new Set(unsyncedFiles.map(f => f.id)))
+    const unsyncedFiles = files.filter(file => 
+      !file.isFolder && 
+      !syncedFiles.has(file.id) && 
+      file.size <= 50 * 1024 * 1024 // Exclude files larger than 50MB
+    )
+    
+    // Limit to MAX_SELECTION_LIMIT files
+    const filesToSelect = unsyncedFiles.slice(0, MAX_SELECTION_LIMIT)
+    setSelectedForSync(new Set(filesToSelect.map(f => f.id)))
+    
+    // Show warnings for excluded files
+    const largeFiles = files.filter(file => 
+      !file.isFolder && 
+      !syncedFiles.has(file.id) && 
+      file.size > 50 * 1024 * 1024
+    )
+    
+    const excludedFiles = unsyncedFiles.length - filesToSelect.length
+    
+    if (largeFiles.length > 0 || excludedFiles > 0) {
+      let message = ''
+      if (largeFiles.length > 0 && excludedFiles > 0) {
+        message = `${largeFiles.length} file(s) larger than 50MB and ${excludedFiles} file(s) beyond the ${MAX_SELECTION_LIMIT} limit were not selected.`
+      } else if (largeFiles.length > 0) {
+        message = `${largeFiles.length} file(s) larger than 50MB were not selected.`
+      } else if (excludedFiles > 0) {
+        message = `${excludedFiles} file(s) beyond the ${MAX_SELECTION_LIMIT} limit were not selected.`
+      }
+      
+      toast({
+        title: "Some Files Excluded",
+        description: message,
+        variant: "destructive"
+      })
+    }
   }
 
   // Clear all selections
@@ -579,10 +815,10 @@ function OneDriveInterfaceContent({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center space-x-2">
-            <span>OneDrive Files</span>
-            <Badge variant="secondary">{files.length} items</Badge>
+            <span className="text-base font-medium">OneDrive Files</span>
+            <Badge variant="secondary" className="text-xs">{files.length} items</Badge>
           </div>
           <div className="flex items-center space-x-2">
             <Button 
@@ -628,17 +864,21 @@ function OneDriveInterfaceContent({
           />
         </div>
 
-        {/* Bulk Sync Controls */}
+        {/* File Selection Controls - Compact */}
         {showSync && files.some(f => !f.isFolder && !syncedFiles.has(f.id)) && (
-          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-blue-900">Bulk Sync to AI Analysis</h4>
+          <div className="mb-4 p-3 bg-blue-50/50 border border-blue-200/40 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                <span className="text-sm font-medium text-blue-800">Prepare Files for Analysis</span>
+              </div>
               <div className="flex items-center space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={selectAllForSync}
                   disabled={files.filter(f => !f.isFolder && !syncedFiles.has(f.id)).length === selectedForSync.size}
+                  className="text-xs px-2 py-1 h-7"
                 >
                   Select All
                 </Button>
@@ -647,22 +887,85 @@ function OneDriveInterfaceContent({
                   size="sm"
                   onClick={clearSelection}
                   disabled={selectedForSync.size === 0}
+                  className="text-xs px-2 py-1 h-7"
                 >
                   Clear
                 </Button>
                 <Button
                   onClick={handleBulkSync}
-                  disabled={selectedForSync.size === 0 || Array.from(selectedForSync).some(id => syncingFiles.has(id))}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={selectedForSync.size === 0 || batchProcessing || Array.from(selectedForSync).some(id => syncingFiles.has(id))}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 h-7"
                   size="sm"
                 >
-                  Sync Selected ({selectedForSync.size})
+                  {batchProcessing ? (
+                    <div className="flex items-center space-x-1">
+                      <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Preparing...</span>
+                    </div>
+                  ) : (
+                    `Prepare (${selectedForSync.size})`
+                  )}
                 </Button>
               </div>
             </div>
-            <p className="text-sm text-blue-700">
-              Select files to sync them to the AI analysis system. Synced files can be analyzed with the AI wizard.
-            </p>
+            
+            {/* File Preparation Progress - Compact */}
+            {batchProcessing && (
+              <div className="mt-3 p-3 bg-blue-50/50 border border-blue-200/40 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-blue-800">Preparing files...</span>
+                  </div>
+                  <span className="text-xs text-blue-600">
+                    {batchProgress.processed}/{batchProgress.total} ({Math.round((batchProgress.processed / batchProgress.total) * 100)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-blue-200/60 rounded-full h-2 mb-2">
+                  <div 
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(batchProgress.processed / batchProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+                {batchProgress.current && (
+                  <p className="text-xs text-blue-700 truncate">
+                    {batchProgress.current}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* File Preparation Issues - Compact */}
+            {!batchProcessing && batchErrors.length > 0 && (
+              <div className="mt-3 p-3 bg-red-50/50 border border-red-200/40 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-red-800">Files Need Attention ({batchErrors.length})</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBatchErrors([])}
+                    className="text-xs px-2 py-1 h-6"
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {batchErrors.map((error, index) => (
+                    <div key={index} className="p-2 bg-white/60 rounded border border-red-200/40">
+                      <div className="text-xs font-medium text-red-900 mb-1 truncate">
+                        {error.fileName}
+                      </div>
+                      <div className="text-xs text-red-700 break-words">
+                        {error.error}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -670,6 +973,42 @@ function OneDriveInterfaceContent({
         <div className="mb-4 text-sm text-gray-600">
           {folderPath.join(' / ')}
         </div>
+
+        {/* File Size Summary - Compact */}
+        {showSync && files.some(f => !f.isFolder && f.size > 50 * 1024 * 1024) && (
+          <div className="mb-4 flex items-center space-x-2 text-xs text-yellow-700 bg-yellow-50/50 rounded-lg px-3 py-2">
+            <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
+            <span>
+              {files.filter(f => !f.isFolder && f.size > 50 * 1024 * 1024).length} file(s) too large (50MB+) - cannot sync
+            </span>
+          </div>
+        )}
+
+        {/* Selection Limit Info - Compact */}
+        {showSync && (
+          <div className="mb-4 flex items-center justify-between text-xs text-gray-600 bg-gray-50/50 rounded-lg px-3 py-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              <span>Selected: {selectedForSync.size} / {MAX_SELECTION_LIMIT} files</span>
+              {selectedForSync.size >= MAX_SELECTION_LIMIT && (
+                <span className="text-red-600 font-medium">• Limit reached</span>
+              )}
+            </div>
+            {selectedForSync.size > 0 && (
+              <div className="flex items-center space-x-2">
+                <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                  <div 
+                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${(selectedForSync.size / MAX_SELECTION_LIMIT) * 100}%` }}
+                  ></div>
+                </div>
+                <span className="text-gray-500">
+                  {Math.round((selectedForSync.size / MAX_SELECTION_LIMIT) * 100)}%
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* File List */}
         <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -695,7 +1034,18 @@ function OneDriveInterfaceContent({
                       checked={selectedForSync.has(file.id)}
                       onChange={(e) => toggleFileSelection(file.id, e as any)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      disabled={file.size > 50 * 1024 * 1024 || (selectedForSync.size >= MAX_SELECTION_LIMIT && !selectedForSync.has(file.id))}
+                      className={`w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${
+                        file.size > 50 * 1024 * 1024 || (selectedForSync.size >= MAX_SELECTION_LIMIT && !selectedForSync.has(file.id)) 
+                          ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      title={
+                        file.size > 50 * 1024 * 1024 
+                          ? 'File too large (max 50MB)' 
+                          : selectedForSync.size >= MAX_SELECTION_LIMIT && !selectedForSync.has(file.id)
+                          ? `Selection limit reached (${MAX_SELECTION_LIMIT} files)`
+                          : ''
+                      }
                     />
                   )}
                   <span className="text-xl">{getFileIcon(file.type, file.isFolder)}</span>
@@ -719,12 +1069,48 @@ function OneDriveInterfaceContent({
                       ✓ Synced
                     </Badge>
                   )}
+                  {!file.isFolder && file.size > 50 * 1024 * 1024 && (
+                    <Badge variant="destructive" className="bg-red-100 text-red-800">
+                      ⚠️ Too Large (50MB+)
+                    </Badge>
+                  )}
+                  
+                  {/* Action buttons for files */}
+                  {!file.isFolder && (
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e: React.MouseEvent) => handleDownloadFile(file, e)}
+                        disabled={loading}
+                        className="h-7 px-2"
+                        title="Download file"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        <span className="hidden sm:inline text-xs">Download</span>
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e: React.MouseEvent) => handleOpenFile(file, e)}
+                        className="h-7 px-2"
+                        title="Open in OneDrive"
+                      >
+                        <ExternalLink className="w-3 h-3 mr-1" />
+                        <span className="hidden sm:inline text-xs">Open</span>
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Sync buttons */}
                   {!showSync && showDownload && !file.isFolder && !syncedFiles.has(file.id) && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={(e: React.MouseEvent) => handleFileSync(file, e)}
-                      disabled={syncingFiles.has(file.id)}
+                      disabled={syncingFiles.has(file.id) || file.size > 50 * 1024 * 1024}
+                      title={file.size > 50 * 1024 * 1024 ? 'File too large (max 50MB)' : ''}
                     >
                       {syncingFiles.has(file.id) ? 'Syncing...' : 'Sync'}
                     </Button>
@@ -734,7 +1120,8 @@ function OneDriveInterfaceContent({
                       variant="outline"
                       size="sm"
                       onClick={(e: React.MouseEvent) => handleFileSync(file, e)}
-                      disabled={syncingFiles.has(file.id)}
+                      disabled={syncingFiles.has(file.id) || file.size > 50 * 1024 * 1024}
+                      title={file.size > 50 * 1024 * 1024 ? 'File too large (max 50MB)' : ''}
                     >
                       {syncingFiles.has(file.id) ? 'Syncing...' : 'Sync Now'}
                     </Button>
@@ -755,7 +1142,9 @@ export default function OneDriveInterface(props: OneDriveInterfaceProps) {
     <Suspense fallback={
       <Card className={props.className}>
         <CardHeader>
-          <CardTitle>OneDrive Integration</CardTitle>
+          <CardTitle className="text-lg">
+            <span className="text-base font-medium">OneDrive Integration</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">

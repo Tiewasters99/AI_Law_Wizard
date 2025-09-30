@@ -12,6 +12,7 @@ import { AgentExecutor, createToolCallingAgent } from 'langchain/agents'
 import { ChatPromptTemplate } from '@langchain/core/prompts'
 import { searchChunksBySummary, getChunksWithSummaries } from '../../lib/summaryService'
 import { openapi, pineIndex } from '../../lib/pineConfig'
+import fs from 'fs/promises'
 
 interface ProcessingRequest {
   userPrompt: string
@@ -862,25 +863,43 @@ const fetchFileContent = async (fileSearchResult: any): Promise<{
     try {
       let content = ""
       
-      // Try to get content from the file content API using job ID
+      // Try to get content directly from the database
       try {
-        const contentResponse = await fetch('/api/document-processing/file-content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileId: originalFile.id,
-            fileName: originalFile.fileName
-          })
+        // Get the job details to find the file path
+        const job = await prisma.embeddingJob.findUnique({
+          where: { id: originalFile.id }
         })
         
-        if (contentResponse.ok) {
-          const contentData = await contentResponse.json()
-          if (contentData.success && contentData.content) {
-            content = contentData.content
+        if (job && job.filePath) {
+          // If it's a blob URL, we need to fetch the content
+          if (job.filePath.startsWith('https://')) {
+            const blobResponse = await fetch(job.filePath)
+            if (blobResponse.ok) {
+              const arrayBuffer = await blobResponse.arrayBuffer()
+              const buffer = Buffer.from(arrayBuffer)
+              content = await extractFileContent(buffer, job.originalName)
+            }
+          } else {
+            // If it's a local file path, read it directly
+            try {
+              const fileBuffer = await fs.readFile(job.filePath)
+              content = await extractFileContent(fileBuffer, job.originalName)
+            } catch (fsError) {
+              console.warn(`Failed to read local file ${job.filePath}:`, fsError)
+              // Fallback: try to extract content from the file path as URL
+              if (job.filePath.startsWith('http')) {
+                const urlResponse = await fetch(job.filePath)
+                if (urlResponse.ok) {
+                  const arrayBuffer = await urlResponse.arrayBuffer()
+                  const buffer = Buffer.from(arrayBuffer)
+                  content = await extractFileContent(buffer, job.originalName)
+                }
+              }
+            }
           }
         }
-      } catch (fetchError) {
-        console.warn(`Failed to fetch content for ${originalFile.fileName}:`, fetchError)
+      } catch (directError) {
+        console.warn(`Failed to get content for ${originalFile.fileName}:`, directError)
       }
       
       // If still no content, try to extract from URL if available

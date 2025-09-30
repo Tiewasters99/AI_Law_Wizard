@@ -32,6 +32,7 @@ import {
   Zap
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
@@ -44,6 +45,8 @@ import { useDocumentProcessing } from '../../hooks/useDocumentProcessing'
 import { useQueryHistory } from '../../hooks/useQueryHistory'
 import OneDriveInterface from '../OneDriveInterface'
 import { ProcessedFilesList } from './ProcessedFilesList'
+import { LargeFileUploadHandler } from './LargeFileUploadHandler'
+import { DocumentLibrary } from './DocumentLibrary'
 
 interface ProcessedFileInfo {
   fileId: string
@@ -64,6 +67,42 @@ interface UnifiedDocumentWizardProps {
   onBeforeStart?: () => Promise<boolean> | boolean
 }
 
+// Animation variants
+const pageVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 }
+}
+
+const cardVariants = {
+  initial: { opacity: 0, y: 30, scale: 0.95 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -30, scale: 0.95 }
+}
+
+const tabVariants = {
+  initial: { opacity: 0, x: -20 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 20 }
+}
+
+const buttonVariants = {
+  hover: { scale: 1.02 },
+  tap: { scale: 0.98 }
+}
+
+const loadingVariants = {
+  animate: {
+    opacity: [0.5, 1, 0.5],
+    scale: [1, 1.05, 1],
+    transition: {
+      duration: 1.5,
+      repeat: Infinity,
+      ease: "easeInOut" as const
+    }
+  }
+}
+
 export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: UnifiedDocumentWizardProps) {
   // Input state
   const [userPrompt, setUserPrompt] = useState('')
@@ -75,7 +114,8 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
   const [generatedFile, setGeneratedFile] = useState('')
   const [showFileManager, setShowFileManager] = useState(false)
   const [showQueryHistory, setShowQueryHistory] = useState(false)
-  const [activeTab, setActiveTab] = useState<'analysis' | 'files' | 'history'>('analysis')
+  const [activeTab, setActiveTab] = useState<'analysis' | 'files' | 'history' | 'library'>('analysis')
+  const [uploadMode, setUploadMode] = useState<'single' | 'bulk'>('single')
   
   // Result viewing state
   const [selectedQuery, setSelectedQuery] = useState<any>(null)
@@ -241,6 +281,21 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
     })
   }
 
+  const handleBulkUploadComplete = (results: any) => {
+    toast({
+      title: 'Bulk Upload Complete',
+      description: `Successfully processed ${results.files?.length || 0} files`
+    })
+  }
+
+  const handleBulkUploadError = (error: string) => {
+    toast({
+      title: 'Bulk Upload Error',
+      description: error,
+      variant: 'destructive'
+    })
+  }
+
   const handleQuerySelect = (query: any) => {
     setUserPrompt(query.userQuery)
     setActiveTab('analysis')
@@ -301,145 +356,329 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <motion.div 
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50"
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+      <motion.div 
+        className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-lg"
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="flex items-center space-x-2">
-                <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">AI Document Wizard</h1>
-              </div>
-            </div>
+            <motion.div 
+              className="flex items-center space-x-2 sm:space-x-4"
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <motion.div 
+                className="flex items-center space-x-2"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <motion.div
+                  animate={{ 
+                    rotate: [0, 5, -5, 0],
+                    scale: [1, 1.1, 1]
+                  }}
+                  transition={{ 
+                    duration: 2,
+                    repeat: Infinity,
+                    repeatDelay: 3
+                  }}
+                >
+                  <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+                </motion.div>
+                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  AI Document Wizard
+                </h1>
+              </motion.div>
+            </motion.div>
             
             {/* Tab Navigation - Mobile Optimized */}
-            <div className="flex items-center space-x-1">
-              <Button
-                variant={activeTab === 'analysis' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab('analysis')}
-                className="flex items-center space-x-1 px-2 sm:px-3"
+            <motion.div 
+              className="flex items-center space-x-1"
+              initial={{ x: 50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              <motion.div
+                whileHover={buttonVariants.hover}
+                whileTap={buttonVariants.tap}
               >
-                <Wind className="w-4 h-4" />
-                <span className="hidden sm:inline">Analysis</span>
-              </Button>
-              <Button
-                variant={activeTab === 'files' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab('files')}
-                className="flex items-center space-x-1 px-2 sm:px-3"
+                <Button
+                  variant={activeTab === 'analysis' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveTab('analysis')}
+                  className="flex items-center space-x-1 px-2 sm:px-3 transition-all duration-300"
+                >
+                  <Wind className="w-4 h-4" />
+                  <span className="hidden sm:inline">Analysis</span>
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={buttonVariants.hover}
+                whileTap={buttonVariants.tap}
               >
-                <Folder className="w-4 h-4" />
-                <span className="hidden sm:inline">Files</span>
-              </Button>
-              <Button
-                variant={activeTab === 'history' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab('history')}
-                className="flex items-center space-x-1 px-2 sm:px-3"
+                <Button
+                  variant={activeTab === 'files' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveTab('files')}
+                  className="flex items-center space-x-1 px-2 sm:px-3 transition-all duration-300"
+                >
+                  <Folder className="w-4 h-4" />
+                  <span className="hidden sm:inline">Files</span>
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={buttonVariants.hover}
+                whileTap={buttonVariants.tap}
               >
-                <History className="w-4 h-4" />
-                <span className="hidden sm:inline">History</span>
-              </Button>
-            </div>
+                <Button
+                  variant={activeTab === 'history' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveTab('history')}
+                  className="flex items-center space-x-1 px-2 sm:px-3 transition-all duration-300"
+                >
+                  <History className="w-4 h-4" />
+                  <span className="hidden sm:inline">History</span>
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={buttonVariants.hover}
+                whileTap={buttonVariants.tap}
+              >
+                <Button
+                  variant={activeTab === 'library' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveTab('library')}
+                  className="flex items-center space-x-1 px-2 sm:px-3 transition-all duration-300"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span className="hidden sm:inline">Library</span>
+                </Button>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+      <motion.div 
+        className="max-w-7xl mx-auto px-4 py-4 sm:py-6"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.6 }}
+      >
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
           {/* Main Analysis Interface */}
-          <div className="xl:col-span-2 space-y-4 sm:space-y-6">
+          <motion.div 
+            className="xl:col-span-2 space-y-4 sm:space-y-6"
+            layout
+          >
             {/* Analysis Tab */}
-            {activeTab === 'analysis' && (
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Wind className="w-5 h-5" />
-                    <span>AI Document Analysis</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Search Input */}
-                  <div>
-                    <label className="block text-lg font-medium mb-4 text-gray-900">
-                      What would you like to analyze? *
-                    </label>
-                    <Textarea
-                      value={userPrompt}
-                      onChange={(e) => setUserPrompt(e.target.value)}
-                      placeholder="Describe what you want to analyze, extract, or understand from your documents..."
-                      rows={4}
-                      disabled={isProcessing}
-                      className="text-base sm:text-lg resize-none border-2 border-gray-200 focus:border-blue-500 rounded-xl p-3 sm:p-4 shadow-sm"
-                    />
-                  </div>
+            <AnimatePresence mode="wait">
+              {activeTab === 'analysis' && (
+                <motion.div
+                  key="analysis"
+                  variants={tabVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                >
+                  <motion.div
+                    variants={cardVariants}
+                    initial="initial"
+                    animate="animate"
+                    whileHover={{ y: -2, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                      <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg">
+                        <CardTitle className="flex items-center space-x-2">
+                          <motion.div
+                            animate={{ opacity: [0.7, 1, 0.7] }}
+                            transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                          >
+                            <Wind className="w-5 h-5 text-blue-600" />
+                          </motion.div>
+                          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            AI Document Analysis
+                          </span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6 p-6">
+                        {/* Search Input */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.6, delay: 0.2 }}
+                        >
+                          <label className="block text-lg font-medium mb-4 text-gray-900">
+                            What would you like to analyze? *
+                          </label>
+                          <motion.div
+                            whileFocus={{ scale: 1.02 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Textarea
+                              value={userPrompt}
+                              onChange={(e) => setUserPrompt(e.target.value)}
+                              placeholder="Describe what you want to analyze, extract, or understand from your documents..."
+                              rows={4}
+                              disabled={isProcessing}
+                              className="text-base sm:text-lg resize-none border-2 border-gray-200 focus:border-blue-500 rounded-xl p-3 sm:p-4 shadow-sm transition-all duration-300 focus:shadow-lg"
+                            />
+                          </motion.div>
+                        </motion.div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Button 
-                      onClick={handleProcess} 
-                      disabled={isProcessing || !userPrompt.trim()}
-                      className="flex-1 h-12 sm:h-14 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg"
-                      size="lg"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-5 h-5 mr-3" />
-                          Start Analysis
-                        </>
-                      )}
-                    </Button>
+                        {/* Action Buttons */}
+                        <motion.div 
+                          className="flex flex-col sm:flex-row gap-4"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.6, delay: 0.4 }}
+                        >
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="flex-1"
+                          >
+                            <Button 
+                              onClick={handleProcess} 
+                              disabled={isProcessing || !userPrompt.trim()}
+                              className="flex-1 h-12 sm:h-14 text-base sm:text-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              size="lg"
+                            >
+                              {isProcessing ? (
+                                <motion.div 
+                                  className="flex items-center"
+                                  variants={loadingVariants}
+                                  animate="animate"
+                                >
+                                  <div className="w-5 h-5 mr-3 flex items-center justify-center">
+                                    <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                                  </div>
+                                  Processing...
+                                </motion.div>
+                              ) : (
+                                <>
+                                  <Play className="w-5 h-5 mr-3" />
+                                  Start Analysis
+                                </>
+                              )}
+                            </Button>
+                          </motion.div>
 
-                    {isProcessing && (
-                      <Button 
-                        onClick={handleStopProcessing}
-                        variant="outline"
-                        size="lg"
-                        className="h-12 sm:h-14 px-6 sm:px-8 border-2 border-gray-300 hover:bg-gray-50 rounded-xl"
-                      >
-                        <Pause className="w-5 h-5 mr-2" />
-                        Stop
-                      </Button>
-                    )}
-                  </div>
+                          <AnimatePresence>
+                            {isProcessing && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{ duration: 0.3 }}
+                                whileHover={buttonVariants.hover}
+                                whileTap={buttonVariants.tap}
+                              >
+                                <Button 
+                                  onClick={handleStopProcessing}
+                                  variant="outline"
+                                  size="lg"
+                                  className="h-12 sm:h-14 px-6 sm:px-8 border-2 border-gray-300 hover:bg-gray-50 rounded-xl transition-all duration-300"
+                                >
+                                  <Pause className="w-5 h-5 mr-2" />
+                                  Stop
+                                </Button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
 
-                  {/* Processing Indicator */}
-                  {isProcessing && (
-                    <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl py-8 px-6">
-                      <div className="flex flex-col items-center justify-center space-y-4">
-                        <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-                        <div className="text-center">
-                          <h3 className="text-xl font-semibold text-blue-900 mb-2">Processing your request...</h3>
-                          <p className="text-blue-700">
-                            Analyzing documents and generating insights
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                        {/* Processing Indicator */}
+                        <AnimatePresence>
+                          {isProcessing && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                              transition={{ duration: 0.5 }}
+                              className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-2xl py-8 px-6 shadow-lg"
+                            >
+                              <div className="flex flex-col items-center justify-center space-y-4">
+                                <motion.div
+                                  animate={{ 
+                                    rotate: 360,
+                                    scale: [1, 1.1, 1]
+                                  }}
+                                  transition={{ 
+                                    rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+                                    scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                                  }}
+                                >
+                                  <Loader2 className="w-12 h-12 text-blue-600" />
+                                </motion.div>
+                                <motion.div 
+                                  className="text-center"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: 0.3 }}
+                                >
+                                  <h3 className="text-xl font-semibold text-blue-900 mb-2">Processing your request...</h3>
+                                  <p className="text-blue-700">
+                                    Analyzing documents and generating insights
+                                  </p>
+                                </motion.div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
-                  {/* Final Result */}
-                  {finalResult && (
-                    <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <CheckCircle className="w-6 h-6 text-green-600" />
-                        <h3 className="text-xl font-semibold text-green-900">Analysis Result</h3>
-                      </div>
-                      <div className="bg-white p-6 rounded-xl border border-green-200 shadow-sm">
-                        <div className="prose prose-sm max-w-none text-gray-800">
-                          <ReactMarkdown>{finalResult}</ReactMarkdown>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                        {/* Final Result */}
+                        <AnimatePresence>
+                          {finalResult && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: -30 }}
+                              transition={{ duration: 0.6, ease: "easeOut" }}
+                              className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6 shadow-lg"
+                            >
+                              <motion.div 
+                                className="flex items-center gap-3 mb-4"
+                                initial={{ x: -20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                              >
+                                <motion.div
+                                  animate={{ scale: [1, 1.2, 1] }}
+                                  transition={{ duration: 0.6, delay: 0.4 }}
+                                >
+                                  <CheckCircle className="w-6 h-6 text-green-600" />
+                                </motion.div>
+                                <h3 className="text-xl font-semibold text-green-900">Analysis Result</h3>
+                              </motion.div>
+                              <motion.div 
+                                className="bg-white p-6 rounded-xl border border-green-200 shadow-sm"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 }}
+                              >
+                                <div className="prose prose-sm max-w-none text-gray-800">
+                                  <ReactMarkdown>{finalResult}</ReactMarkdown>
+                                </div>
+                              </motion.div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
                   {/* Processed Files */}
                   {processedFiles && processedFiles.length > 0 && (
@@ -515,34 +754,101 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
                     </div>
                   )}
                 </CardContent>
-              </Card>
-            )}
+                    </Card>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Files Tab */}
-            {activeTab === 'files' && (
-              <Card className="shadow-sm">
+            <AnimatePresence mode="wait">
+              {activeTab === 'files' && (
+                <motion.div
+                  key="files"
+                  variants={tabVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                >
+                  <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Folder className="w-5 h-5" />
-                    <span>File Management</span>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Folder className="w-5 h-5" />
+                      <span>File Management</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant={uploadMode === 'single' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setUploadMode('single')}
+                        className="flex items-center space-x-1"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>Single</span>
+                      </Button>
+                      <Button
+                        variant={uploadMode === 'bulk' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setUploadMode('bulk')}
+                        className="flex items-center space-x-1"
+                      >
+                        <Folder className="w-4 h-4" />
+                        <span>Bulk (30-40 files)</span>
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <OneDriveInterface
-                    onFileSelect={handleFileSelect}
-                    onFileSync={handleFileSync}
-                    showUpload={true}
-                    showDownload={true}
-                    showSync={true}
-                    className="border-0 shadow-none"
-                  />
+                  {uploadMode === 'single' ? (
+                    <OneDriveInterface
+                      onFileSelect={handleFileSelect}
+                      onFileSync={handleFileSync}
+                      showUpload={true}
+                      showDownload={true}
+                      showSync={true}
+                      className="border-0 shadow-none"
+                    />
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Folder className="w-5 h-5 text-blue-600" />
+                          <h3 className="text-lg font-semibold text-blue-900">Bulk File Processing</h3>
+                        </div>
+                        <p className="text-blue-700 text-sm">
+                          Upload and process up to 40 files at once. Perfect for large document collections.
+                        </p>
+                      </div>
+                      
+                      <LargeFileUploadHandler
+                        onUploadComplete={handleBulkUploadComplete}
+                        onUploadError={handleBulkUploadError}
+                        maxFiles={40}
+                        maxTotalSize={500 * 1024 * 1024} // 500MB total
+                        maxFileSize={20 * 1024 * 1024} // 20MB per file
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* History Tab */}
-            {activeTab === 'history' && (
-              <Card className="shadow-sm">
+            <AnimatePresence mode="wait">
+              {activeTab === 'history' && (
+                <motion.div
+                  key="history"
+                  variants={tabVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                >
+                  <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -563,8 +869,10 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
                 <CardContent>
                   {queryHistory.loading ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                      <span className="ml-2 text-gray-600">Loading history...</span>
+                      <div className="w-6 h-6 flex items-center justify-center mr-3">
+                        <div className="w-4 h-4 bg-blue-600 rounded-full animate-pulse"></div>
+                      </div>
+                      <span className="text-gray-600">Loading history...</span>
                     </div>
                   ) : queryHistory.queries.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
@@ -716,58 +1024,137 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
                   )}
                 </CardContent>
               </Card>
-            )}
-          </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Library Tab */}
+            <AnimatePresence mode="wait">
+              {activeTab === 'library' && (
+                <motion.div
+                  key="library"
+                  variants={tabVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                >
+                  <DocumentLibrary />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
 
           {/* Sidebar */}
-          <div className="space-y-4 sm:space-y-6">
+          <motion.div 
+            className="space-y-4 sm:space-y-6"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+          >
             {/* Quick Actions - Most Important Tools */}
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center space-x-2">
-                  <Settings className="w-5 h-5" />
-                  <span>Quick Tools</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab('files')}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Files
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab('history')}
-                >
-                  <History className="w-4 h-4 mr-2" />
-                  Query History
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setUserPrompt('')
-                    setGeneratedFile('')
-                    processingState.clearState()
-                  }}
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Clear All
-                </Button>
-              </CardContent>
-            </Card>
-
-          </div>
+            <motion.div
+              variants={cardVariants}
+              initial="initial"
+              animate="animate"
+              whileHover={{ y: -2, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-lg">
+                  <CardTitle className="text-lg flex items-center space-x-2">
+                    <motion.div
+                      animate={{ opacity: [0.7, 1, 0.7] }}
+                      transition={{ duration: 2, repeat: Infinity, repeatDelay: 2 }}
+                    >
+                      <Settings className="w-5 h-5 text-purple-600" />
+                    </motion.div>
+                    <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      Quick Tools
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 p-6">
+                  <motion.div
+                    whileHover={buttonVariants.hover}
+                    whileTap={buttonVariants.tap}
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start transition-all duration-300 hover:bg-blue-50 hover:border-blue-300"
+                      onClick={() => setActiveTab('files')}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Files
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    whileHover={buttonVariants.hover}
+                    whileTap={buttonVariants.tap}
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start transition-all duration-300 hover:bg-green-50 hover:border-green-300"
+                      onClick={() => setActiveTab('history')}
+                    >
+                      <History className="w-4 h-4 mr-2" />
+                      Query History
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    whileHover={buttonVariants.hover}
+                    whileTap={buttonVariants.tap}
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start transition-all duration-300 hover:bg-purple-50 hover:border-purple-300"
+                      onClick={() => setActiveTab('library')}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Document Library
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    whileHover={buttonVariants.hover}
+                    whileTap={buttonVariants.tap}
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start transition-all duration-300 hover:bg-red-50 hover:border-red-300"
+                      onClick={() => {
+                        setUserPrompt('')
+                        setGeneratedFile('')
+                        processingState.clearState()
+                      }}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Clear All
+                    </Button>
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
         </div>
+      </motion.div>
 
-        {/* Result Modal */}
+      {/* Result Modal */}
+      <AnimatePresence>
         {showResultModal && selectedQuery && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <motion.div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div 
+              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+              initial={{ opacity: 0, scale: 0.9, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 50 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            >
               <div className="flex items-center justify-between p-6 border-b">
                 <div className="flex items-center space-x-3">
                   <Brain className="w-6 h-6 text-blue-600" />
@@ -1080,10 +1467,10 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
   )
 }

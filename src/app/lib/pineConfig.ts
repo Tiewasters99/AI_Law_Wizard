@@ -6,7 +6,7 @@ const pine  = new Pinecone({
 });
 
 
-const pineIndex = pine.index('ai-wizard-open-ai');
+const pineIndex = pine.index( process.env.ENV === 'LOCAL' ? 'local-testing' : 'ai-wizard-open-ai');
 
 const openapi = new OpenAIEmbeddings({
     openAIApiKey: process.env.OPENAI_API_KEY ?? 'api-key',

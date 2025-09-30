@@ -10,21 +10,70 @@ export async function ingestPlainText(
   jobId: string,
   opts = { maxChars: 2000, overlap: 200 }   
 ) {
+  // Check if text is empty or too short
+  if (!text || text.trim().length === 0) {
+    console.warn(`No text content extracted for file ${fileId}`);
+    return 0;
+  }
+
   const chunks = chunkTextWithOverlap(fileId, text, opts.maxChars, opts.overlap);
 
+  // Check if chunks were created
+  if (!chunks || chunks.length === 0) {
+    console.warn(`No chunks created for file ${fileId}`);
+    return 0;
+  }
+
+  // Check if chunks already exist for this job
+  const existingChunks = await prisma.embeddingChunk.findMany({
+    where: { jobId },
+    select: { chunkIndex: true, id: true }
+  });
+  
+  const existingChunkIndices = new Set(existingChunks.map(c => c.chunkIndex));
+  const existingChunkMap = new Map(existingChunks.map(c => [c.chunkIndex, c.id]));
+  
   // Create chunk records in database individually to get their IDs
   const createdChunks: EmbeddingChunk[] = [];
   for (const chunk of chunks) {
-    const createdChunk = await prisma.embeddingChunk.create({
-      data: {
-        jobId,
-        chunkIndex: chunk.chunkIndex,
-        content: chunk.text,
-        contentLength: chunk.text.length,
-        status: ChunkStatus.PENDING,
-      },
-    });
-    createdChunks.push(createdChunk);
+    if (existingChunkIndices.has(chunk.chunkIndex)) {
+      // Chunk already exists, use existing one
+      const existingChunk = await prisma.embeddingChunk.findUnique({
+        where: { id: existingChunkMap.get(chunk.chunkIndex)! }
+      });
+      if (existingChunk) {
+        createdChunks.push(existingChunk);
+        continue;
+      }
+    }
+    
+    try {
+      const createdChunk = await prisma.embeddingChunk.create({
+        data: {
+          jobId,
+          chunkIndex: chunk.chunkIndex,
+          content: chunk.text,
+          contentLength: chunk.text.length,
+          status: ChunkStatus.PENDING,
+        },
+      });
+      createdChunks.push(createdChunk);
+    } catch (error) {
+      // If chunk already exists, find and use it
+      if (error instanceof Error && error.message.includes('Unique constraint failed')) {
+        const existingChunk = await prisma.embeddingChunk.findFirst({
+          where: {
+            jobId,
+            chunkIndex: chunk.chunkIndex
+          }
+        });
+        if (existingChunk) {
+          createdChunks.push(existingChunk);
+        }
+      } else {
+        throw error;
+      }
+    }
   }
 
   // Process embeddings and update chunk status
@@ -81,6 +130,10 @@ export async function ingestPlainText(
     metadata: { fileId, chunkIndex: c.chunkIndex, text: c.text },
   }));
 
-  await pineIndex.upsert(records);
+  // Only upsert if we have records
+  if (records.length > 0) {
+    await pineIndex.upsert(records);
+  }
+  
   return chunks.length;
 }

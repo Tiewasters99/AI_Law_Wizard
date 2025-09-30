@@ -92,7 +92,7 @@ export default function LoginPage() {
           description: "Successfully signed in to AI Wizard.",
         });
         
-        router.push('/chat');
+        router.push('/wizard');
       }
     } catch (error) {
       toast({

@@ -314,12 +314,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check file size limit (10MB for embedding processing)
-    const maxFileSize = 10 * 1024 * 1024 // 10MB
+    // Check file size limit (50MB for embedding processing)
+    const maxFileSize = 50 * 1024 * 1024 // 50MB
     if (fileMetadata.size > maxFileSize) {
       return NextResponse.json(
         { 
-          error: `File "${fileMetadata.name}" is too large (${(fileMetadata.size / 1024 / 1024).toFixed(2)}MB). Maximum file size for processing is 10MB.` 
+          error: `File "${fileMetadata.name}" is too large (${(fileMetadata.size / 1024 / 1024).toFixed(2)}MB). Maximum file size for processing is 50MB.` 
         },
         { status: 400 }
       )

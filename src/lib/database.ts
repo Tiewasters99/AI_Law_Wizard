@@ -53,19 +53,51 @@ interface ChunkUpdateData {
 
 // Create a new embedding job
 export async function createEmbeddingJob(data: CreateEmbeddingJobData) {
-  return await prisma.embeddingJob.create({
-    data: {
-      fileName: data.fileName,
-      originalName: data.originalName,
-      fileType: data.fileType,
-      fileSize: data.fileSize,
-      filePath: data.filePath,
-      isOneDriveFile: data.isOneDriveFile || false,
-      oneDriveId: data.oneDriveId,
-      oneDriveLastModified: data.oneDriveLastModified,
-      status: JobStatus.PENDING,
-    },
-  });
+  // Check if OneDrive file already exists
+  if (data.oneDriveId && data.isOneDriveFile) {
+    const existingJob = await prisma.embeddingJob.findFirst({
+      where: {
+        oneDriveId: data.oneDriveId,
+        isOneDriveFile: true
+      }
+    });
+
+    if (existingJob) {
+      console.log(`OneDrive file ${data.oneDriveId} already processed, skipping...`);
+      return existingJob;
+    }
+  }
+
+  try {
+    return await prisma.embeddingJob.create({
+      data: {
+        fileName: data.fileName,
+        originalName: data.originalName,
+        fileType: data.fileType,
+        fileSize: data.fileSize,
+        filePath: data.filePath,
+        isOneDriveFile: data.isOneDriveFile || false,
+        oneDriveId: data.oneDriveId,
+        oneDriveLastModified: data.oneDriveLastModified,
+        status: JobStatus.PENDING,
+      },
+    });
+  } catch (error) {
+    // If job already exists due to unique constraint, find and return it
+    if (error instanceof Error && error.message.includes('Unique constraint failed')) {
+      const existingJob = await prisma.embeddingJob.findFirst({
+        where: {
+          oneDriveId: data.oneDriveId,
+          isOneDriveFile: data.isOneDriveFile
+        }
+      });
+      if (existingJob) {
+        console.log(`Job already exists for OneDrive file ${data.oneDriveId}, using existing job`);
+        return existingJob;
+      }
+    }
+    throw error;
+  }
 }
 
 // Update job status
