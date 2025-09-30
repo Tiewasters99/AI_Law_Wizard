@@ -1,5 +1,6 @@
 'use client'
 
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertCircle,
   BarChart3,
@@ -32,7 +33,6 @@ import {
   Zap
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
@@ -44,9 +44,9 @@ import ReactMarkdown from 'react-markdown'
 import { useDocumentProcessing } from '../../hooks/useDocumentProcessing'
 import { useQueryHistory } from '../../hooks/useQueryHistory'
 import OneDriveInterface from '../OneDriveInterface'
-import { ProcessedFilesList } from './ProcessedFilesList'
-import { LargeFileUploadHandler } from './LargeFileUploadHandler'
 import { DocumentLibrary } from './DocumentLibrary'
+import { LargeFileUploadHandler } from './LargeFileUploadHandler'
+import { ProcessedFilesList } from './ProcessedFilesList'
 
 interface ProcessedFileInfo {
   fileId: string
