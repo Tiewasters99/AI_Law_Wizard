@@ -366,101 +366,128 @@ export function DocumentAnalysisInterface({ onComplete, onBeforeStart }: Unified
     >
       {/* Header */}
       <motion.div 
-        className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-lg"
+        className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200/50"
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
+            {/* Logo Icon */}
             <motion.div 
-              className="flex items-center space-x-2 sm:space-x-4"
-              initial={{ x: -50, opacity: 0 }}
+              className="flex items-center"
+              initial={{ x: -30, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
             >
               <motion.div 
-                className="flex items-center space-x-2"
+                className="relative"
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.2 }}
               >
                 <motion.div
+                  className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg"
                   animate={{ 
-                    rotate: [0, 5, -5, 0],
-                    scale: [1, 1.1, 1]
+                    rotate: [0, 1, -1, 0],
+                    scale: [1, 1.01, 1]
                   }}
                   transition={{ 
-                    duration: 2,
+                    duration: 4,
                     repeat: Infinity,
-                    repeatDelay: 3
+                    repeatDelay: 5
                   }}
                 >
-                  <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+                  <FileText className="w-5 h-5 text-white" />
                 </motion.div>
-                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  AI Document Wizard
-                </h1>
+                <motion.div
+                  className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full"
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                    opacity: [0.8, 1, 0.8]
+                  }}
+                  transition={{ 
+                    duration: 2.5,
+                    repeat: Infinity,
+                    repeatDelay: 2
+                  }}
+                />
               </motion.div>
             </motion.div>
             
-            {/* Tab Navigation - Mobile Optimized */}
+            {/* Tab Navigation */}
             <motion.div 
-              className="flex items-center space-x-1"
-              initial={{ x: 50, opacity: 0 }}
+              className="flex items-center space-x-1 bg-slate-50/90 rounded-xl p-1.5 border border-slate-200/50"
+              initial={{ x: 30, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
             >
               <motion.div
-                whileHover={buttonVariants.hover}
-                whileTap={buttonVariants.tap}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <Button
-                  variant={activeTab === 'analysis' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setActiveTab('analysis')}
-                  className="flex items-center space-x-1 px-2 sm:px-3 transition-all duration-300"
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                    activeTab === 'analysis' 
+                      ? 'bg-white shadow-sm text-blue-600 border border-blue-200/50' 
+                      : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 hover:border-blue-200/30'
+                  }`}
                 >
                   <Wind className="w-4 h-4" />
                   <span className="hidden sm:inline">Analysis</span>
                 </Button>
               </motion.div>
               <motion.div
-                whileHover={buttonVariants.hover}
-                whileTap={buttonVariants.tap}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <Button
-                  variant={activeTab === 'files' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setActiveTab('files')}
-                  className="flex items-center space-x-1 px-2 sm:px-3 transition-all duration-300"
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                    activeTab === 'files' 
+                      ? 'bg-white shadow-sm text-blue-600 border border-blue-200/50' 
+                      : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 hover:border-blue-200/30'
+                  }`}
                 >
                   <Folder className="w-4 h-4" />
                   <span className="hidden sm:inline">Files</span>
                 </Button>
               </motion.div>
               <motion.div
-                whileHover={buttonVariants.hover}
-                whileTap={buttonVariants.tap}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <Button
-                  variant={activeTab === 'history' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setActiveTab('history')}
-                  className="flex items-center space-x-1 px-2 sm:px-3 transition-all duration-300"
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                    activeTab === 'history' 
+                      ? 'bg-white shadow-sm text-blue-600 border border-blue-200/50' 
+                      : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 hover:border-blue-200/30'
+                  }`}
                 >
                   <History className="w-4 h-4" />
                   <span className="hidden sm:inline">History</span>
                 </Button>
               </motion.div>
               <motion.div
-                whileHover={buttonVariants.hover}
-                whileTap={buttonVariants.tap}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <Button
-                  variant={activeTab === 'library' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setActiveTab('library')}
-                  className="flex items-center space-x-1 px-2 sm:px-3 transition-all duration-300"
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                    activeTab === 'library' 
+                      ? 'bg-white shadow-sm text-blue-600 border border-blue-200/50' 
+                      : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 hover:border-blue-200/30'
+                  }`}
                 >
                   <FileText className="w-4 h-4" />
                   <span className="hidden sm:inline">Library</span>
