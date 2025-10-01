@@ -20,7 +20,7 @@ import {
   Timer,
   Activity
 } from 'lucide-react'
-import { ProgressEvent, ProgressEventType, OperationStep } from '../../hooks/useDocumentProcessing'
+import { ProgressEvent, ProgressEventType, OperationStep } from '../../stores/documentProcessingStore'
 
 interface OperationChainProgressProps {
   operationChain: OperationStep[]

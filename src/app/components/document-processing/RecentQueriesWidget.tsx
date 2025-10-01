@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { DocumentQuery, useQueryHistory } from '../../hooks/useQueryHistory'
+import { DocumentQuery, useQueryHistoryStore } from '../../stores/queryHistoryStore'
 import { QueryDetailsModal } from './QueryDetailsModal'
 import { format } from '../../utils/dateUtils'
 import { 
@@ -28,7 +28,7 @@ export const RecentQueriesWidget: React.FC<QueryHistoryWidgetProps> = ({
     loading,
     error,
     fetchRecentQueries
-  } = useQueryHistory()
+  } = useQueryHistoryStore()
 
   const [selectedQuery, setSelectedQuery] = useState<DocumentQuery | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)

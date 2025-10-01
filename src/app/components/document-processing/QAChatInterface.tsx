@@ -490,7 +490,7 @@ export function QAChatInterface({
                   <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
                     <div className="flex items-center space-x-3">
                       <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                      <span className="text-sm font-medium text-gray-700">AI is thinking...</span>
+                      <span className="text-sm font-medium text-gray-700">Thinking...</span>
                     </div>
                   </div>
                 </div>

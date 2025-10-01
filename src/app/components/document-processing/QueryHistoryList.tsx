@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { DocumentQuery, useQueryHistory } from '../../hooks/useQueryHistory'
+import { DocumentQuery, useQueryHistoryStore } from '../../stores/queryHistoryStore'
 import { format } from '../../utils/dateUtils'
 import { 
   ChevronLeftIcon, 
@@ -34,7 +34,7 @@ export const QueryHistoryList: React.FC<QueryHistoryProps> = ({
     fetchQueries,
     fetchRecentQueries,
     deleteQuery
-  } = useQueryHistory()
+  } = useQueryHistoryStore()
 
   const [currentPage, setCurrentPage] = useState(1)
   const [searchTerm, setSearchTerm] = useState('')

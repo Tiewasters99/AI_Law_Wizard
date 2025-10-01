@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { DocumentQuery, useQueryHistory } from '../../hooks/useQueryHistory'
+import { DocumentQuery, useQueryHistoryStore } from '../../stores/queryHistoryStore'
 import { QueryDetailsModal } from './QueryDetailsModal'
 import { format, formatDistanceToNow } from '../../utils/dateUtils'
 import { 
@@ -30,7 +30,7 @@ export const QueryAnalyticsDashboard: React.FC<RecentQueriesDashboardProps> = ({
     loading,
     error,
     fetchRecentQueries
-  } = useQueryHistory()
+  } = useQueryHistoryStore()
 
   const [selectedQuery, setSelectedQuery] = useState<DocumentQuery | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)

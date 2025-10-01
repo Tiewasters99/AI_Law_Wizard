@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { QueryHistoryList } from './QueryHistoryList'
 import { QueryAnalyticsDashboard } from './QueryAnalyticsDashboard'
 import { QueryDetailsModal } from './QueryDetailsModal'
-import { DocumentQuery } from '../../hooks/useQueryHistory'
+import { DocumentQuery } from '../../stores/queryHistoryStore'
 import { useRouter } from 'next/navigation'
 import { 
   ChartBarIcon,

@@ -32,7 +32,7 @@
 
 ### 6. **Loading State Improvements**
 - ✅ **Better loading indicator**: Enhanced styling with proper spacing and colors
-- ✅ **Improved messaging**: More engaging "AI is thinking..." text
+- ✅ **Improved messaging**: More engaging "Thinking..." text
 - ✅ **Enhanced visual design**: Better avatar and bubble styling for loading state
 
 ### 7. **Sidebar Cleanup**

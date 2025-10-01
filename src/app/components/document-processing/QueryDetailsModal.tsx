@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { DocumentQuery } from '../../hooks/useQueryHistory'
+import { DocumentQuery } from '../../stores/queryHistoryStore'
 import { format } from '../../utils/dateUtils'
 import { 
   XMarkIcon,
