@@ -281,15 +281,17 @@ enum Role {
 
 // User model for authentication
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          Role      @default(CUSTOMER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String?
+  email           String?   @unique
+  emailVerified   DateTime?
+  image           String?
+  password        String?
+  role            Role      @default(CUSTOMER)
+  profileComplete Boolean   @default(false)
+  profileData     Json?     // Store additional profile information
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
   accounts                Account[]
@@ -351,12 +353,14 @@ model VerificationToken {
 
 // Profile for Lawyers
 model LawyerProfile {
-  id           String  @id @default(cuid())
-  userId       String  @unique
-  specialty    String? // e.g., "Corporate Law", "Criminal Law"
-  barLicense   String? // Bar license number
-  bio          String? @db.Text
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  specialty        String? // e.g., "Corporate Law", "Criminal Law"
+  barLicense       String? // Bar license number
+  bio              String? @db.Text
   yearsOfExperience Int?
+  firmName         String? // Law firm name
+  verified         Boolean @default(false) // For future verification system
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -371,6 +375,8 @@ model CustomerProfile {
   companyName String?
   address     String?
   phone       String?
+  industry    String? // Industry type
+  needs       String? @db.Text // Legal needs description
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

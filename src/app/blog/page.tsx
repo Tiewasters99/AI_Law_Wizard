@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import Layout from '../components/Layout'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -33,7 +34,183 @@ import { useBlogManagement, AIGenerationState } from '../hooks/useBlogManagement
 import BlogCanvasEditor from '../components/blog/BlogCanvasEditor'
 import Link from 'next/link'
 
+// Client Blog Exploration Interface
+const ClientBlogInterface = ({ blogs, isLoading }: { blogs: any[], isLoading: boolean }) => {
+  const [selectedBlog, setSelectedBlog] = useState<any>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterPublished, setFilterPublished] = useState(true)
+
+  // Filter blogs based on search and published status
+  const filteredBlogs = blogs.filter(blog => {
+    const matchesSearch = blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         blog.content.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesPublished = filterPublished ? blog.published : true
+    return matchesSearch && matchesPublished
+  })
+
+  const publishedBlogs = blogs.filter(blog => blog.published)
+  const totalBlogs = blogs.length
+
+  if (selectedBlog) {
+    return (
+      <div className="space-y-6">
+        {/* Back Button */}
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setSelectedBlog(null)}
+            className="flex items-center gap-2"
+          >
+            ← Back to Blogs
+          </Button>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Calendar className="w-4 h-4" />
+            <span>{new Date(selectedBlog.createdAt).toLocaleDateString()}</span>
+            <span>•</span>
+            <User className="w-4 h-4" />
+            <span>{selectedBlog.author || 'AI Wizard'}</span>
+          </div>
+        </div>
+
+        {/* Blog Content */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <CardTitle className="text-2xl mb-2">{selectedBlog.title}</CardTitle>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <User className="w-4 h-4" />
+                    <span>{selectedBlog.author || 'AI Wizard'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date(selectedBlog.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <Badge variant="default" className="text-xs">
+                    Published
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div 
+              className="prose prose-lg max-w-none"
+              dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Legal Blog Library
+          </CardTitle>
+          <p className="text-gray-600">
+            Explore our collection of legal insights and articles written by our AI Wizard technology.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Search blogs..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={filterPublished ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilterPublished(true)}
+              >
+                <Eye className="w-4 h-4 mr-1" />
+                Published ({publishedBlogs.length})
+              </Button>
+              <Button
+                variant={!filterPublished ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilterPublished(false)}
+              >
+                All ({totalBlogs})
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Blog Grid */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          <span>Loading blogs...</span>
+        </div>
+      ) : filteredBlogs.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2">No blogs found</h3>
+            <p className="text-gray-600">
+              {searchTerm ? 'Try adjusting your search terms.' : 'No blogs available at the moment.'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredBlogs.map((blog) => (
+            <Card 
+              key={blog.id} 
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setSelectedBlog(blog)}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-lg line-clamp-2 leading-tight">
+                    {blog.title}
+                  </CardTitle>
+                  <Badge variant={blog.published ? 'default' : 'secondary'} className="text-xs ml-2">
+                    {blog.published ? 'Published' : 'Draft'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    <span>{blog.author || 'AI Wizard'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 line-clamp-3 text-sm leading-relaxed">
+                  {blog.content.replace(/<[^>]*>/g, '').substring(0, 200)}...
+                </p>
+                <div className="mt-4 flex items-center text-blue-600 text-sm font-medium">
+                  Read more →
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function BlogPage() {
+  const { data: session } = useSession()
   const {
     blogs,
     selectedBlog,
@@ -47,6 +224,9 @@ export default function BlogPage() {
     togglePublished,
     editBlogWithAI
   } = useBlogManagement()
+
+  // Check if user is a lawyer
+  const isLawyer = session?.user?.role === 'LAWYER'
 
   const [mode, setMode] = useState<'list' | 'create-custom' | 'create-ai' | 'edit' | 'canvas' | 'manage-all'>('list')
   const [viewMode, setViewMode] = useState<'management' | 'public'>('management')
@@ -956,6 +1136,18 @@ export default function BlogPage() {
     )
   }
 
+  // If user is not a lawyer, show client blog exploration interface
+  if (!isLawyer) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto">
+          <ClientBlogInterface blogs={blogs} isLoading={isLoading} />
+        </div>
+      </Layout>
+    )
+  }
+
+  // Lawyer interface - full blog management
   return (
     <Layout>
       <div className="max-w-7xl mx-auto h-full">

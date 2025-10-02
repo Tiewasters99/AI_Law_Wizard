@@ -50,59 +50,34 @@ export default function ChatInput({
   }
 
   return (
-    <motion.div 
-      className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-100/50 bg-white/80 backdrop-blur-sm"
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ delay: 0.15, duration: 0.4 }}
-    >
-      <div className="flex items-end gap-2 sm:gap-3">
-        <div className="flex-1">
-          <Textarea
-            ref={textareaRef}
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask me anything about legal matters..."
-            className="min-h-[44px] sm:min-h-[50px] max-h-[100px] sm:max-h-[120px] resize-none border-gray-200 focus:border-indigo-400 focus:ring-indigo-400/20 text-sm bg-white transition-all duration-200 placeholder:text-gray-400"
-            disabled={isLoading}
-          />
-        </div>
-
-        <Button
-          onClick={handleSend}
-          disabled={!inputMessage.trim() || isLoading}
-          className={`px-3 sm:px-6 h-[44px] sm:h-[50px] transition-all duration-200 ${
-            inputMessage.trim() && !isLoading
-              ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg'
-              : 'bg-gray-300 cursor-not-allowed'
-          }`}
-        >
-          <AnimatePresence mode="wait">
-            {isLoading ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-center"
-              >
-                <Loader2 className="w-4 h-4 animate-spin" />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="send"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-center"
-              >
-                <Send className="w-4 h-4" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Button>
+    <div className="flex items-end gap-3 pb-4">
+      <div className="flex-1">
+        <Textarea
+          ref={textareaRef}
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask me anything about legal matters..."
+          className="min-h-[52px] max-h-[120px] resize-none border border-gray-200 focus:border-gray-400 focus:ring-0 text-sm bg-white rounded-2xl px-4 py-3 transition-all duration-200 placeholder:text-gray-400"
+          disabled={isLoading}
+        />
       </div>
-    </motion.div>
+
+      <Button
+        onClick={handleSend}
+        disabled={!inputMessage.trim() || isLoading}
+        className={`h-[52px] w-[52px] rounded-full transition-all duration-200 ${
+          inputMessage.trim() && !isLoading
+            ? 'bg-gray-800 hover:bg-gray-900 shadow-md hover:shadow-lg'
+            : 'bg-gray-300 cursor-not-allowed'
+        }`}
+      >
+        {isLoading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Send className="w-4 h-4" />
+        )}
+      </Button>
+    </div>
   )
 }

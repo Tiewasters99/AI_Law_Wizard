@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/app/components/ui/use-toast'
 import { useSession } from 'next-auth/react'
 import Layout from '@/app/components/Layout'
@@ -10,6 +10,8 @@ import QuickPrompts from '@/app/components/chat/QuickPrompts'
 import ChatMessages from '@/app/components/chat/ChatMessages'
 import ChatInput from '@/app/components/chat/ChatInput'
 import { Message } from '@/app/components/chat/types'
+import { Button } from '@/app/components/ui/button'
+import { Menu, X, MessageSquare, Sparkles, Users, BookOpen, Scale, Shield, GraduationCap } from 'lucide-react'
 
 export default function ApprenticePage() {
   const { data: session } = useSession()
@@ -21,19 +23,19 @@ export default function ApprenticePage() {
   const [showScrollDown, setShowScrollDown] = useState(false)
   const [currentChatId, setCurrentChatId] = useState<string>('current')
   const [currentChatTitle, setCurrentChatTitle] = useState<string>('Legal Apprentice')
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Check if mobile on mount
+  // Check if mobile on mount and manage sidebar state
   useEffect(() => {
     const checkMobile = () => {
       const isMobileDevice = window.innerWidth < 1024 // lg breakpoint
       setIsMobile(isMobileDevice)
-      // Keep sidebar collapsed on mobile, expanded on desktop
+      // Close sidebar on mobile by default, open on desktop
       if (isMobileDevice) {
-        setIsSidebarCollapsed(true) // Start collapsed on mobile
+        setIsSidebarOpen(false)
       } else {
-        setIsSidebarCollapsed(false) // Start expanded on desktop
+        setIsSidebarOpen(true)
       }
     }
     
@@ -241,7 +243,7 @@ export default function ApprenticePage() {
   }
 
   const toggleSidebar = () => {
-    setIsSidebarCollapsed(!isSidebarCollapsed)
+    setIsSidebarOpen(!isSidebarOpen)
   }
 
   const apprenticePrompts = [
@@ -254,70 +256,83 @@ export default function ApprenticePage() {
   ]
 
   return (
-    <Layout>
-      <div className="h-[calc(100vh-120px)] bg-gray-100 flex overflow-hidden rounded-lg shadow-lg">
-        {/* Mobile Menu Button - Only visible on mobile */}
-        <div className="lg:hidden fixed top-4 right-4 z-50">
-          <button
+    <div className="min-h-screen bg-white">
+      <Layout>
+        <div className="h-[calc(100vh-64px)] bg-white flex overflow-hidden -mt-2 sm:-mt-4">
+        {/* Mobile Sidebar Toggle Button - Only show for authenticated users */}
+        {session?.user && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="lg:hidden fixed top-4 left-4 z-50 bg-white shadow-lg border-gray-200"
             onClick={toggleSidebar}
-            className="p-2 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
+            {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </Button>
+        )}
 
-          {/* Sidebar - Fixed, always visible on desktop */}
-          <div className="hidden lg:block">
-            <ChatSidebar
-              onNewChat={handleNewChat}
-              onSelectChat={handleSelectChat}
-              onLoadChatHistory={handleLoadChatHistory}
-              currentChatId={currentChatId}
-              isCollapsed={false}
-              onToggleCollapse={() => {}}
-              chatType="apprentice"
-            />
-          </div>
+        {/* Sidebar - Only show for authenticated users */}
+        {session?.user && (
+          <AnimatePresence>
+            {(isSidebarOpen || !isMobile) && (
+              <motion.div
+                initial={{ x: isMobile ? -288 : 0, opacity: isMobile ? 0 : 1 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: isMobile ? -288 : 0, opacity: isMobile ? 0 : 1 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className={`${
+                  isMobile 
+                    ? 'fixed inset-y-0 left-0 z-40 w-72' 
+                    : 'relative w-72'
+                } bg-gray-50`}
+              >
+                <ChatSidebar
+                  onNewChat={handleNewChat}
+                  onSelectChat={handleSelectChat}
+                  onLoadChatHistory={handleLoadChatHistory}
+                  currentChatId={currentChatId}
+                  isCollapsed={false}
+                  onToggleCollapse={() => {}}
+                  chatType="apprentice"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
 
-          {/* Mobile Sidebar - Overlay when needed */}
-          <div className={`lg:hidden ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
-            <ChatSidebar
-              onNewChat={handleNewChat}
-              onSelectChat={handleSelectChat}
-              onLoadChatHistory={handleLoadChatHistory}
-              currentChatId={currentChatId}
-              isCollapsed={false}
-              onToggleCollapse={() => {}}
-              chatType="apprentice"
-            />
-          </div>
+        {/* Mobile Overlay - Only show for authenticated users */}
+        {session?.user && (
+          <AnimatePresence>
+            {isMobile && isSidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 bg-black/20 z-30"
+                onClick={toggleSidebar}
+              />
+            )}
+          </AnimatePresence>
+        )}
 
-          {/* Mobile Overlay - Only on mobile when sidebar is open */}
-          {!isSidebarCollapsed && (
-            <div 
-              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-              onClick={toggleSidebar}
-            />
-          )}
-
-          {/* Main Chat Panel */}
-          <div className="flex-1 flex flex-col bg-white min-h-0 relative">
-          {/* User Status Indicator */}
-          {!session?.user && (
-            <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-sm text-blue-700">
-              <div className="flex items-center justify-between">
-                <span>You're using the free apprentice tier. Sign in to save your chat history.</span>
-                <a 
-                  href="/login" 
-                  className="text-blue-600 hover:text-blue-800 font-medium underline"
-                >
-                  Sign In
-                </a>
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col bg-white min-h-0 relative">
+          {/* Header - Only show when there are messages */}
+          {messages.length > 0 && (
+            <div className="flex-shrink-0 px-6 py-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                  <GraduationCap className="w-4 h-4 text-gray-600" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold text-gray-900">Legal Apprentice</h1>
+                  <p className="text-sm text-gray-500">AI-powered legal assistance</p>
+                </div>
               </div>
             </div>
           )}
+
           
           {/* Messages Area */}
           <div className="flex-1 min-h-0 overflow-hidden">
@@ -335,34 +350,75 @@ export default function ApprenticePage() {
             />
           </div>
 
-          {/* Quick Prompts - Only show when no messages */}
-          {messages.length === 0 && (
-            <div className="px-4 py-2 border-t border-gray-100 flex-shrink-0">
-              <QuickPrompts
-                prompts={apprenticePrompts}
-                onSelectPrompt={(prompt) => {
-                  setInputMessage(prompt)
-                  setTimeout(() => sendMessageWithText(prompt), 100)
-                }}
-              />
-            </div>
-          )}
+          {/* Input Area - Centered when no messages, bottom when chatting */}
+          <div className={`flex-shrink-0 ${
+            messages.length === 0 
+              ? 'flex-1 flex items-center justify-center px-6' 
+              : 'px-6 py-4'
+          }`}>
+            {messages.length === 0 ? (
+              /* Centered Welcome Section */
+              <div className="w-full max-w-2xl mx-auto space-y-8">
+                {/* Welcome Header */}
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
+                    <GraduationCap className="w-8 h-8 text-gray-600" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-semibold text-gray-900">Legal Apprentice</h1>
+                    <p className="text-gray-500 mt-2">How can I help you with your legal questions today?</p>
+                    {!session?.user && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        💡 Sign in to save your conversation history
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-          {/* Input Area */}
-          <div className="flex-shrink-0">
-            <ChatInput
-              inputMessage={inputMessage}
-              setInputMessage={setInputMessage}
-              onSendMessage={sendMessage}
-              onKeyPress={handleKeyPress}
-              isLoading={isLoading}
-              isClient={isClient}
-              isLimitReached={false} // Apprentice tier is free
-              onUpgrade={() => {}} // No upgrade needed for free tier
-            />
+                {/* Quick Prompts */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-gray-700 text-center">Quick Start</h3>
+                  <QuickPrompts
+                    prompts={apprenticePrompts}
+                    onSelectPrompt={(prompt) => {
+                      setInputMessage(prompt)
+                      setTimeout(() => sendMessageWithText(prompt), 100)
+                    }}
+                  />
+                </div>
+
+                {/* Input Section */}
+                <div className="space-y-4">
+                  <ChatInput
+                    inputMessage={inputMessage}
+                    setInputMessage={setInputMessage}
+                    onSendMessage={sendMessage}
+                    onKeyPress={handleKeyPress}
+                    isLoading={isLoading}
+                    isClient={isClient}
+                    isLimitReached={false}
+                    onUpgrade={() => {}}
+                  />
+                  
+                </div>
+              </div>
+            ) : (
+              /* Bottom Input Section */
+              <ChatInput
+                inputMessage={inputMessage}
+                setInputMessage={setInputMessage}
+                onSendMessage={sendMessage}
+                onKeyPress={handleKeyPress}
+                isLoading={isLoading}
+                isClient={isClient}
+                isLimitReached={false}
+                onUpgrade={() => {}}
+              />
+            )}
           </div>
         </div>
       </div>
-    </Layout>
+      </Layout>
+    </div>
   )
 }

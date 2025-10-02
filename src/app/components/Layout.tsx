@@ -6,9 +6,9 @@ import {
   Home, 
   Clock,
   WandSparkles,
+  Wand2,
   Cloud,
   FileText,
-  Scale,
   WholeWord,
   EarthIcon,
   User,
@@ -23,27 +23,65 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { useSession, signIn, signOut } from 'next-auth/react'
 import { Button } from '@/app/components/ui/button'
+import { useAuth } from '@/app/stores/authStore'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { user, isLawyer, isCustomer } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-
-  const navigation = [
+  // Public navigation items
+  const publicNavigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Apprentice', href: '/apprentice', icon: GraduationCap },
-    { name: 'Wizard', href: '/wizard', icon: WandSparkles },
-    { name: 'Grand Wizard', href: '/grand-wizard', icon: Crown },
-    { name: 'Integrations', href: '/integrations', icon: Cloud },
     { name: 'Blog', href: '/blog', icon: FileText },
     { name: 'Miniverse™', href: '/miniverse', icon: EarthIcon },
   ]
-  
-  const authenticatedNavigation = [
+
+  // Lawyer-only navigation items
+  const lawyerNavigation = [
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Wizard', href: '/wizard', icon: WandSparkles },
+    { name: 'Grand Wizard', href: '/grand-wizard', icon: Crown },
+    { name: 'Blog', href: '/blog', icon: FileText },
     { name: 'Tokens', href: '/tokens', icon: Coins },
+    { name: 'Miniverse™', href: '/miniverse', icon: EarthIcon },
+  ]
+
+  // Customer navigation items (custom order)
+  const customerNavigation: Array<{ name: string; href: string; icon: any }> = [
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Apprentice', href: '/apprentice', icon: GraduationCap },
+    { name: 'Wizard', href: '/wizard', icon: Wand2 },
+    { name: 'Grand Wizard', href: '/grand-wizard', icon: Crown },
+    { name: 'Blog', href: '/blog', icon: FileText },
+    { name: 'Miniverse™', href: '/miniverse', icon: EarthIcon },
+  ]
+
+  // Common authenticated navigation
+  const commonAuthenticatedNavigation = [
     { name: 'Profile', href: '/profile', icon: User },
   ]
+
+  // Determine which navigation to show
+  const getNavigationItems = () => {
+    if (!session) {
+      return publicNavigation
+    }
+
+    if (isLawyer) {
+      return [...lawyerNavigation, ...commonAuthenticatedNavigation]
+    }
+
+    if (isCustomer) {
+      return [...customerNavigation, ...commonAuthenticatedNavigation]
+    }
+
+    return publicNavigation
+  }
+
+  const navigation = getNavigationItems()
 
 
 
@@ -72,24 +110,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {/* Desktop Navigation links */}
             <nav className="hidden lg:flex items-center space-x-1">
               {navigation.map((item) => {
-                const Icon = item.icon
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-sm font-medium">{item.name}</span>
-                  </Link>
-                )
-              })}
-              {session && authenticatedNavigation.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
                 return (
@@ -174,27 +194,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )
               })}
               
-              {/* Authenticated navigation */}
-              {session && authenticatedNavigation.map((item) => {
-                const Icon = item.icon
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="text-sm font-medium">{item.name}</span>
-                  </Link>
-                )
-              })}
-              
               {/* Mobile auth buttons */}
               <div className="pt-2 border-t">
                 {session ? (
@@ -228,7 +227,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Page content */}
-      <main className="p-2 sm:p-4">
+      <main className="pt-2 sm:pt-4">
         {children}
       </main>
     </div>

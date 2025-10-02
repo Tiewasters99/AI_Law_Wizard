@@ -1,24 +1,7 @@
-import { ChatXAI } from "@langchain/xai";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import { prisma } from "../../lib/prisma";
 import { searchRelevant } from './retrival';
-
-// Initialize Grok client with LangChain
-const grok = new ChatXAI({
-  apiKey: process.env.GROK_API_KEY!,
-  model: 'grok-4-latest',
-  maxTokens: 4000,
-  temperature: 0.3
-});
-
-// Initialize OpenAI client for apprentice chat
-const openai = new ChatOpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-  model: 'gpt-4o-mini',
-  maxTokens: 4000,
-  temperature: 0.3
-});
+import { OpenRouterService, ChatType } from './openRouterService';
 
 export interface ChatContext {
   sessionId: string;
@@ -160,7 +143,8 @@ export class ChatService {
   static async sendMessage(
     sessionId: string,
     userMessage: string,
-    userId?: string
+    userId?: string,
+    chatType?: 'general' | 'apprentice' | 'wizard' | 'grand-wizard'
   ): Promise<{ response: string; tokenCount?: number }> {
     try {
       // Get session and chat history
@@ -180,7 +164,7 @@ export class ChatService {
       console.log(`Processing message for session ${sessionId} with ${session.messages.length} existing messages`);
 
       // Save user message
-      const userMsg = await prisma.chatMessage.create({
+      await prisma.chatMessage.create({
         data: {
           sessionId,
           role: 'USER',
@@ -192,8 +176,8 @@ export class ChatService {
       });
 
       // Get chat type and system prompt
-      const chatType = (session.metadata as any)?.chatType || 'general';
-      const systemPrompt = this.getSystemPrompt(chatType);
+      const currentChatType = chatType || (session.metadata as any)?.chatType || 'general';
+      const systemPrompt = this.getSystemPrompt(currentChatType);
 
       // Manage conversation history based on size and relevance
       const managedHistory = await this.manageConversationHistory(sessionId, session.messages, userMessage);
@@ -212,28 +196,17 @@ export class ChatService {
       const shouldSummarize = totalMessages > this.SUMMARY_THRESHOLD && 
                              !(session.metadata as any)?.lastSummarizedAt;
 
-      // Get AI response using appropriate model based on chat type
-      let chatClient, modelName;
-      
-      if (chatType === 'apprentice') {
-        if (!process.env.OPENAI_API_KEY) {
-          throw new Error('OpenAI API key not configured for apprentice chat. Please set OPENAI_API_KEY in your environment variables.');
-        }
-        chatClient = openai;
-        modelName = 'gpt-4o-mini';
-      } else {
-        if (!process.env.GROK_API_KEY) {
-          throw new Error('Grok API key not configured. Please set GROK_API_KEY in your environment variables.');
-        }
-        chatClient = grok;
-        modelName = 'grok-4-latest';
+      // Get AI response using OpenRouter with appropriate model based on chat type
+      if (!process.env.OPENROUTER_API_KEY) {
+        throw new Error('OpenRouter API key not configured. Please set OPENROUTER_API_KEY in your environment variables.');
       }
-      
-      const response = await chatClient.invoke(messages);
-      const responseContent = response.content.toString();
 
-      // Estimate token count (rough approximation)
-      const tokenCount = Math.ceil((userMessage.length + responseContent.length) / 4);
+      const openRouterResponse = await OpenRouterService.sendMessage(messages, currentChatType as ChatType);
+      const responseContent = openRouterResponse.content;
+      const modelName = openRouterResponse.modelUsed;
+
+      // Use actual token count from OpenRouter response or estimate
+      const tokenCount = openRouterResponse.tokenCount || Math.ceil((userMessage.length + responseContent.length) / 4);
 
       // Save AI response
       await prisma.chatMessage.create({
@@ -277,18 +250,30 @@ export class ChatService {
     } catch (error) {
       console.error('Error in sendMessage:', error);
       
-      // Save error message
-      await prisma.chatMessage.create({
-        data: {
-          sessionId,
-          role: 'ASSISTANT',
-          content: 'Sorry, I encountered an error while processing your message. Please try again.',
-          metadata: {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            timestamp: new Date().toISOString()
-          }
+      // Only save error message if session exists
+      try {
+        const sessionExists = await prisma.chatSession.findUnique({
+          where: { id: sessionId },
+          select: { id: true }
+        });
+
+        if (sessionExists) {
+          await prisma.chatMessage.create({
+            data: {
+              sessionId,
+              role: 'ASSISTANT',
+              content: 'Sorry, I encountered an error while processing your message. Please try again.',
+              metadata: {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                timestamp: new Date().toISOString()
+              }
+            }
+          });
         }
-      });
+      } catch (dbError) {
+        console.error('Error saving error message to database:', dbError);
+        // Don't throw this error as it's secondary to the main error
+      }
 
       throw error;
     }
@@ -329,10 +314,10 @@ export class ChatService {
         return `${basePrompt} You are in "Apprentice" mode - focus on basic legal concepts, simple explanations, and educational content. Keep responses beginner-friendly and easy to understand. Use clear language and provide examples when helpful.`;
       
       case 'wizard':
-        return `${basePrompt} You are in "Wizard" mode - provide detailed legal analysis, complex case explanations, and advanced legal strategies.`;
+        return `${basePrompt} You are in "Legal Wizard" mode - provide detailed legal analysis, complex case explanations, and advanced legal strategies. This is an upgraded version of our AI Wizard technology for enhanced legal assistance.`;
       
       case 'grand-wizard':
-        return `${basePrompt} You are in "Grand Wizard" mode - provide expert-level legal consultation, comprehensive analysis, and sophisticated legal strategies. This is for advanced users.`;
+        return `${basePrompt} You are in "Legal Grand Wizard" mode - provide expert-level legal consultation, comprehensive analysis, and sophisticated legal strategies. This is our most advanced AI Wizard technology for premium legal assistance.`;
       
       default:
         return basePrompt;
@@ -547,16 +532,10 @@ export class ChatService {
 
       const summaryPrompt = `Please provide a concise summary of the following legal conversation, focusing on key topics, questions asked, and important legal advice given. Keep it under 200 words:\n\n${conversationText}`;
 
-      // Use a smaller, faster model for summarization
-      const summaryClient = new ChatOpenAI({
-        apiKey: process.env.OPENAI_API_KEY!,
-        model: 'gpt-4o-mini',
-        maxTokens: 300,
-        temperature: 0.3
-      });
-
-      const summaryResponse = await summaryClient.invoke([new HumanMessage(summaryPrompt)]);
-      const summary = summaryResponse.content.toString();
+      // Use OpenRouter for summarization with apprentice model (cost-effective)
+      const summaryMessages = [new HumanMessage(summaryPrompt)];
+      const summaryResponse = await OpenRouterService.sendMessage(summaryMessages, 'apprentice');
+      const summary = summaryResponse.content;
 
       // Update session with summary
       const session = await prisma.chatSession.findUnique({

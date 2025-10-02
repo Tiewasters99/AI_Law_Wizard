@@ -13,11 +13,11 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Chat API called - checking environment...')
     
-    // Check if API key is available
-    if (!process.env.GROK_API_KEY) {
-      console.error('GROK_API_KEY is not set in environment variables')
+    // Check if OpenRouter API key is available
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.error('OPENROUTER_API_KEY is not set in environment variables')
       return NextResponse.json(
-        { error: 'API key not configured. Please set GROK_API_KEY in your environment variables.' },
+        { error: 'API key not configured. Please set OPENROUTER_API_KEY in your environment variables.' },
         { status: 500 }
       )
     }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send message and get response using ChatService
-    const result = await ChatService.sendMessage(currentSessionId, message, userId)
+    const result = await ChatService.sendMessage(currentSessionId, message, userId, chatType)
     
     console.log('Response generated successfully')
 
