@@ -28,7 +28,7 @@ export default function ProfileSetupPage() {
         if (session.user.role === 'LAWYER') {
           router.push('/wizard');
         } else {
-          router.push('/dashboard');
+          router.push('/');
         }
         return;
       }
@@ -41,9 +41,8 @@ export default function ProfileSetupPage() {
 
   const handleRoleSelected = async (role: 'LAWYER' | 'CUSTOMER') => {
     console.log('handleRoleSelected called with role:', role);
-    
-    // Simple redirect to home page after role selection
-    router.push('/');
+    // The redirect is now handled in the RoleSelection component
+    // This callback is kept for any additional logic if needed
   };
 
   if (status === 'loading' || isChecking) {

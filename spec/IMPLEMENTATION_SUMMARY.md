@@ -28,7 +28,7 @@
 - **AuthGuard Component**: Client-side route protection with fallbacks
 - **Protected Routes**:
   - `/wizard`, `/tokens`, `/admin`, `/grand-wizard`, `/apprentice` → LAWYER only
-  - `/dashboard`, `/profile`, `/query-history` → Both roles
+  - `/`, `/profile`, `/query-history` → Both roles
   - `/consultation`, `/find-attorney`, `/resources` → CUSTOMER features
 
 ### 6. Conditional Feature Rendering

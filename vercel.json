@@ -27,8 +27,5 @@
       ]
     }
   ],
-  "regions": ["iad1"],
-  "env": {
-    "PRISMA_QUERY_ENGINE_LIBRARY": "/opt/nodejs/node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node"
-  }
+  "regions": ["iad1"]
 }

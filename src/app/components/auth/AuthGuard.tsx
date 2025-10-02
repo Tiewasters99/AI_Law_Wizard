@@ -41,7 +41,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
         if (session.user.role === 'LAWYER') {
           router.push('/wizard');
         } else {
-          router.push('/dashboard');
+          router.push('/');
         }
         return;
       }

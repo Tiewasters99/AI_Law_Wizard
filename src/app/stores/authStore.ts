@@ -35,6 +35,9 @@ export interface AuthState {
   updateUserRole: (role: UserRole) => Promise<{ success: boolean; error?: string }>;
   completeProfile: (profileData: any) => Promise<{ success: boolean; error?: string }>;
   
+  // Navigation
+  redirectAfterRoleSelection: (role: UserRole) => void;
+  
   // Utility Actions
   checkAuthStatus: () => Promise<void>;
 }
@@ -138,6 +141,12 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      // Navigation
+      redirectAfterRoleSelection: (role) => {
+        // Force a page refresh to ensure the session is updated
+        window.location.href = '/';
+      },
+
       completeProfile: async (profileData) => {
         try {
           const response = await fetch('/api/auth/complete-profile', {
@@ -220,7 +229,8 @@ export const useAuth = () => {
     signInWithCredentials, 
     signOut, 
     updateUserRole, 
-    completeProfile 
+    completeProfile,
+    redirectAfterRoleSelection
   } = useAuthStore();
 
   useEffect(() => {
@@ -251,6 +261,7 @@ export const useAuth = () => {
     signOut, 
     updateUserRole, 
     completeProfile, 
+    redirectAfterRoleSelection,
     update 
   };
 };

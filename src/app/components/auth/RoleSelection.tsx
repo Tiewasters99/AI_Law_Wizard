@@ -12,7 +12,7 @@ interface RoleSelectionProps {
 }
 
 export const RoleSelection: React.FC<RoleSelectionProps> = ({ onRoleSelected }) => {
-  const { updateUserRole } = useAuth();
+  const { updateUserRole, redirectAfterRoleSelection } = useAuth();
   const [selectedRole, setSelectedRole] = useState<'LAWYER' | 'CUSTOMER' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,8 +37,9 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ onRoleSelected }) 
       console.log('Role update result:', result);
       
       if (result.success) {
-        console.log('Role update successful, calling onRoleSelected');
-        onRoleSelected?.(selectedRole);
+        console.log('Role update successful, redirecting to home page');
+        // Use the auth store redirect function for better reliability
+        redirectAfterRoleSelection(selectedRole);
       } else {
         console.error('Failed to update role:', result.error);
         alert('Failed to update role: ' + result.error);
