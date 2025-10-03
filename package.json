@@ -41,7 +41,6 @@
     "multer": "^2.0.2",
     "next": "15.4.6",
     "next-auth": "^4.24.11",
-    "openai": "^6.0.1",
     "pdf-parse": "^1.1.1",
     "prisma": "^6.13.0",
     "react": "19.1.0",
@@ -71,8 +70,5 @@
     "tailwindcss": "^3.3.0",
     "tsx": "^4.20.5",
     "typescript": "^5"
-  },
-  "overrides": {
-    "openai": "^6.0.1"
   }
 }
