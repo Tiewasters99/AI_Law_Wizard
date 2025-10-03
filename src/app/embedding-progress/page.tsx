@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -68,7 +68,7 @@ export default function EmbeddingProgressPage() {
   const [refreshing, setRefreshing] = useState(false)
   const { toast } = useToast()
 
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       const response = await fetch('/api/embedding/jobs')
       const data = await response.json()
@@ -83,9 +83,9 @@ export default function EmbeddingProgressPage() {
         variant: "destructive",
       })
     }
-  }
+  }, [toast])
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch('/api/embedding/stats')
       const data = await response.json()
@@ -95,13 +95,13 @@ export default function EmbeddingProgressPage() {
     } catch (error) {
       console.error('Error fetching stats:', error)
     }
-  }
+  }, [])
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     setRefreshing(true)
     await Promise.all([fetchJobs(), fetchStats()])
     setRefreshing(false)
-  }
+  }, [fetchJobs, fetchStats])
 
   const deleteJob = async (jobId: string) => {
     try {

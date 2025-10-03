@@ -67,7 +67,7 @@ export function EnhancedTextEditor({
     }, 1000)
 
     return () => clearTimeout(timer)
-  }, [value])
+  }, [value, history, historyIndex])
 
   const insertText = (before: string, after: string = '') => {
     const textarea = textareaRef.current

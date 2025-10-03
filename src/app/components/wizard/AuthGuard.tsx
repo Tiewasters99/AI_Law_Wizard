@@ -57,7 +57,7 @@ export const AuthGuard = ({ onSignIn }: AuthGuardProps) => {
               <div className="flex items-center space-x-3">
                 <Brain className="w-5 h-5 text-blue-600" />
                 <div className="text-sm text-blue-800">
-                  <p className="font-medium">What you'll get:</p>
+                  <p className="font-medium">What you&apos;ll get:</p>
                   <p>AI-powered document analysis, insights extraction, and smart recommendations</p>
                 </div>
               </div>
@@ -70,7 +70,7 @@ export const AuthGuard = ({ onSignIn }: AuthGuardProps) => {
               Sign In to Continue
             </Button>
             <p className="text-center text-sm text-gray-500">
-              Don't have an account? 
+              Don&apos;t have an account? 
               <Button variant="link" className="p-0 ml-1 h-auto" onClick={() => router.push('/register')}>
                 Create one here
               </Button>

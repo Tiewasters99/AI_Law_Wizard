@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, Suspense, useCallback } from 'react'
 import { 
   listOneDriveFiles, 
   downloadOneDriveFile, 
@@ -61,6 +61,59 @@ function OneDriveInterfaceContent({
   const searchParams = useSearchParams()
   const router = useRouter()
 
+     // Load files from current folder
+     const loadFiles = useCallback(async (folderId: string = currentFolder) => {
+       if (!isAuthenticated) return
+   
+       setLoading(true)
+       try {
+         const result = await listOneDriveFiles({
+           folderId,
+           pageSize: 100,
+           search: searchTerm || undefined,
+           orderBy: 'name'
+         })
+   
+         if (result.success && result.files) {
+           setFiles(result.files)
+           // Check which files are already synced
+           await checkSyncStatus(result.files)
+         } else {
+           // Check if it's an authentication error
+           if (result.error?.includes('Authentication required')) {
+             setIsAuthenticated(false)
+             toast({
+               title: "Authentication Required",
+               description: "Please sign in to OneDrive to access your files",
+               variant: "destructive"
+             })
+           } else {
+             toast({
+               title: "Error",
+               description: result.error || "Failed to load files",
+               variant: "destructive"
+             })
+           }
+         }
+       } catch (error) {
+         if (error instanceof Error && error.message.includes('authenticate')) {
+           setIsAuthenticated(false)
+           toast({
+             title: "Authentication Required",
+             description: "Please sign in to access OneDrive",
+             variant: "destructive"
+           })
+         } else {
+           toast({
+             title: "Error",
+             description: "Failed to load files from OneDrive",
+             variant: "destructive"
+           })
+         }
+       } finally {
+         setLoading(false)
+       }
+     }, [isAuthenticated, currentFolder, searchTerm, toast])
   // Check authentication status on mount and when URL params change
   useEffect(() => {
     const checkAuth = () => {
@@ -97,61 +150,9 @@ function OneDriveInterfaceContent({
     } else {
       checkAuth()
     }
-  }, [searchParams, toast, router])
+  }, [searchParams, toast, router, loadFiles])
 
-  // Load files from current folder
-  const loadFiles = async (folderId: string = currentFolder) => {
-    if (!isAuthenticated) return
 
-    setLoading(true)
-    try {
-      const result = await listOneDriveFiles({
-        folderId,
-        pageSize: 100,
-        search: searchTerm || undefined,
-        orderBy: 'name'
-      })
-
-      if (result.success && result.files) {
-        setFiles(result.files)
-        // Check which files are already synced
-        await checkSyncStatus(result.files)
-      } else {
-        // Check if it's an authentication error
-        if (result.error?.includes('Authentication required')) {
-          setIsAuthenticated(false)
-          toast({
-            title: "Authentication Required",
-            description: "Please sign in to OneDrive to access your files",
-            variant: "destructive"
-          })
-        } else {
-          toast({
-            title: "Error",
-            description: result.error || "Failed to load files",
-            variant: "destructive"
-          })
-        }
-      }
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('authenticate')) {
-        setIsAuthenticated(false)
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to access OneDrive",
-          variant: "destructive"
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to load files from OneDrive",
-          variant: "destructive"
-        })
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Check sync status for files
   const checkSyncStatus = async (fileList: OneDriveFileInfo[]) => {
@@ -178,7 +179,7 @@ function OneDriveInterfaceContent({
     if (isAuthenticated) {
       loadFiles()
     }
-  }, [currentFolder, searchTerm, isAuthenticated])
+  }, [currentFolder, searchTerm, isAuthenticated, loadFiles])
 
   // Handle authentication
   const handleSignIn = async () => {

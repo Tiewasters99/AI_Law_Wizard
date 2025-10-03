@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Layout from '../../components/Layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -59,11 +59,7 @@ export default function BlogViewPage() {
   const [replyContent, setReplyContent] = useState('')
   const [replyAuthor, setReplyAuthor] = useState('')
 
-  useEffect(() => {
-    loadBlogAndComments()
-  }, [blogId])
-
-  const loadBlogAndComments = async () => {
+  const loadBlogAndComments = useCallback(async () => {
     try {
       setIsLoading(true)
 
@@ -92,7 +88,11 @@ export default function BlogViewPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [blogId])
+
+  useEffect(() => {
+    loadBlogAndComments()
+  }, [blogId, loadBlogAndComments])
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -269,7 +269,7 @@ export default function BlogViewPage() {
             <CardContent className="text-center py-12">
               <h2 className="text-xl font-semibold mb-2">Blog Not Found</h2>
               <p className="text-gray-600 mb-4">
-                The blog post you're looking for doesn't exist or is not published.
+                The blog post you&apos;re looking for doesn&apos;t exist or is not published.
               </p>
               <Link href="/blog">
                 <Button>

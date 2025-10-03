@@ -269,7 +269,7 @@ export function DocumentViewer({
                   {(fileType.includes('text') || fileType.includes('word') || fileType.includes('document')) && (
                     <div className="bg-gray-50 rounded-lg p-6">
                       <div className="text-sm text-gray-600 mb-2">
-                        Preview not available for this file type. Click "Open in New Tab" to view the document.
+                        Preview not available for this file type. Click &ldquo;Open in New Tab&rdquo; to view the document.
                       </div>
                       <Button onClick={handleViewInNewTab} variant="outline">
                         <ExternalLink className="w-4 h-4 mr-2" />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useToast } from '../ui/use-toast'
 import { useDocumentProcessingStore } from '../../stores/documentProcessingStore'
@@ -62,6 +62,31 @@ export function DocumentAnalysisInterface({
   const [userPrompt, setUserPrompt] = useState('')
   const { toast } = useToast()
 
+  // Create document analysis session
+  const handleCreateSession = useCallback(async () => {
+    if (!userPrompt || !finalResult) return
+
+    const sessionId = await createDocumentAnalysisSession({
+      userPrompt,
+      processedFiles,
+      analysisResult: finalResult
+    })
+
+    if (sessionId) {
+      setSessionIds(sessionId, sessionId)
+      toast({
+        title: 'Chat Session Ready',
+        description: 'You can now ask follow-up questions'
+      })
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to create chat session',
+        variant: 'destructive'
+      })
+    }
+  }, [userPrompt, finalResult, processedFiles, setSessionIds, toast])
+
   // Handle processing completion
   useEffect(() => {
     if (!isProcessing && finalResult && !error) {
@@ -77,7 +102,7 @@ export function DocumentAnalysisInterface({
 
       onComplete?.(finalResult, finalResult)
     }
-  }, [isProcessing, finalResult, error, processedFiles.length])
+  }, [isProcessing, finalResult, error, processedFiles.length, documentSessionId, handleCreateSession, onComplete, toast, userPrompt])
 
   // Handle error display
   useEffect(() => {
@@ -106,31 +131,6 @@ export function DocumentAnalysisInterface({
       }
     }
   }, [error, toast])
-
-  // Create document analysis session
-  const handleCreateSession = async () => {
-    if (!userPrompt || !finalResult) return
-
-    const sessionId = await createDocumentAnalysisSession({
-      userPrompt,
-      processedFiles,
-      analysisResult: finalResult
-    })
-
-    if (sessionId) {
-      setSessionIds(sessionId, sessionId)
-      toast({
-        title: 'Chat Session Ready',
-        description: 'You can now ask follow-up questions'
-      })
-    } else {
-      toast({
-        title: 'Error',
-        description: 'Failed to create chat session',
-        variant: 'destructive'
-      })
-    }
-  }
 
   // Start analysis
   const handleStartAnalysis = async () => {

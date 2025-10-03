@@ -138,7 +138,7 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ onRoleSelected }) 
                 <CardContent>
                   <div className="space-y-3">
                     <h4 className="font-medium text-sm text-gray-700 mb-3">
-                      What you'll get:
+                      What you&apos;ll get:
                     </h4>
                     <ul className="space-y-2">
                       {option.features.map((feature, index) => (

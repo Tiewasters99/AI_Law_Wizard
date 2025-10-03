@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Send,
@@ -75,14 +75,7 @@ export const ActionChatInterface = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Load session data if sessionId is provided
-  useEffect(() => {
-    if (initialSessionId) {
-      loadSession(initialSessionId)
-    }
-  }, [initialSessionId])
-
-  const loadSession = async (id: string) => {
+  const loadSession = useCallback(async (id: string) => {
     try {
       const response = await fetch(`/api/document-processing/sessions?sessionId=${id}`)
       const data = await response.json()
@@ -110,7 +103,14 @@ export const ActionChatInterface = ({
         variant: 'destructive'
       })
     }
-  }
+  }, [onSessionUpdate, toast])
+
+  // Load session data if sessionId is provided
+  useEffect(() => {
+    if (initialSessionId) {
+      loadSession(initialSessionId)
+    }
+  }, [initialSessionId, loadSession])
 
   const createSession = async () => {
     setIsCreatingSession(true)

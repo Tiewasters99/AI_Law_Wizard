@@ -136,12 +136,12 @@ export default function BlogCanvasEditor({
         newContent.includes('\n') !== content.includes('\n')) {
       addToHistory(title, newContent)
     }
-  }, [content, title])
+  }, [content, title, addToHistory])
 
   const handleTitleChange = useCallback((newTitle: string) => {
     setTitle(newTitle)
     addToHistory(newTitle, content)
-  }, [content])
+  }, [content, addToHistory])
 
   // Stable event handlers to prevent input focus loss
   const onTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

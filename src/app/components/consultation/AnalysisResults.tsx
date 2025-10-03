@@ -169,7 +169,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
               <CardContent>
                 <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
                   <p className="text-slate-700 text-lg leading-relaxed font-medium">
-                    "{renderText(consultation.user_issue)}"
+                    &ldquo;{renderText(consultation.user_issue)}&rdquo;
                   </p>
                 </div>
               </CardContent>
@@ -309,7 +309,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
                   🎯 Ready to WIN Your Case?
                 </h3>
                 <p className="text-green-700 mb-4">
-                  Don't wait - these lawyers are ready to help you achieve success today!
+                  Don&apos;t wait - these lawyers are ready to help you achieve success today!
                 </p>
                 <Button 
                   size="lg"
@@ -437,7 +437,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
                 <CardContent className="text-center py-8">
                   <h3 className="text-2xl font-bold mb-4">Ready to Take Action on Your Case?</h3>
                   <p className="text-blue-100 mb-6 text-lg">
-                    Don't let legal issues hold you back. Our recommended lawyers are standing by to help you WIN!
+                    Don&apos;t let legal issues hold you back. Our recommended lawyers are standing by to help you WIN!
                   </p>
                   <Button 
                     size="lg"
@@ -537,7 +537,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
 
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                     <h3 className="font-bold text-green-800 mb-1">✨ FREE Consultation - No Obligation</h3>
-                    <p className="text-sm text-green-700">Discuss your case at no cost. We're here to help you WIN!</p>
+                    <p className="text-sm text-green-700">Discuss your case at no cost. We&apos;re here to help you WIN!</p>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
@@ -631,7 +631,7 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
 
                   <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                     <h4 className="font-semibold text-slate-900 mb-2">Your Original Question:</h4>
-                    <p className="text-sm text-slate-700 italic">"{consultation.user_issue}"</p>
+                    <p className="text-sm text-slate-700 italic">&ldquo;{consultation.user_issue}&rdquo;</p>
                   </div>
 
                   <div className="flex gap-3 pt-4">

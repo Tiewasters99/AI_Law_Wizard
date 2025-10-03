@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useMiniverseStore } from '../data/store';
 
 const MusicPlayer: React.FC = () => {
@@ -32,10 +32,10 @@ const MusicPlayer: React.FC = () => {
         audioContext.close();
       }
     };
-  }, []);
+  }, [audioContext]);
 
   // Create soft classical music with multiple melodies
-  const createAmbientMusic = () => {
+  const createAmbientMusic = useCallback(() => {
     if (!audioContext || !isMusicEnabled) return;
 
     try {
@@ -192,10 +192,10 @@ const MusicPlayer: React.FC = () => {
     } catch (error) {
       console.error('Failed to create classical music:', error);
     }
-  };
+  }, [audioContext, isMusicEnabled]);
 
   // Stop ambient music
-  const stopAmbientMusic = () => {
+  const stopAmbientMusic = useCallback(() => {
     oscillators.forEach(osc => {
       try {
         osc.stop();
@@ -205,7 +205,7 @@ const MusicPlayer: React.FC = () => {
     });
     setOscillators([]);
     setGainNodes([]);
-  };
+  }, [oscillators]);
 
   // Handle music state changes
   useEffect(() => {
@@ -220,7 +220,7 @@ const MusicPlayer: React.FC = () => {
     return () => {
       stopAmbientMusic();
     };
-  }, [isMusicEnabled, isInitialized]);
+  }, [isMusicEnabled, isInitialized, createAmbientMusic, stopAmbientMusic]);
 
   // Handle volume changes
   useEffect(() => {

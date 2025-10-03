@@ -3,7 +3,7 @@
 import { Button } from '@/app/components/ui/button'
 import { Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 
 interface ChatHistory {
@@ -41,7 +41,7 @@ export default function ChatSidebar({
   const [loadingChatId, setLoadingChatId] = useState<string | null>(null)
 
   // Fetch chat history from API
-  const fetchChatHistory = async () => {
+  const fetchChatHistory = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -66,12 +66,21 @@ export default function ChatSidebar({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [session?.user?.id])
 
   // Load chat history on component mount and when session changes
   useEffect(() => {
-    fetchChatHistory()
-  }, [session?.user])
+    const userId = session?.user?.id
+    let shouldFetch = false
+    
+    if (userId || !session?.user) {
+      shouldFetch = true
+    }
+    
+    if (shouldFetch) {
+      fetchChatHistory()
+    }
+  }, [session?.user?.id]) // Remove fetchChatHistory from dependencies
 
   const formatTime = (date: Date | string) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date
@@ -232,7 +241,7 @@ export default function ChatSidebar({
                    ) : (
                      <>
                        <p className="text-sm text-gray-500">Sign in to save your chat history</p>
-                       <p className="text-xs text-gray-400 mt-1">Your conversations will be saved when you're logged in</p>
+                       <p className="text-xs text-gray-400 mt-1">Your conversations will be saved when you&apos;re logged in</p>
                      </>
                    )}
                  </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import Layout from '@/app/components/Layout'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useToast } from '@/app/components/ui/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
@@ -184,12 +184,7 @@ export default function IntegrationsPage() {
     }
   ]
 
-  // Fetch synced files when component mounts
-  useEffect(() => {
-    fetchSyncedFiles()
-  }, [])
-
-  const fetchSyncedFiles = async (page: number = currentPage, search: string = searchTerm) => {
+  const fetchSyncedFiles = useCallback(async (page: number = currentPage, search: string = searchTerm) => {
     setIsLoadingFiles(true)
     try {
       const params = new URLSearchParams({
@@ -219,7 +214,12 @@ export default function IntegrationsPage() {
     } finally {
       setIsLoadingFiles(false)
     }
-  }
+  }, [currentPage, searchTerm, pageSize, toast])
+
+  // Fetch synced files when component mounts
+  useEffect(() => {
+    fetchSyncedFiles()
+  }, [fetchSyncedFiles])
 
   const handleFileSync = async (files: any[]) => {
     setRecentSyncCount(files.length)
@@ -643,7 +643,7 @@ export default function IntegrationsPage() {
                 transition={{ delay: 0.1, duration: 0.5 }}
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect Your Data Sources</h2>
-                <p className="text-gray-600">Choose how you'd like to add files to your document library</p>
+                <p className="text-gray-600">Choose how you&apos;d like to add files to your document library</p>
               </motion.div>
 
               {/* Integration Cards - Single Row */}

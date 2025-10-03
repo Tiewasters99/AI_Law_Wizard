@@ -81,7 +81,7 @@ export const AnalysisSection = ({
                 <h4 className="font-semibold text-blue-900">Summary</h4>
               </div>
               <p className="text-sm text-blue-800">
-                "Summarize the key points from all documents"
+                &ldquo;Summarize the key points from all documents&rdquo;
               </p>
             </div>
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
@@ -92,7 +92,7 @@ export const AnalysisSection = ({
                 <h4 className="font-semibold text-green-900">Action Items</h4>
               </div>
               <p className="text-sm text-green-800">
-                "Extract action items and deadlines"
+                &ldquo;Extract action items and deadlines&rdquo;
               </p>
             </div>
             <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
@@ -103,7 +103,7 @@ export const AnalysisSection = ({
                 <h4 className="font-semibold text-purple-900">Themes</h4>
               </div>
               <p className="text-sm text-purple-800">
-                "What are the main themes discussed?"
+                &ldquo;What are the main themes discussed?&rdquo;
               </p>
             </div>
           </div>

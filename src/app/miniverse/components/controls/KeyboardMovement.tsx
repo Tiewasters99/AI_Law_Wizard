@@ -47,7 +47,7 @@ const KeyboardMovement: React.FC<KeyboardMovementProps> = ({ disabled = false })
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [keys]);
 
   useFrame(() => {
     if (disabled) return; // Disable movement when modal is open
