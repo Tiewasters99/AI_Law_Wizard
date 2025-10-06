@@ -1,14 +1,12 @@
 'use client'
 
 import { useAuth } from '@/app/stores/authStore'
-import { LandingPage } from '@/components/landing/LandingPage'
 import { LawyerDashboard } from '@/app/components/role-based/LawyerDashboard'
 import Layout from '@/app/components/Layout'
 import Home from '@/app/components/Home'
 
 export default function Page() {
   const { isAuthenticated, isLawyer, isCustomer, isLoading } = useAuth()
-
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -22,17 +20,12 @@ export default function Page() {
     )
   }
 
-  // Show landing page for non-authenticated users
-  if (!isAuthenticated) {
-    return <LandingPage />
-  }
-
   // Show appropriate dashboard for authenticated users
-  if (isLawyer) {
+  if (isAuthenticated && isLawyer) {
     return <LawyerDashboard />
   }
 
-  // Regular home page for authenticated customers/clients
+  // Home page for all users (authenticated and guest)
   return (
     <Layout>
       <Home />
