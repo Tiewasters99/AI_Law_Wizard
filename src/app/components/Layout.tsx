@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Badge } from '@/app/components/ui/badge'
+import PremiumFeaturesModal from './PremiumFeaturesModal'
 import { 
   Home, 
   Clock,
@@ -16,7 +17,9 @@ import {
   Crown,
   Coins,
   Menu,
-  X
+  X,
+  Lock,
+  Settings
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -30,13 +33,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
   const { user, isLawyer, isCustomer } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
 
-  // Public navigation items
+  // Public navigation items (accessible to guests)
   const publicNavigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Apprentice', href: '/apprentice', icon: GraduationCap },
     { name: 'Blog', href: '/blog', icon: FileText },
     { name: 'Miniverse™', href: '/miniverse', icon: EarthIcon },
+  ]
+
+  // Locked navigation items for guests (require authentication)
+  const lockedNavigation = [
+    { name: 'Wizard', href: '/wizard', icon: WandSparkles, locked: true },
+    { name: 'Grand Wizard', href: '/grand-wizard', icon: Crown, locked: true },
+    { name: 'Integration', href: '/integrations', icon: Settings, locked: true },
   ]
 
   // Lawyer-only navigation items
@@ -83,7 +94,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const navigation = getNavigationItems()
 
-
+  // Handle locked navigation clicks
+  const handleLockedNavigationClick = (itemName: string) => {
+    if (itemName === 'premium-features') {
+      setShowPremiumModal(true)
+    } else {
+      signIn()
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -127,6 +145,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 )
               })}
+              
+              {/* Show locked navigation capsule for guest users */}
+              {!session && (
+                <button
+                  onClick={() => handleLockedNavigationClick('premium-features')}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 cursor-pointer group relative bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-blue-500/20 hover:border-purple-300/50 hover:shadow-xl hover:shadow-purple-500/20 hover:scale-105"
+                  title="Sign in to access premium features"
+                >
+                  <div className="flex items-center space-x-1">
+                    <WandSparkles className="w-4 h-4 text-purple-600" />
+                    <Crown className="w-3 h-3 text-purple-500" />
+                    <Settings className="w-3 h-3 text-blue-500" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-800 group-hover:text-purple-700">
+                    Premium Features
+                  </span>
+                  <Lock className="w-3 h-3 text-amber-400" />
+                  {/* Glassmorphic tooltip */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white/90 backdrop-blur-md text-gray-800 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap z-50 border border-white/20 shadow-lg">
+                    <div className="flex items-center space-x-1">
+                      <WandSparkles className="w-3 h-3 text-purple-600" />
+                      <Crown className="w-3 h-3 text-purple-500" />
+                      <Settings className="w-3 h-3 text-blue-500" />
+                      <span>Sign in to access</span>
+                    </div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-white/90"></div>
+                  </div>
+                </button>
+              )}
             </nav>
           </div>
           
@@ -194,6 +241,36 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )
               })}
               
+              {/* Show locked navigation capsule for guest users */}
+              {!session && (
+                <button
+                  onClick={() => {
+                    handleLockedNavigationClick('premium-features')
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 cursor-pointer group relative bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-blue-500/20 hover:border-purple-300/50 hover:shadow-xl hover:shadow-purple-500/20 w-full"
+                  title="Sign in to access premium features"
+                >
+                  <div className="flex items-center space-x-2">
+                    <WandSparkles className="w-5 h-5 text-purple-600" />
+                    <Crown className="w-4 h-4 text-purple-500" />
+                    <Settings className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className="text-sm font-medium text-gray-800 group-hover:text-purple-700">
+                      Premium Features
+                    </span>
+                    <div className="text-xs text-gray-600 group-hover:text-purple-600">
+                      Wizard • Grand Wizard • Integration
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs text-amber-500 font-medium">Locked</span>
+                  </div>
+                </button>
+              )}
+              
               {/* Mobile auth buttons */}
               <div className="pt-2 border-t">
                 {session ? (
@@ -230,6 +307,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="pt-2 sm:pt-4">
         {children}
       </main>
+
+      {/* Premium Features Modal */}
+      <PremiumFeaturesModal 
+        isOpen={showPremiumModal} 
+        onClose={() => setShowPremiumModal(false)} 
+      />
     </div>
   )
 }
