@@ -324,7 +324,7 @@ function AuthPageContent() {
         }
         return 'Enter your password to continue';
       case 'register':
-        // For new users, show role from URL parameter
+        // For new users, show role from URL parameter or selected role
         const roleText = role === 'LAWYER' ? 'Attorney' : 'Client';
         return `Complete your ${roleText.toLowerCase()} account setup`;
       default:
@@ -450,7 +450,7 @@ function AuthPageContent() {
                           ? 'bg-green-100 text-green-800 border border-green-200'
                           : 'bg-blue-100 text-blue-800 border border-blue-200';
                       }
-                      // For new users (email/register steps), use role from URL parameter
+                      // For new users (email/register steps), use role from URL parameter or selected role
                       return role === 'LAWYER' 
                         ? 'bg-green-100 text-green-800 border border-green-200' 
                         : 'bg-blue-100 text-blue-800 border border-blue-200';
@@ -461,7 +461,7 @@ function AuthPageContent() {
                       if (step === 'password' && userInfo?.user?.role) {
                         return userInfo.user.role === 'LAWYER' ? '⚖️ Attorney' : '👤 Client';
                       }
-                      // For new users (email/register steps), use role from URL parameter
+                      // For new users (email/register steps), use role from URL parameter or selected role
                       return role === 'LAWYER' ? '⚖️ Attorney' : '👤 Client';
                     })()}
                   </div>
@@ -629,6 +629,45 @@ function AuthPageContent() {
               {/* Register Step */}
               {step === 'register' && (
                 <form onSubmit={handleRegister} className="space-y-5">
+                  {/* Role Selection */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-700">
+                      I am a:
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setRole('CUSTOMER')}
+                        className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                          role === 'CUSTOMER'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-2xl mb-2">👤</div>
+                          <div className="font-medium">Client</div>
+                          <div className="text-xs text-gray-500 mt-1">Looking for legal help</div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRole('LAWYER')}
+                        className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                          role === 'LAWYER'
+                            ? 'border-green-500 bg-green-50 text-green-700'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-2xl mb-2">⚖️</div>
+                          <div className="font-medium">Attorney</div>
+                          <div className="text-xs text-gray-500 mt-1">Providing legal services</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Name Field */}
                   <div className="space-y-2">
                     <label htmlFor="name" className="text-sm font-medium text-gray-700">

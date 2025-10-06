@@ -13,6 +13,8 @@ import { Message } from '@/app/components/chat/types'
 import { Button } from '@/app/components/ui/button'
 import { Menu, X, MessageSquare, Sparkles, Users, BookOpen, Scale, Shield, Wand2 } from 'lucide-react'
 import { DocumentAnalysisInterface } from '@/app/components/document-processing/DocumentAnalysisInterface'
+import { TokenGuard } from '@/app/components/auth/TokenGuard'
+import { TOKEN_REQUIREMENTS } from '@/app/hooks/useTokenAccess'
 
 export default function WizardPage() {
   const { data: session } = useSession()
@@ -189,16 +191,29 @@ export default function WizardPage() {
   // If user is a lawyer, show enhanced document analysis interface
   if (isLawyer) {
     return (
-      <Layout>
-        <div className="max-w-7xl mx-auto">
-          <DocumentAnalysisInterface />
-        </div>
-      </Layout>
+      <TokenGuard 
+        requiredTokens={TOKEN_REQUIREMENTS.WIZARD}
+        featureName="Legal Wizard"
+        featureIcon={<Wand2 className="w-10 h-10 text-purple-600" />}
+        featureDescription="Access advanced AI-powered legal analysis with document processing, file management, and intelligent legal insights."
+      >
+        <Layout>
+          <div className="max-w-7xl mx-auto">
+            <DocumentAnalysisInterface />
+          </div>
+        </Layout>
+      </TokenGuard>
     )
   }
 
   // Client interface - chat only
   return (
+    <TokenGuard 
+      requiredTokens={TOKEN_REQUIREMENTS.WIZARD}
+      featureName="Legal Wizard"
+      featureIcon={<Wand2 className="w-10 h-10 text-purple-600" />}
+      featureDescription="Access advanced AI-powered legal chat with intelligent responses and legal guidance."
+    >
     <div className="min-h-screen bg-white">
       <Layout>
         <div className="h-[calc(100vh-64px)] bg-white flex overflow-hidden -mt-2 sm:-mt-4">
@@ -356,5 +371,6 @@ export default function WizardPage() {
         </div>
       </Layout>
     </div>
+    </TokenGuard>
   )
 }
