@@ -938,48 +938,78 @@ export default function MiniversePage() {
     audio.loop = true;
     audio.volume = 0.5;
     audio.preload = 'auto';
+    audio.crossOrigin = 'anonymous';
 
-    audio.addEventListener('canplaythrough', () => {
+    // Enhanced error handling and loading
+    const handleAudioReady = () => {
       console.log('Audio ready to play:', trackName);
       audio.play().then(() => {
         setIsPlaying(true);
         setIsLoading(false);
         setCurrentTrack(trackName);
+        setCurrentAudio(audio);
       }).catch((error) => {
         console.error('Error playing audio:', error);
         setIsPlaying(false);
         setIsLoading(false);
         setCurrentTrack(null);
       });
-    });
+    };
 
-    audio.addEventListener('error', (e) => {
+    const handleAudioError = (e: any) => {
       console.error('Error loading audio:', trackName, e);
       console.error('Audio src:', audio.src);
       setIsPlaying(false);
       setIsLoading(false);
       setCurrentTrack(null);
       
-      // Try alternative path
-      console.log('Trying alternative audio path...');
-      const altAudio = new Audio(`./images/${trackName}`);
-      altAudio.loop = true;
-      altAudio.volume = 0.5;
-      altAudio.addEventListener('canplaythrough', () => {
-        altAudio.play().then(() => {
-          setIsPlaying(true);
-          setIsLoading(false);
-          setCurrentTrack(trackName);
-          setCurrentAudio(altAudio);
-        }).catch((altError) => {
-          console.error('Alternative audio also failed:', altError);
+      // Try alternative paths
+      console.log('Trying alternative audio paths...');
+      const alternativePaths = [
+        `./images/${trackName}`,
+        `/public/images/${trackName}`,
+        `images/${trackName}`
+      ];
+      
+      let pathIndex = 0;
+      const tryNextPath = () => {
+        if (pathIndex < alternativePaths.length) {
+          const altAudio = new Audio(alternativePaths[pathIndex]);
+          altAudio.loop = true;
+          altAudio.volume = 0.5;
+          altAudio.crossOrigin = 'anonymous';
+          
+          altAudio.addEventListener('canplaythrough', () => {
+            altAudio.play().then(() => {
+              setIsPlaying(true);
+              setIsLoading(false);
+              setCurrentTrack(trackName);
+              setCurrentAudio(altAudio);
+            }).catch((altError) => {
+              console.error(`Alternative path ${pathIndex + 1} failed:`, altError);
+              pathIndex++;
+              tryNextPath();
+            });
+          });
+          
+          altAudio.addEventListener('error', () => {
+            console.error(`Alternative path ${pathIndex + 1} failed to load`);
+            pathIndex++;
+            tryNextPath();
+          });
+        } else {
+          console.error('All audio paths failed');
           setIsPlaying(false);
           setIsLoading(false);
           setCurrentTrack(null);
-        });
-      });
-    });
+        }
+      };
+      
+      tryNextPath();
+    };
 
+    audio.addEventListener('canplaythrough', handleAudioReady);
+    audio.addEventListener('error', handleAudioError);
     audio.addEventListener('loadstart', () => {
       console.log('Starting to load audio:', trackName);
     });
@@ -1008,7 +1038,14 @@ export default function MiniversePage() {
       }).catch((error) => {
         console.error('Error resuming audio:', error);
         setIsPlaying(false);
+        // If resume fails, try to restart the track
+        if (currentTrack) {
+          playAudio(currentTrack);
+        }
       });
+    } else if (currentTrack && !currentAudio) {
+      // If we have a track but no audio element, restart it
+      playAudio(currentTrack);
     }
   };
 
@@ -1017,10 +1054,25 @@ export default function MiniversePage() {
     return () => {
       if (currentAudio) {
         currentAudio.pause();
+        currentAudio.currentTime = 0;
         currentAudio.src = '';
+        currentAudio.load(); // Reset the audio element
       }
     };
   }, [currentAudio]);
+
+  // Additional cleanup when component unmounts
+  useEffect(() => {
+    return () => {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.src = '';
+      }
+      setCurrentAudio(null);
+      setIsPlaying(false);
+      setCurrentTrack(null);
+    };
+  }, []);
 
   const handleObjectClick = (userData: UserData) => {
     if (userData.type === 'lamp') {
@@ -1250,27 +1302,35 @@ export default function MiniversePage() {
             {/* Audio Track 1 */}
             <button 
               className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm ${
-                currentTrack === 'audio-1.mp3' 
+                currentTrack === 'audio1.mp3' 
                   ? 'bg-emerald-500/30 text-emerald-100 border border-emerald-400/50 shadow-lg shadow-emerald-500/20' 
                   : 'bg-white/10 text-white/90 hover:bg-white/20 border border-white/20 hover:border-white/30'
               }`}
-              onClick={() => playAudio('audio-1.mp3')}
-              disabled={isLoading}
+              onClick={() => {
+                if (currentTrack === 'audio1.mp3' && isPlaying) {
+                  toggleAudio();
+                } else {
+                  playAudio('audio1.mp3');
+                }
+              }}
+              disabled={isLoading && currentTrack !== 'audio1.mp3'}
             >
               <div className="flex items-center justify-center space-x-2">
                 <span className="text-lg">🎵</span>
                 <span>
-                  {currentTrack === 'audio-1.mp3' && isLoading 
+                  {currentTrack === 'audio1.mp3' && isLoading 
                     ? 'Loading...' 
-                    : currentTrack === 'audio-1.mp3' && isPlaying 
+                    : currentTrack === 'audio1.mp3' && isPlaying 
                     ? 'Track 1 • Playing' 
+                    : currentTrack === 'audio1.mp3' && !isPlaying
+                    ? 'Track 1 • Paused'
                     : 'Track 1'
                   }
                 </span>
-                {currentTrack === 'audio-1.mp3' && isLoading && (
+                {currentTrack === 'audio1.mp3' && isLoading && (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 )}
-                {currentTrack === 'audio-1.mp3' && isPlaying && (
+                {currentTrack === 'audio1.mp3' && isPlaying && (
                   <div className="flex space-x-1">
                     <div className="w-1 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
                     <div className="w-1 h-4 bg-emerald-400 rounded-full animate-pulse" style={{animationDelay: '0.1s'}}></div>
@@ -1283,27 +1343,35 @@ export default function MiniversePage() {
             {/* Audio Track 2 */}
             <button 
               className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm ${
-                currentTrack === 'audio-2.mp3' 
+                currentTrack === 'audio2.mp3' 
                   ? 'bg-emerald-500/30 text-emerald-100 border border-emerald-400/50 shadow-lg shadow-emerald-500/20' 
                   : 'bg-white/10 text-white/90 hover:bg-white/20 border border-white/20 hover:border-white/30'
               }`}
-              onClick={() => playAudio('audio-2.mp3')}
-              disabled={isLoading}
+              onClick={() => {
+                if (currentTrack === 'audio2.mp3' && isPlaying) {
+                  toggleAudio();
+                } else {
+                  playAudio('audio2.mp3');
+                }
+              }}
+              disabled={isLoading && currentTrack !== 'audio2.mp3'}
             >
               <div className="flex items-center justify-center space-x-2">
                 <span className="text-lg">🎶</span>
                 <span>
-                  {currentTrack === 'audio-2.mp3' && isLoading 
+                  {currentTrack === 'audio2.mp3' && isLoading 
                     ? 'Loading...' 
-                    : currentTrack === 'audio-2.mp3' && isPlaying 
+                    : currentTrack === 'audio2.mp3' && isPlaying 
                     ? 'Track 2 • Playing' 
+                    : currentTrack === 'audio2.mp3' && !isPlaying
+                    ? 'Track 2 • Paused'
                     : 'Track 2'
                   }
                 </span>
-                {currentTrack === 'audio-2.mp3' && isLoading && (
+                {currentTrack === 'audio2.mp3' && isLoading && (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 )}
-                {currentTrack === 'audio-2.mp3' && isPlaying && (
+                {currentTrack === 'audio2.mp3' && isPlaying && (
                   <div className="flex space-x-1">
                     <div className="w-1 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
                     <div className="w-1 h-4 bg-emerald-400 rounded-full animate-pulse" style={{animationDelay: '0.1s'}}></div>
