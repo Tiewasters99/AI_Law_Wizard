@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
@@ -42,6 +42,7 @@ interface UserInfo {
 }
 
 export default function AuthPage() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<AuthStep>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,6 +67,16 @@ export default function AuthPage() {
       setEmail(rememberedEmail);
     }
   }, []);
+
+  // Handle role parameter from URL
+  useEffect(() => {
+    const roleParam = searchParams.get('role');
+    if (roleParam === 'attorney') {
+      setRole('LAWYER');
+    } else if (roleParam === 'client') {
+      setRole('CUSTOMER');
+    }
+  }, [searchParams]);
 
   const validateEmail = () => {
     if (!email) {
@@ -298,11 +309,24 @@ export default function AuthPage() {
   const getStepDescription = () => {
     switch (step) {
       case 'email':
-        return 'Enter your email address to get started';
+        // For email step, show role from URL if available (new users), otherwise generic message
+        const roleParam = searchParams.get('role');
+        if (roleParam) {
+          const roleText = role === 'LAWYER' ? 'Attorney' : 'Client';
+          return `Enter your email address to get started as a ${roleText}`;
+        }
+        return 'Enter your email address to sign in';
       case 'password':
+        // For existing users, show their actual role from database
+        if (userInfo?.user?.role) {
+          const roleText = userInfo.user.role === 'LAWYER' ? 'Attorney' : 'Client';
+          return `Welcome back! You're signing in as a ${roleText}`;
+        }
         return 'Enter your password to continue';
       case 'register':
-        return 'Complete your account setup';
+        // For new users, show role from URL parameter
+        const roleText = role === 'LAWYER' ? 'Attorney' : 'Client';
+        return `Complete your ${roleText.toLowerCase()} account setup`;
       default:
         return '';
     }
@@ -412,6 +436,37 @@ export default function AuthPage() {
               <CardDescription className="text-gray-600 mt-2">
                 {getStepDescription()}
               </CardDescription>
+              
+              {/* Role Indicator - only show when we have role information */}
+              {((step === 'password' && userInfo?.user?.role) || 
+                (step === 'register') || 
+                (step === 'email' && searchParams.get('role'))) && (
+                <div className="flex justify-center mt-4">
+                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    (() => {
+                      // For existing users (password step), use their actual role from database
+                      if (step === 'password' && userInfo?.user?.role) {
+                        return userInfo.user.role === 'LAWYER' 
+                          ? 'bg-green-100 text-green-800 border border-green-200'
+                          : 'bg-blue-100 text-blue-800 border border-blue-200';
+                      }
+                      // For new users (email/register steps), use role from URL parameter
+                      return role === 'LAWYER' 
+                        ? 'bg-green-100 text-green-800 border border-green-200' 
+                        : 'bg-blue-100 text-blue-800 border border-blue-200';
+                    })()
+                  }`}>
+                    {(() => {
+                      // For existing users (password step), use their actual role from database
+                      if (step === 'password' && userInfo?.user?.role) {
+                        return userInfo.user.role === 'LAWYER' ? '⚖️ Attorney' : '👤 Client';
+                      }
+                      // For new users (email/register steps), use role from URL parameter
+                      return role === 'LAWYER' ? '⚖️ Attorney' : '👤 Client';
+                    })()}
+                  </div>
+                </div>
+              )}
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -426,6 +481,19 @@ export default function AuthPage() {
                   <ArrowLeft className="w-4 h-4" />
                   <span>Change email address</span>
                 </Button>
+              )}
+              
+              {/* Change Role Link - only show on email step when role is from URL parameter */}
+              {step === 'email' && searchParams.get('role') && (
+                <div className="flex justify-center mb-4">
+                  <Link 
+                    href="/" 
+                    className="text-sm text-gray-500 hover:text-blue-600 transition-colors flex items-center space-x-1"
+                  >
+                    <ArrowLeft className="w-3 h-3" />
+                    <span>Change role selection</span>
+                  </Link>
+                </div>
               )}
 
               {/* Email Step */}
