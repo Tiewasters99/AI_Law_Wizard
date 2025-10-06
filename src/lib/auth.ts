@@ -44,7 +44,7 @@ export const authOptions: AuthOptions = {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: user.role || 'CUSTOMER',
           profileComplete: user.profileComplete,
         };
       },
@@ -115,7 +115,7 @@ export const authOptions: AuthOptions = {
             },
           });
           if (dbUser) {
-            token.role = dbUser.role;
+            token.role = dbUser.role || 'CUSTOMER';
             token.profileComplete = dbUser.profileComplete;
           }
         } catch (error) {
