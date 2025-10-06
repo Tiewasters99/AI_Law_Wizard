@@ -1,13 +1,13 @@
 /*
  * RoleSelection Component - COMMENTED OUT
  * 
- * This component is no longer needed since role selection now happens on the landing page.
+ * This component is no longer needed since role selection now happens on the auth page.
  * Users now select their role before authentication, not after.
  * 
  * The component has been completely commented out to preserve the code for reference.
  * 
  * New Flow:
- * 1. User visits landing page
+ * 1. User visits home page
  * 2. User clicks "Start as Client" or "Start as Attorney" 
  * 3. User is redirected to /auth with role parameter
  * 4. Registration form shows pre-selected role

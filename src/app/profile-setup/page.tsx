@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-// import { RoleSelection } from '@/app/components/auth/RoleSelection'; // Commented out - role selection now happens on landing page
 import { useAuth } from '@/app/stores/authStore';
 import { Loader2 } from 'lucide-react';
 
