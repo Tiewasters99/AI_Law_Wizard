@@ -9,13 +9,13 @@ export const Hero: React.FC<HeroProps> = ({ headline, subtext, stats }) => {
   return (
     <motion.section 
       data-section="hero"
-      className="text-center py-16 sm:py-20 lg:py-24 relative overflow-hidden"
+      className="text-center py-8 sm:py-12 lg:py-16 relative overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
     >
       {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 opacity-60"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-purple-50/80 to-cyan-50/80"></div>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Enhanced Badge */}
         <motion.div

@@ -10,9 +10,9 @@ const openRouterClient = new OpenAI({
 // Model mapping for different chat types
 export const MODEL_MAPPING = {
   'apprentice': 'openai/gpt-4o-mini',
-  'wizard': 'x-ai/grok-4-fast:free',
+  'wizard': 'deepseek/deepseek-chat-v3.1:free',
   'grand-wizard': 'google/gemini-2.5-flash-lite-preview-09-2025',
-  'general': 'x-ai/grok-4-fast:free'
+  'general': 'deepseek/deepseek-r1:free'
 } as const;
 
 export type ChatType = keyof typeof MODEL_MAPPING;

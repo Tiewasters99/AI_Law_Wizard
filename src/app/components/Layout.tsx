@@ -19,17 +19,20 @@ import {
   Menu,
   X,
   Lock,
-  Settings
+  Settings,
+  Scale
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { useSession, signIn, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/app/components/ui/button'
 import { useAuth } from '@/app/stores/authStore'
+import { useRouter } from 'next/navigation'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { data: session } = useSession()
   const { user, isLawyer, isCustomer } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -99,7 +102,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (itemName === 'premium-features') {
       setShowPremiumModal(true)
     } else {
-      signIn()
+      // Navigate to attorney features page using Next.js router
+      router.push('/attorney-features')
     }
   }
 
@@ -111,18 +115,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Left side - Logo and Desktop Navigation */}
           <div className="flex items-center space-x-6">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+            <Link href="/landing" className="flex items-center hover:opacity-80 transition-opacity">
               <Image 
-                src="/images/ai_law_wizard_logo.svg" 
+                src="/images/ai_law_wizard_logo_v1.png" 
                 alt="AI Law Wizard" 
-                width={32} 
-                height={32}
-                className="w-8 h-8 flex-shrink-0"
+                width={1964} 
+                height={468}
+                className="h-8 sm:h-10 w-auto flex-shrink-0 object-contain"
                 priority
+                sizes="(max-width: 640px) 128px, 160px"
               />
-              <span className="text-lg font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:block">
-                AI Law Wizard
-              </span>
             </Link>
             
             {/* Desktop Navigation links */}
@@ -189,16 +191,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               })}
             </Badge>
             
-            {/* Auth button */}
-            {session ? (
-              <Button variant="outline" onClick={() => signOut()} className="hidden sm:inline-flex">
-                Sign Out
+            {/* Attorney Features button */}
+            <Link href="/attorney-features">
+              <Button variant="outline" className="hidden sm:inline-flex">
+                <Scale className="w-4 h-4 mr-2" />
+                Attorney
               </Button>
-            ) : (
-              <Button onClick={() => signIn()} className="hidden sm:inline-flex">
-                Sign In
-              </Button>
-            )}
+            </Link>
             
             {/* Mobile menu button */}
             <Button
@@ -271,40 +270,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </button>
               )}
               
-              {/* Mobile auth buttons */}
-              <div className="pt-2 border-t">
-                {session ? (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      signOut()
-                      setIsMobileMenuOpen(false)
-                    }}
-                    className="w-full justify-start"
-                  >
-                    <User className="w-5 h-5 mr-3" />
-                    Sign Out
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={() => {
-                      signIn()
-                      setIsMobileMenuOpen(false)
-                    }}
-                    className="w-full justify-start"
-                  >
-                    <User className="w-5 h-5 mr-3" />
-                    Sign In
-                  </Button>
-                )}
-              </div>
+              {/* Attorney Features - Mobile */}
+              <Link 
+                href="/attorney-features"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50"
+              >
+                <Scale className="w-5 h-5" />
+                <span className="text-sm font-medium">Attorney Features</span>
+              </Link>
             </div>
           </div>
         )}
       </div>
 
       {/* Page content */}
-      <main className="pt-2 sm:pt-4">
+      <main>
         {children}
       </main>
 

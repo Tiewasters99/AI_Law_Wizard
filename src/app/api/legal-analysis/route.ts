@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { HumanMessage, SystemMessage } from '@langchain/core/messages'
+import { OpenRouterService, ChatType } from '../../lib/openRouterService'
 
 interface LegalAnalysisRequest {
   userIssue: string
@@ -8,11 +10,11 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Legal Analysis API called - checking environment...')
     
-    // Debug: Check if API key is available
-    if (!process.env.GROK_API_KEY) {
-      console.error('GROK_API_KEY is not set in environment variables')
+    // Debug: Check if OpenRouter API key is available
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.error('OPENROUTER_API_KEY is not set in environment variables')
       return NextResponse.json(
-        { error: 'API key not configured. Please set GROK_API_KEY in your environment variables.' },
+        { error: 'API key not configured. Please set OPENROUTER_API_KEY in your environment variables.' },
         { status: 500 }
       )
     }
@@ -61,65 +63,58 @@ export async function POST(request: NextRequest) {
       - Focus on lawyers who can help the user ACHIEVE SUCCESS and WIN their case
     `
 
-    // Call Grok API
-    const response = await fetch('https://api.x.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GROK_API_KEY}`
-      },
-      body: JSON.stringify({
-        messages: [
-          {
-            role: 'user',
-            content: analysisPrompt
-          }
-        ],
-        model: 'grok-4-latest',
-        stream: false,
-        temperature: 0.7
-      })
+    // Create LangChain messages for the legal analysis
+    const messages = [
+      new SystemMessage('You are AI Law Wizard - witty, a bit rebellious, but ultimately insightful and smart. Provide comprehensive legal guidance with a professional yet approachable tone.'),
+      new HumanMessage(analysisPrompt)
+    ]
+
+    console.log('Calling OpenRouter with LangChain for legal analysis...')
+    
+    // Use OpenRouter with wizard model (Grok-4-fast) for faster response
+    const openRouterResponse = await OpenRouterService.sendMessage(messages, 'wizard' as ChatType)
+    
+    console.log('OpenRouter response successful:', {
+      modelUsed: openRouterResponse.modelUsed,
+      tokenCount: openRouterResponse.tokenCount,
+      contentLength: openRouterResponse.content.length
     })
 
-    console.log('Grok API response status:', response.status)
-    
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error('Grok API error:', response.status, errorData)
-      
-      // Provide specific error messages based on status code
-      if (response.status === 401) {
-        throw new Error('Invalid API key. Please check your GROK_API_KEY environment variable.')
-      } else if (response.status === 403) {
-        throw new Error('No credits available. Please purchase credits on https://console.x.ai/')
-      } else if (response.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.')
-      } else {
-        throw new Error(`Grok API error: ${response.status} - ${errorData}`)
-      }
-    }
-
-    console.log('Grok API call successful, parsing response...')
-    const data = await response.json()
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid response format:', data)
-      throw new Error('Invalid response format from Grok API')
-    }
-
-    const responseText = data.choices[0].message.content
+    const responseText = openRouterResponse.content
     console.log('Response text (first 100 chars):', responseText.substring(0, 100) + '...')
 
     return NextResponse.json({ 
       success: true,
-      content: responseText 
+      content: responseText,
+      modelUsed: openRouterResponse.modelUsed,
+      tokenCount: openRouterResponse.tokenCount
     })
   } catch (error) {
     console.error('Legal Analysis API error:', error)
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    
+    // Provide more specific error messages based on error type
+    let errorMessage = 'Failed to process legal analysis request'
+    let statusCode = 500
+    
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        errorMessage = 'API key not configured. Please set OPENROUTER_API_KEY in your environment variables.'
+        statusCode = 500
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = 'Rate limit exceeded. Please try again later.'
+        statusCode = 429
+      } else if (error.message.includes('credits')) {
+        errorMessage = 'No credits available. Please check your OpenRouter account.'
+        statusCode = 402
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to process legal analysis request' },
-      { status: 500 }
+      { error: errorMessage },
+      { status: statusCode }
     )
   }
 }

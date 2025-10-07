@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Header } from './sections/Header';
+// Header removed - using Layout header instead
 import { Hero } from './sections/Hero';
 import { RoleSelection } from './sections/RoleSelection';
 import { Features } from './sections/Features';
@@ -29,10 +29,6 @@ import {
 
 export const LandingPage: React.FC = () => {
   const router = useRouter();
-
-  const handleSignInClick = () => {
-    router.push('/auth');
-  };
 
   const handleRoleSelect = (role: 'client' | 'attorney') => {
     // Navigate to auth page with role parameter
@@ -142,7 +138,7 @@ export const LandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden pt-16">
+    <div className="relative overflow-hidden">
       
       {/* Enhanced Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -152,8 +148,6 @@ export const LandingPage: React.FC = () => {
       </div>
 
       <div className="relative z-10">
-        <Header onSignInClick={handleSignInClick} />
-        
         <main>
           {/* Use the enhanced Hero component with 3D background */}
           <Hero 
