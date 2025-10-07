@@ -24,7 +24,8 @@ import {
   BarChart3,
   Globe,
   AlertCircle,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react'
 
 interface FeaturePreviewProps {

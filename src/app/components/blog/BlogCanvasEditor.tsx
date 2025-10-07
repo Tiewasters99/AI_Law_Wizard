@@ -95,7 +95,7 @@ export default function BlogCanvasEditor({
     }
   }, [blog.id, blog.updatedAt])
 
-  const addToHistory = (newTitle: string, newContent: string) => {
+  const addToHistory = useCallback((newTitle: string, newContent: string) => {
     const newEntry = { title: newTitle, content: newContent, timestamp: Date.now() }
     const newHistory = history.slice(0, historyIndex + 1)
     newHistory.push(newEntry)
@@ -107,7 +107,7 @@ export default function BlogCanvasEditor({
     
     setHistory(newHistory)
     setHistoryIndex(newHistory.length - 1)
-  }
+  }, [history, historyIndex])
 
   const undo = () => {
     if (historyIndex > 0) {

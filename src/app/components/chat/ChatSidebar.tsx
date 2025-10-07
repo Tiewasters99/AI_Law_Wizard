@@ -66,7 +66,7 @@ export default function ChatSidebar({
     } finally {
       setIsLoading(false)
     }
-  }, [session?.user?.id])
+  }, [session?.user])
 
   // Load chat history on component mount and when session changes
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function ChatSidebar({
     if (shouldFetch) {
       fetchChatHistory()
     }
-  }, [session?.user?.id]) // Remove fetchChatHistory from dependencies
+  }, [fetchChatHistory, session?.user]) // Include fetchChatHistory and session?.user
 
   const formatTime = (date: Date | string) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date

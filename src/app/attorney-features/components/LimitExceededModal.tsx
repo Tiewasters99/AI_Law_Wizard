@@ -100,7 +100,7 @@ export function LimitExceededModal({
                   <div>
                     <CardTitle className="text-2xl text-gray-900">Limit Reached</CardTitle>
                     <CardDescription className="text-lg">
-                      You've reached your free usage limit for {featureName}
+                      You&apos;ve reached your free usage limit for {featureName}
                     </CardDescription>
                   </div>
                 </div>

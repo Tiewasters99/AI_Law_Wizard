@@ -1072,7 +1072,7 @@ export default function MiniversePage() {
       setIsPlaying(false);
       setCurrentTrack(null);
     };
-  }, []);
+  }, [currentAudio]);
 
   const handleObjectClick = (userData: UserData) => {
     if (userData.type === 'lamp') {

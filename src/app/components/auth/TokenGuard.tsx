@@ -150,7 +150,7 @@ export function TokenGuard({
                   <div className="flex items-start space-x-3">
                     <Zap className="w-5 h-5 text-blue-600 mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-blue-900 mb-1">What you'll get:</h4>
+                      <h4 className="font-medium text-blue-900 mb-1">What you&apos;ll get:</h4>
                       <p className="text-sm text-blue-700">{featureDescription}</p>
                     </div>
                   </div>
