@@ -52,7 +52,7 @@ export function FeaturePreview({
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [previewResult, setPreviewResult] = useState<string | null>(null)
-  const [canUse, setCanUse] = useState({ canUse: true, remaining: 0 })
+  const [canUse, setCanUse] = useState({ canUse: true, remaining: 0, reason: undefined as string | undefined })
   const [usageStats, setUsageStats] = useState({
     daily: { used: 0, limit: 0, remaining: 0 },
     total: { used: 0, limit: 0, remaining: 0 }
@@ -62,7 +62,11 @@ export function FeaturePreview({
     if (isFree && isLimited) {
       const canUseResult = limitTracker.canUseFeature(featureId)
       const stats = limitTracker.getFeatureStats(featureId)
-      setCanUse(canUseResult)
+      setCanUse({ 
+        canUse: canUseResult.canUse, 
+        remaining: canUseResult.remaining || 0,
+        reason: canUseResult.reason 
+      })
       setUsageStats(stats)
     }
   }, [featureId, isFree, isLimited])

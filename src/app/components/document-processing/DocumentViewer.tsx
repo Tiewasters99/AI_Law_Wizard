@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import { 
   Download, 
   Eye, 
@@ -35,7 +36,7 @@ interface DocumentViewerProps {
 
 const getFileIcon = (fileType: string) => {
   if (fileType.includes('pdf')) return <FileText className="w-8 h-8 text-red-500" />
-  if (fileType.includes('image')) return <Image className="w-8 h-8 text-blue-500" />
+  if (fileType.includes('image')) return <Image className="w-8 h-8 text-blue-500" alt="Image file" />
   if (fileType.includes('video')) return <Video className="w-8 h-8 text-purple-500" />
   if (fileType.includes('audio')) return <Music className="w-8 h-8 text-green-500" />
   if (fileType.includes('zip') || fileType.includes('rar')) return <Archive className="w-8 h-8 text-orange-500" />
@@ -256,9 +257,11 @@ export function DocumentViewer({
                   {/* Image Viewer */}
                   {fileType.includes('image') && (
                     <div className="flex justify-center">
-                      <img
+                      <Image
                         src={viewerUrl}
                         alt={fileName}
+                        width={800}
+                        height={600}
                         className="max-w-full max-h-[600px] object-contain rounded-lg shadow-lg"
                         onError={() => setError('Failed to load image')}
                       />
