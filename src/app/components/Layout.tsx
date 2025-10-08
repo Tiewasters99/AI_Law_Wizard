@@ -21,12 +21,13 @@ import {
   X,
   Lock,
   Settings,
-  Scale
+  Scale,
+  LogOut
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { Button } from '@/app/components/ui/button'
 import { useAuth } from '@/app/stores/authStore'
 import { useRouter } from 'next/navigation'
@@ -166,13 +167,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               })}
             </Badge>
             
-            {/* Attorney Features button */}
-            <Link href="/attorney-features">
-              <Button variant="outline" className="hidden sm:inline-flex">
-                <Scale className="w-4 h-4 mr-2" />
-                Attorney
+            {/* Attorney Features button - only show for guests */}
+            {!session && (
+              <Link href="/attorney-features">
+                <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+                  <Scale className="w-4 h-4 mr-2" />
+                  Attorney
+                </Button>
+              </Link>
+            )}
+            
+            {/* Sign Out button - only show for authenticated users */}
+            {session && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="hidden sm:flex items-center space-x-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm font-medium">Sign Out</span>
               </Button>
-            </Link>
+            )}
             
             {/* Mobile menu button */}
             <Button
@@ -245,15 +261,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </button>
               )}
               
-              {/* Attorney Features - Mobile */}
-              <Link 
-                href="/attorney-features"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50"
-              >
-                <Scale className="w-5 h-5" />
-                <span className="text-sm font-medium">Attorney Features</span>
-              </Link>
+              {/* Attorney Features - Mobile (only for guests) */}
+              {!session && (
+                <Link 
+                  href="/attorney-features"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300 w-full mt-4"
+                >
+                  <Scale className="w-5 h-5" />
+                  <span className="text-sm font-medium">Attorney Features</span>
+                </Link>
+              )}
+              
+              {/* Sign Out button - Mobile */}
+              {session && (
+                <button
+                  onClick={() => {
+                    signOut({ callbackUrl: '/' })
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-red-600 hover:bg-red-50 border border-red-200 hover:border-red-300 w-full mt-4"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="text-sm font-medium">Sign Out</span>
+                </button>
+              )}
             </div>
           </div>
         )}
