@@ -13,6 +13,7 @@ import {
   WholeWord,
   EarthIcon,
   User,
+  Users,
   GraduationCap,
   Crown,
   Coins,
@@ -41,6 +42,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // Public navigation items (accessible to guests)
   const publicNavigation = [
     { name: 'Home', href: '/', icon: Home },
+    { name: 'Directory', href: '/directory', icon: Users },
     { name: 'Apprentice', href: '/apprentice', icon: GraduationCap },
     { name: 'Blog', href: '/blog', icon: FileText },
     { name: 'Miniverse™', href: '/miniverse', icon: EarthIcon },
@@ -56,6 +58,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // Lawyer-only navigation items
   const lawyerNavigation = [
     { name: 'Home', href: '/', icon: Home },
+    { name: 'Directory', href: '/directory', icon: Users },
     { name: 'Wizard', href: '/wizard', icon: WandSparkles },
     { name: 'Grand Wizard', href: '/grand-wizard', icon: Crown },
     { name: 'Blog', href: '/blog', icon: FileText },
@@ -66,6 +69,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // Customer navigation items (custom order)
   const customerNavigation: Array<{ name: string; href: string; icon: any }> = [
     { name: 'Home', href: '/', icon: Home },
+    { name: 'Directory', href: '/directory', icon: Users },
     { name: 'Apprentice', href: '/apprentice', icon: GraduationCap },
     { name: 'Wizard', href: '/wizard', icon: Wand2 },
     { name: 'Grand Wizard', href: '/grand-wizard', icon: Crown },
@@ -147,35 +151,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 )
               })}
-              
-              {/* Show locked navigation capsule for guest users */}
-              {!session && (
-                <button
-                  onClick={() => handleLockedNavigationClick('premium-features')}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 cursor-pointer group relative bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-blue-500/20 hover:border-purple-300/50 hover:shadow-xl hover:shadow-purple-500/20 hover:scale-105"
-                  title="Sign in to access premium features"
-                >
-                  <div className="flex items-center space-x-1">
-                    <WandSparkles className="w-4 h-4 text-purple-600" />
-                    <Crown className="w-3 h-3 text-purple-500" />
-                    <Settings className="w-3 h-3 text-blue-500" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-800 group-hover:text-purple-700">
-                    Premium Features
-                  </span>
-                  <Lock className="w-3 h-3 text-amber-400" />
-                  {/* Glassmorphic tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white/90 backdrop-blur-md text-gray-800 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap z-50 border border-white/20 shadow-lg">
-                    <div className="flex items-center space-x-1">
-                      <WandSparkles className="w-3 h-3 text-purple-600" />
-                      <Crown className="w-3 h-3 text-purple-500" />
-                      <Settings className="w-3 h-3 text-blue-500" />
-                      <span>Sign in to access</span>
-                    </div>
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-white/90"></div>
-                  </div>
-                </button>
-              )}
             </nav>
           </div>
           

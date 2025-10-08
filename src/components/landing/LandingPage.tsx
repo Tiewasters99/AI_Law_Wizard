@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Hero } from './sections/Hero';
 import { RoleSelection } from './sections/RoleSelection';
 import { Features } from './sections/Features';
+import { FeatureComparison } from './sections/FeatureComparison';
 import { Footer } from './sections/Footer';
 import { LandingPageProps } from './types/landing.types';
 import { 
@@ -286,6 +287,11 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
           </motion.section>
+          
+          {/* Feature Comparison Section */}
+          <div data-section="comparison">
+            <FeatureComparison />
+          </div>
           
           {/* Features Section */}
           <div data-section="experience">

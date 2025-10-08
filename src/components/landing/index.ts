@@ -5,6 +5,7 @@ export { Header } from './sections/Header';
 export { Hero } from './sections/Hero';
 export { RoleSelection } from './sections/RoleSelection';
 export { Features } from './sections/Features';
+export { FeatureComparison } from './sections/FeatureComparison';
 export { Footer } from './sections/Footer';
 
 // Shared components

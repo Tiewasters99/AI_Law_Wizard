@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Layout from '@/app/components/Layout';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
@@ -17,10 +18,7 @@ import {
   User, 
   Loader2, 
   Shield, 
-  ArrowLeft, 
-  Home, 
-  FileText, 
-  EarthIcon,
+  ArrowLeft,
   CheckCircle,
   AlertCircle,
   ArrowRight
@@ -49,6 +47,7 @@ function AuthPageContent() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<'LAWYER' | 'CUSTOMER'>('CUSTOMER');
+  const [isRoleLocked, setIsRoleLocked] = useState(false); // Track if role is locked from URL
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,13 +67,17 @@ function AuthPageContent() {
     }
   }, []);
 
-  // Handle role parameter from URL
+  // Handle role parameter from URL - lock role if provided
   useEffect(() => {
     const roleParam = searchParams.get('role');
     if (roleParam === 'attorney') {
       setRole('LAWYER');
+      setIsRoleLocked(true); // Lock role to LAWYER
     } else if (roleParam === 'client') {
       setRole('CUSTOMER');
+      setIsRoleLocked(true); // Lock role to CUSTOMER
+    } else {
+      setIsRoleLocked(false); // Allow role selection if no param
     }
   }, [searchParams]);
 
@@ -156,6 +159,31 @@ function AuthPageContent() {
       setUserInfo(data);
 
       if (data.exists) {
+        // Check if existing user's role matches the locked role (if any)
+        if (isRoleLocked && data.user?.role) {
+          const expectedRole = role; // The locked role from URL
+          const actualRole = data.user.role;
+          
+          if (expectedRole !== actualRole) {
+            const expectedRoleText = expectedRole === 'LAWYER' ? 'Attorney' : 'Client';
+            const actualRoleText = actualRole === 'LAWYER' ? 'Attorney' : 'Client';
+            
+            toast({
+              title: "Role Mismatch",
+              description: `This account is registered as ${actualRoleText}. Please sign in from the appropriate page.`,
+              variant: "destructive"
+            });
+            
+            // Redirect to appropriate auth page after a delay
+            setTimeout(() => {
+              const correctRole = actualRole === 'LAWYER' ? 'attorney' : 'client';
+              router.push(`/auth?role=${correctRole}`);
+            }, 2000);
+            
+            return;
+          }
+        }
+        
         setStep('password');
         toast({
           title: "Welcome back!",
@@ -290,6 +318,15 @@ function AuthPageContent() {
       setStep('email');
       setUserInfo(null);
       setErrors({});
+      // Reset role to locked role if it was locked, otherwise keep current
+      if (isRoleLocked) {
+        const roleParam = searchParams.get('role');
+        if (roleParam === 'attorney') {
+          setRole('LAWYER');
+        } else if (roleParam === 'client') {
+          setRole('CUSTOMER');
+        }
+      }
     }
   };
 
@@ -309,9 +346,8 @@ function AuthPageContent() {
   const getStepDescription = () => {
     switch (step) {
       case 'email':
-        // For email step, show role from URL if available (new users), otherwise generic message
-        const roleParam = searchParams.get('role');
-        if (roleParam) {
+        // For email step, show role from URL if locked
+        if (isRoleLocked) {
           const roleText = role === 'LAWYER' ? 'Attorney' : 'Client';
           return `Enter your email address to get started as a ${roleText}`;
         }
@@ -324,7 +360,7 @@ function AuthPageContent() {
         }
         return 'Enter your password to continue';
       case 'register':
-        // For new users, show role from URL parameter or selected role
+        // For new users, show role (locked or selected)
         const roleText = role === 'LAWYER' ? 'Attorney' : 'Client';
         return `Complete your ${roleText.toLowerCase()} account setup`;
       default:
@@ -337,68 +373,10 @@ function AuthPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* Navigation Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b">
-        <div className="flex items-center justify-between px-4 py-3">
-          {/* Left side - Logo and Navigation */}
-          <div className="flex items-center space-x-6">
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <Image 
-                src="/images/ai_law_wizard_logo.svg" 
-                alt="AI Law Wizard" 
-                width={32} 
-                height={32}
-                className="w-8 h-8 flex-shrink-0"
-                priority
-              />
-              <span className="text-lg font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:block">
-                AI Law Wizard
-              </span>
-            </Link>
-            
-            {/* Navigation links */}
-            <nav className="hidden lg:flex items-center space-x-1">
-              <Link
-                href="/"
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50"
-              >
-                <Home className="w-4 h-4" />
-                <span className="text-sm font-medium">Home</span>
-              </Link>
-              <Link
-                href="/blog"
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50"
-              >
-                <FileText className="w-4 h-4" />
-                <span className="text-sm font-medium">Blog</span>
-              </Link>
-              <Link
-                href="/miniverse"
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-50"
-              >
-                <EarthIcon className="w-4 h-4" />
-                <span className="text-sm font-medium">Miniverse™</span>
-              </Link>
-            </nav>
-          </div>
-          
-          {/* Right side - Back button */}
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="outline" 
-              onClick={() => router.push('/')}
-              className="flex items-center space-x-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Home</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4 relative overflow-hidden">
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+        {/* Main Content */}
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-4 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-30"></div>
@@ -437,10 +415,10 @@ function AuthPageContent() {
                 {getStepDescription()}
               </CardDescription>
               
-              {/* Role Indicator - only show when we have role information */}
+              {/* Role Indicator - only show when role is locked or user exists with role */}
               {((step === 'password' && userInfo?.user?.role) || 
-                (step === 'register') || 
-                (step === 'email' && searchParams.get('role'))) && (
+                (step === 'register' && isRoleLocked) || 
+                (step === 'email' && isRoleLocked)) && (
                 <div className="flex justify-center mt-4">
                   <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                     (() => {
@@ -450,7 +428,7 @@ function AuthPageContent() {
                           ? 'bg-green-100 text-green-800 border border-green-200'
                           : 'bg-blue-100 text-blue-800 border border-blue-200';
                       }
-                      // For new users (email/register steps), use role from URL parameter or selected role
+                      // For new users with locked role, use the locked role
                       return role === 'LAWYER' 
                         ? 'bg-green-100 text-green-800 border border-green-200' 
                         : 'bg-blue-100 text-blue-800 border border-blue-200';
@@ -461,7 +439,7 @@ function AuthPageContent() {
                       if (step === 'password' && userInfo?.user?.role) {
                         return userInfo.user.role === 'LAWYER' ? '⚖️ Attorney' : '👤 Client';
                       }
-                      // For new users (email/register steps), use role from URL parameter or selected role
+                      // For new users with locked role
                       return role === 'LAWYER' ? '⚖️ Attorney' : '👤 Client';
                     })()}
                   </div>
@@ -483,16 +461,12 @@ function AuthPageContent() {
                 </Button>
               )}
               
-              {/* Change Role Link - only show on email step when role is from URL parameter */}
-              {step === 'email' && searchParams.get('role') && (
+              {/* Info about locked role - only show on email step when role is locked */}
+              {step === 'email' && isRoleLocked && (
                 <div className="flex justify-center mb-4">
-                  <Link 
-                    href="/" 
-                    className="text-sm text-gray-500 hover:text-blue-600 transition-colors flex items-center space-x-1"
-                  >
-                    <ArrowLeft className="w-3 h-3" />
-                    <span>Change role selection</span>
-                  </Link>
+                  <div className="text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+                    Signing in as {role === 'LAWYER' ? 'Attorney' : 'Client'}
+                  </div>
                 </div>
               )}
 
@@ -629,44 +603,58 @@ function AuthPageContent() {
               {/* Register Step */}
               {step === 'register' && (
                 <form onSubmit={handleRegister} className="space-y-5">
-                  {/* Role Selection */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-700">
-                      I am a:
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setRole('CUSTOMER')}
-                        className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                          role === 'CUSTOMER'
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="text-2xl mb-2">👤</div>
-                          <div className="font-medium">Client</div>
-                          <div className="text-xs text-gray-500 mt-1">Looking for legal help</div>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRole('LAWYER')}
-                        className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                          role === 'LAWYER'
-                            ? 'border-green-500 bg-green-50 text-green-700'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="text-2xl mb-2">⚖️</div>
-                          <div className="font-medium">Attorney</div>
-                          <div className="text-xs text-gray-500 mt-1">Providing legal services</div>
-                        </div>
-                      </button>
+                  {/* Role Selection - Only show if role is not locked */}
+                  {!isRoleLocked ? (
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-gray-700">
+                        I am a:
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setRole('CUSTOMER')}
+                          className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                            role === 'CUSTOMER'
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-2xl mb-2">👤</div>
+                            <div className="font-medium">Client</div>
+                            <div className="text-xs text-gray-500 mt-1">Looking for legal help</div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRole('LAWYER')}
+                          className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                            role === 'LAWYER'
+                              ? 'border-green-500 bg-green-50 text-green-700'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-2xl mb-2">⚖️</div>
+                            <div className="font-medium">Attorney</div>
+                            <div className="text-xs text-gray-500 mt-1">Providing legal services</div>
+                          </div>
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4">
+                      <div className="flex items-center justify-center space-x-3">
+                        <div className="text-3xl">{role === 'LAWYER' ? '⚖️' : '👤'}</div>
+                        <div>
+                          <div className="text-sm text-gray-600">Creating account as:</div>
+                          <div className="text-lg font-bold text-gray-900">
+                            {role === 'LAWYER' ? 'Attorney' : 'Client'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Name Field */}
                   <div className="space-y-2">
@@ -830,29 +818,23 @@ function AuthPageContent() {
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Footer with additional links */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
-            <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
-            <Link href="/blog" className="hover:text-gray-700 transition-colors">Blog</Link>
-            <Link href="/miniverse" className="hover:text-gray-700 transition-colors">Miniverse™</Link>
-          </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 
 export default function AuthPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
         </div>
-      </div>
+      </Layout>
     }>
       <AuthPageContent />
     </Suspense>
