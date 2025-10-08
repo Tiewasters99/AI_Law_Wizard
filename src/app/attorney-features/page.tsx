@@ -7,34 +7,28 @@ import Layout from '@/app/components/Layout'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
-import { FeaturePreview } from './components/FeaturePreview'
-import { IntegrationPreview } from './components/IntegrationPreview'
+import { InteractiveFeaturePanel } from './components/InteractiveFeaturePanel'
+import { 
+  DocumentAnalysisDemo,
+  LegalResearchDemo,
+  PremiumFeatureDemo
+} from './components/FeatureDemos'
 import { 
   Scale, 
   FileText, 
   Search, 
-  MessageSquare, 
-  Crown, 
-  Wand2, 
   Shield, 
   Users, 
   Zap, 
   Lock, 
   CheckCircle, 
-  Star,
   ArrowRight,
-  Menu,
-  X,
   Gavel,
   Briefcase,
-  Globe,
   BarChart3,
-  Clock,
   DollarSign,
-  List,
-  Grid3X3
+  AlertCircle
 } from 'lucide-react'
-import Link from 'next/link'
 
 interface Feature {
   id: string
@@ -54,106 +48,28 @@ interface Feature {
 
 const attorneyFeatures: Feature[] = [
   {
-    id: 'legal-wizard',
-    name: 'Legal Wizard',
-    description: 'AI-powered legal consultation and document analysis',
-    icon: Wand2,
+    id: 'document-analysis',
+    name: 'Advanced Document Analysis',
+    description: 'Professional AI-powered document processing and analysis interface',
+    icon: FileText,
     category: 'core',
-    isFree: true,
-    isLimited: true,
-    features: [
-      'Basic legal consultation',
-      'Document analysis (limited)',
-      'Legal research assistance',
-      'Case law references'
-    ],
-    pricing: {
-      free: '3 queries per day',
-      paid: 'Unlimited access'
-    },
-    tooltip: 'Get instant AI-powered legal advice, document analysis, and research assistance. Perfect for quick legal questions and preliminary case analysis.'
-  },
-  {
-    id: 'grand-wizard',
-    name: 'Grand Wizard',
-    description: 'Advanced AI legal analysis with comprehensive document processing',
-    icon: Crown,
-    category: 'premium',
     isFree: false,
     isLimited: false,
     features: [
-      'Advanced document analysis',
-      'Comprehensive legal research',
-      'Case strategy development',
-      'Legal brief generation',
-      'Contract analysis and drafting',
-      'Legal opinion generation'
+      'Advanced document processing interface',
+      'Multi-file analysis and comparison',
+      'Intelligent search across documents',
+      'File management with OneDrive integration',
+      'Query history and analytics',
+      'Real-time processing status',
+      'Comprehensive legal insights',
+      'Export and reporting capabilities'
     ],
     pricing: {
-      free: 'Not available',
-      paid: 'Premium subscription required'
+      free: 'Not available for guests',
+      paid: 'Lawyer subscription required'
     },
-    tooltip: 'Premium AI legal analysis with advanced document processing, comprehensive research, case strategy development, and legal brief generation. Unlock unlimited access to our most powerful legal AI tools.'
-  },
-  {
-    id: 'document-analysis',
-    name: 'Document Analysis',
-    description: 'AI-powered analysis of legal documents and contracts',
-    icon: FileText,
-    category: 'core',
-    isFree: true,
-    isLimited: true,
-    features: [
-      'Contract review',
-      'Legal document analysis',
-      'Risk assessment',
-      'Compliance checking'
-    ],
-    pricing: {
-      free: '2 documents per day',
-      paid: 'Unlimited documents'
-    },
-    tooltip: 'Upload and analyze legal documents, contracts, and agreements. Get instant insights on key terms, risks, compliance issues, and recommendations for improvements.'
-  },
-  {
-    id: 'legal-research',
-    name: 'Legal Research',
-    description: 'Comprehensive legal research and case law analysis',
-    icon: Search,
-    category: 'advanced',
-    isFree: true,
-    isLimited: true,
-    features: [
-      'Case law search',
-      'Statute research',
-      'Legal precedent analysis',
-      'Citation tracking'
-    ],
-    pricing: {
-      free: '5 searches per day',
-      paid: 'Unlimited research'
-    },
-    tooltip: 'Comprehensive legal research with AI-powered case law search, statute analysis, precedent tracking, and citation management. Find relevant cases and legal authorities quickly.'
-  },
-  {
-    id: 'chat-consultation',
-    name: 'AI Chat Consultation',
-    description: 'Real-time AI legal consultation and guidance',
-    icon: MessageSquare,
-    category: 'core',
-    isFree: true,
-    isLimited: true,
-    features: [
-      'Real-time legal advice',
-      'Case strategy discussion',
-      'Legal question answering',
-      'Client consultation support'
-    ],
-    pricing: {
-      free: '10 messages per day',
-      paid: 'Unlimited chat'
-    },
-    tooltip: 'Real-time AI legal consultation for instant answers to legal questions, case strategy discussions, and client consultation support. Get expert legal guidance on-demand.'
+    tooltip: 'Professional-grade document analysis interface exclusively for lawyers. Process multiple documents, search across files, track query history, and get comprehensive legal insights with our advanced AI-powered analysis tools.'
   },
   {
     id: 'case-management',
@@ -168,13 +84,15 @@ const attorneyFeatures: Feature[] = [
       'Document organization',
       'Client communication logs',
       'Deadline management',
-      'Case status updates'
+      'Case status updates',
+      'Task automation',
+      'Team collaboration tools'
     ],
     pricing: {
-      free: 'Not available',
-      paid: 'Full access with subscription'
+      free: 'Not available for guests',
+      paid: 'Lawyer subscription required'
     },
-    tooltip: 'Complete case management system with timeline tracking, document organization, client communication logs, deadline management, and case status updates. Streamline your legal practice workflow.'
+    tooltip: 'Complete case management system with timeline tracking, document organization, client communication logs, deadline management, and case status updates. Streamline your legal practice workflow with professional tools.'
   },
   {
     id: 'contract-drafting',
@@ -185,17 +103,19 @@ const attorneyFeatures: Feature[] = [
     isFree: false,
     isLimited: false,
     features: [
-      'Contract templates',
+      'Professional contract templates',
       'AI-assisted drafting',
-      'Risk assessment',
+      'Advanced risk assessment',
       'Compliance verification',
-      'Negotiation support'
+      'Negotiation support',
+      'Clause library and suggestions',
+      'Version control and tracking'
     ],
     pricing: {
-      free: 'Not available',
-      paid: 'Premium feature'
+      free: 'Not available for guests',
+      paid: 'Lawyer subscription required'
     },
-    tooltip: 'AI-powered contract drafting with templates, risk assessment, compliance verification, and negotiation support. Create professional contracts with intelligent assistance and risk analysis.'
+    tooltip: 'AI-powered contract drafting exclusively for lawyers. Access professional templates, get intelligent drafting assistance, perform risk assessments, verify compliance, and receive negotiation support to create superior contracts.'
   },
   {
     id: 'legal-analytics',
@@ -209,33 +129,39 @@ const attorneyFeatures: Feature[] = [
       'Case outcome predictions',
       'Legal trend analysis',
       'Performance metrics',
-      'Client satisfaction tracking'
+      'Client satisfaction tracking',
+      'Practice area insights',
+      'Financial analytics',
+      'Competitive intelligence'
     ],
     pricing: {
-      free: 'Not available',
-      paid: 'Advanced analytics'
+      free: 'Not available for guests',
+      paid: 'Lawyer subscription required'
     },
-    tooltip: 'Advanced legal analytics with case outcome predictions, trend analysis, performance metrics, and client satisfaction tracking. Make data-driven decisions for your legal practice.'
+    tooltip: 'Advanced legal analytics exclusively for lawyers. Get case outcome predictions, trend analysis, performance metrics, and client satisfaction tracking. Make data-driven decisions for your legal practice with professional analytics tools.'
   },
   {
-    id: 'integration-tools',
-    name: 'Integration Tools',
-    description: 'Connect with external legal databases and tools',
-    icon: Globe,
-    category: 'integration',
-    isFree: true,
-    isLimited: true,
+    id: 'legal-research',
+    name: 'Advanced Legal Research',
+    description: 'Professional legal research and case law analysis',
+    icon: Search,
+    category: 'advanced',
+    isFree: false,
+    isLimited: false,
     features: [
-      'OneDrive integration',
-      'Document cloud storage',
-      'Calendar synchronization',
-      'Email integration'
+      'Comprehensive case law search',
+      'Advanced statute research',
+      'Legal precedent analysis',
+      'Citation tracking and verification',
+      'Jurisdiction-specific research',
+      'Research history tracking',
+      'Collaborative research tools'
     ],
     pricing: {
-      free: 'Basic integrations',
-      paid: 'Full integration suite'
+      free: 'Not available for guests',
+      paid: 'Lawyer subscription required'
     },
-    tooltip: 'Seamlessly integrate with OneDrive, cloud storage, calendar systems, and email platforms. Connect your existing legal tools and databases for enhanced workflow efficiency.'
+    tooltip: 'Professional legal research tools exclusively for lawyers. Comprehensive case law search, statute analysis, precedent tracking, and citation management. Access advanced research capabilities to find relevant cases and legal authorities quickly and efficiently.'
   }
 ]
 
@@ -245,13 +171,31 @@ export default function AttorneyFeaturesPage() {
   const { data: session } = useSession()
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [showInteractivePanel, setShowInteractivePanel] = useState(false)
 
   const handleFeatureClick = (feature: Feature) => {
-    if (!session && !feature.isFree) {
-      // Show login prompt for premium features
-      return
-    }
+    // Allow all users to explore features
     setSelectedFeature(feature)
+  }
+
+  const handleTryFeature = (feature: Feature) => {
+    setSelectedFeature(feature)
+    setShowInteractivePanel(true)
+  }
+
+  const getFeatureDemo = (featureId: string) => {
+    switch (featureId) {
+      case 'document-analysis':
+        return <DocumentAnalysisDemo />
+      case 'legal-research':
+        return <LegalResearchDemo />
+      case 'case-management':
+      case 'contract-drafting':
+      case 'legal-analytics':
+        return <PremiumFeatureDemo featureName={selectedFeature?.name || ''} />
+      default:
+        return null
+    }
   }
 
   const handleUpgrade = () => {
@@ -286,7 +230,6 @@ export default function AttorneyFeaturesPage() {
                 {attorneyFeatures.map((feature) => {
                   const Icon = feature.icon
                   const isActive = selectedFeature?.id === feature.id
-                  const isLocked = !session && !feature.isFree
                   
                   return (
                     <button
@@ -297,35 +240,35 @@ export default function AttorneyFeaturesPage() {
                         isActive
                           ? 'bg-blue-50 text-blue-700 border border-blue-200'
                           : 'text-gray-700 hover:bg-gray-50'
-                      } ${isLocked ? 'opacity-60' : ''}`}
+                      }`}
                     >
                       <div className={`p-1 rounded ${
-                        feature.category === 'premium' ? 'bg-yellow-100' :
-                        feature.category === 'advanced' ? 'bg-purple-100' :
-                        feature.category === 'core' ? 'bg-blue-100' : 'bg-green-100'
+                        feature.category === 'premium' ? 'bg-purple-100' :
+                        feature.category === 'advanced' ? 'bg-blue-100' :
+                        'bg-blue-100'
                       }`}>
                         <Icon className={`w-3 h-3 ${
-                          feature.category === 'premium' ? 'text-yellow-600' :
-                          feature.category === 'advanced' ? 'text-purple-600' :
-                          feature.category === 'core' ? 'text-blue-600' : 'text-green-600'
+                          feature.category === 'premium' ? 'text-purple-600' :
+                          feature.category === 'advanced' ? 'text-blue-600' :
+                          'text-blue-600'
                         }`} />
                       </div>
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center space-x-2">
                           <span className="font-medium truncate text-sm">{feature.name}</span>
-                          {feature.isFree ? (
-                            <Badge variant="secondary" className="text-green-600 bg-green-50 text-xs flex-shrink-0">
-                              Free
+                          {!session && (
+                            <Badge variant="outline" className="text-green-600 border-green-200 text-xs flex-shrink-0">
+                              Try Free
                             </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-yellow-600 border-yellow-200 text-xs flex-shrink-0">
-                              Premium
+                          )}
+                          {session && session.user?.role === 'LAWYER' && (
+                            <Badge variant="outline" className="text-blue-600 border-blue-200 text-xs flex-shrink-0">
+                              Full Access
                             </Badge>
                           )}
                         </div>
                         <p className="text-xs text-gray-500 truncate mt-1">{feature.description}</p>
                       </div>
-                      {isLocked && <Lock className="w-3 h-3 text-gray-400 flex-shrink-0" />}
                       
                       {/* Custom Tooltip - Glassmorphic Design - Side Position */}
                       <div className="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-md text-gray-800 text-xs rounded-xl px-4 py-3 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-[9999] max-w-xs whitespace-normal shadow-2xl border border-white/20">
@@ -356,14 +299,14 @@ export default function AttorneyFeaturesPage() {
                   <div className="mb-6">
                     <div className="flex items-center space-x-4 mb-4">
                       <div className={`p-3 rounded-lg ${
-                        selectedFeature.category === 'premium' ? 'bg-yellow-100' :
-                        selectedFeature.category === 'advanced' ? 'bg-purple-100' :
-                        selectedFeature.category === 'core' ? 'bg-blue-100' : 'bg-green-100'
+                        selectedFeature.category === 'premium' ? 'bg-purple-100' :
+                        selectedFeature.category === 'advanced' ? 'bg-blue-100' :
+                        'bg-blue-100'
                       }`}>
                         <selectedFeature.icon className={`w-8 h-8 ${
-                          selectedFeature.category === 'premium' ? 'text-yellow-600' :
-                          selectedFeature.category === 'advanced' ? 'text-purple-600' :
-                          selectedFeature.category === 'core' ? 'text-blue-600' : 'text-green-600'
+                          selectedFeature.category === 'premium' ? 'text-purple-600' :
+                          selectedFeature.category === 'advanced' ? 'text-blue-600' :
+                          'text-blue-600'
                         }`} />
                       </div>
                       <div>
@@ -373,18 +316,19 @@ export default function AttorneyFeaturesPage() {
                     </div>
                     
                     <div className="flex items-center space-x-4">
-                      {selectedFeature.isFree ? (
-                        <Badge variant="secondary" className="text-green-600 bg-green-50">
-                          Free Preview Available
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-yellow-600 border-yellow-200">
-                          Premium Feature
+                      {!session && (
+                        <Badge variant="outline" className="text-green-600 border-green-200">
+                          Try Free Once
                         </Badge>
                       )}
-                      {selectedFeature.isLimited && (
-                        <Badge variant="outline" className="text-orange-600 border-orange-200">
-                          Limited Usage
+                      {session && session.user?.role === 'LAWYER' && (
+                        <Badge variant="outline" className="text-blue-600 border-blue-200">
+                          Unlimited Access
+                        </Badge>
+                      )}
+                      {selectedFeature.category === 'premium' && (
+                        <Badge variant="outline" className="text-purple-600 border-purple-200">
+                          Premium
                         </Badge>
                       )}
                     </div>
@@ -392,19 +336,60 @@ export default function AttorneyFeaturesPage() {
 
                   {/* Feature Content */}
                   <div className="max-w-4xl">
-                    {selectedFeature.id === 'integration-tools' ? (
-                      <IntegrationPreview onUpgrade={handleUpgrade} />
-                    ) : (
-                      <FeaturePreview
-                        featureId={selectedFeature.id}
-                        featureName={selectedFeature.name}
-                        featureDescription={selectedFeature.description}
-                        icon={selectedFeature.icon}
-                        isFree={selectedFeature.isFree}
-                        isLimited={selectedFeature.isLimited}
-                        onUpgrade={handleUpgrade}
-                      />
-                    )}
+                    <div className="space-y-6">
+                        {/* Feature Details Card */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>About This Feature</CardTitle>
+                            <CardDescription>
+                              {selectedFeature.description}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <div>
+                                <h4 className="font-semibold text-gray-900 mb-3">Key Features:</h4>
+                                <ul className="space-y-2">
+                                  {selectedFeature.features.map((feature, idx) => (
+                                    <li key={idx} className="flex items-start space-x-2">
+                                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                      <span className="text-gray-700">{feature}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              {selectedFeature.pricing && (
+                                <div className="pt-4 border-t">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                      <span className="text-sm text-gray-600">Free Tier</span>
+                                      <p className="font-semibold text-gray-900">{selectedFeature.pricing.free}</p>
+                                    </div>
+                                    <div className="bg-blue-50 p-3 rounded-lg">
+                                      <span className="text-sm text-blue-600">Premium Tier</span>
+                                      <p className="font-semibold text-blue-900">{selectedFeature.pricing.paid}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Try It Button */}
+                              <div className="pt-4">
+                                <Button
+                                  onClick={() => handleTryFeature(selectedFeature)}
+                                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                                  size="lg"
+                                >
+                                  <Zap className="w-5 h-5 mr-2" />
+                                  Try It Now - Interactive Demo
+                                  <ArrowRight className="w-5 h-5 ml-2" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                    </div>
                   </div>
                 </motion.div>
               ) : (
@@ -421,60 +406,44 @@ export default function AttorneyFeaturesPage() {
                       <Scale className="w-4 h-4 text-white" />
                     </div>
                     <h1 className="text-lg font-bold text-gray-900 mb-1">
-                      AI-Powered Legal Tools
+                      Professional Legal Tools for Lawyers
                     </h1>
                     <p className="text-sm text-gray-600 max-w-xl mx-auto">
-                      Select a feature from the sidebar to explore our comprehensive suite of AI-powered legal tools.
+                      Select a feature from the sidebar to explore our exclusive lawyer-only AI-powered professional tools.
                     </p>
                   </div>
 
                   {/* Feature Categories Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 max-w-3xl w-full mb-3">
-                    {/* Free Features */}
-                    <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
-                          <CheckCircle className="w-3 h-3 text-green-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-xs font-semibold text-gray-900">Free Features</h3>
-                          <p className="text-xs text-gray-500">Try with limited usage</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 text-xs">
-                        Experience our core legal tools with daily limits.
-                      </p>
-                    </div>
-
-                    {/* Premium Tools */}
-                    <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className="w-6 h-6 bg-yellow-100 rounded flex items-center justify-center">
-                          <Crown className="w-3 h-3 text-yellow-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-xs font-semibold text-gray-900">Premium Tools</h3>
-                          <p className="text-xs text-gray-500">Advanced AI analysis</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 text-xs">
-                        Unlock unlimited access to advanced AI models.
-                      </p>
-                    </div>
-
-                    {/* Integrations */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-3xl w-full mb-3">
+                    {/* Core Tools */}
                     <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                       <div className="flex items-center space-x-2 mb-1">
                         <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
-                          <Globe className="w-3 h-3 text-blue-600" />
+                          <FileText className="w-3 h-3 text-blue-600" />
                         </div>
                         <div>
-                          <h3 className="text-xs font-semibold text-gray-900">Integrations</h3>
-                          <p className="text-xs text-gray-500">Connect & collaborate</p>
+                          <h3 className="text-xs font-semibold text-gray-900">Core Professional Tools</h3>
+                          <p className="text-xs text-gray-500">Document analysis & research</p>
                         </div>
                       </div>
                       <p className="text-gray-600 text-xs">
-                        Seamlessly connect with OneDrive and cloud storage.
+                        Advanced document processing and legal research tools exclusively for lawyers.
+                      </p>
+                    </div>
+
+                    {/* Practice Management */}
+                    <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+                          <Briefcase className="w-3 h-3 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-semibold text-gray-900">Practice Management</h3>
+                          <p className="text-xs text-gray-500">Case & contract tools</p>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 text-xs">
+                        Case management, contract drafting, and analytics for professional practice.
                       </p>
                     </div>
                   </div>
@@ -484,11 +453,11 @@ export default function AttorneyFeaturesPage() {
                     <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 rounded-lg p-3 max-w-lg w-full border border-blue-100">
                       <div className="text-center">
                         <div className="flex items-center justify-center mb-1">
-                          <Crown className="w-4 h-4 text-yellow-600 mr-1" />
-                          <h3 className="text-sm font-bold text-gray-900">Unlock Full Access</h3>
+                          <Shield className="w-4 h-4 text-blue-600 mr-1" />
+                          <h3 className="text-sm font-bold text-gray-900">Try Free or Sign In</h3>
                         </div>
                         <p className="text-gray-600 mb-2 text-xs">
-                          Sign in to access all premium features and unlimited usage.
+                          Try features once for free, or sign in as a lawyer for unlimited access.
                         </p>
                         <div className="flex gap-2 justify-center">
                           <Button 
@@ -497,7 +466,7 @@ export default function AttorneyFeaturesPage() {
                             className="bg-blue-600 hover:bg-blue-700 shadow-lg text-xs px-3 py-1"
                           >
                             <Users className="w-3 h-3 mr-1" />
-                            Sign In
+                            Sign In to Continue
                           </Button>
                           <Button 
                             variant="outline" 
@@ -506,9 +475,23 @@ export default function AttorneyFeaturesPage() {
                             className="border-blue-200 hover:bg-blue-50 text-xs px-3 py-1"
                           >
                             <DollarSign className="w-3 h-3 mr-1" />
-                            Pricing
+                            View Pricing
                           </Button>
                         </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {session && session.user?.role !== 'LAWYER' && (
+                    <div className="bg-gradient-to-r from-orange-50 via-yellow-50 to-orange-50 rounded-lg p-3 max-w-lg w-full border border-orange-100">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center mb-1">
+                          <AlertCircle className="w-4 h-4 text-orange-600 mr-1" />
+                          <h3 className="text-sm font-bold text-gray-900">Lawyer Account Required</h3>
+                        </div>
+                        <p className="text-gray-600 mb-2 text-xs">
+                          These features are exclusively available to lawyers. Please contact support to upgrade your account.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -526,6 +509,23 @@ export default function AttorneyFeaturesPage() {
           </div>
         </div>
       </div>
+
+      {/* Interactive Feature Panel */}
+      {selectedFeature && (
+        <InteractiveFeaturePanel
+          isOpen={showInteractivePanel}
+          onClose={() => setShowInteractivePanel(false)}
+          featureId={selectedFeature.id}
+          featureName={selectedFeature.name}
+          featureDescription={selectedFeature.description}
+          icon={selectedFeature.icon}
+          isFree={selectedFeature.isFree}
+          isLimited={selectedFeature.isLimited}
+          onUpgrade={handleUpgrade}
+        >
+          {getFeatureDemo(selectedFeature.id)}
+        </InteractiveFeaturePanel>
+      )}
     </Layout>
   )
 }

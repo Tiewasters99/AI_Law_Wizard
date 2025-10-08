@@ -17,6 +17,9 @@ import fs from 'fs/promises'
 interface ProcessingRequest {
   userPrompt: string
   searchQuery?: string
+  fileContent?: string // For free tier direct file analysis
+  fileName?: string // File name when using direct content
+  skipVectorSearch?: boolean // Flag to skip vector search for free tier
 }
 
 interface ProcessingResponse {
@@ -1160,7 +1163,7 @@ const processDocuments = async (request: ProcessingRequest): Promise<ProcessingR
 export const POST = async (request: NextRequest): Promise<NextResponse<ProcessingResponse>> => {
   try {
     const body: ProcessingRequest = await request.json()
-    const { userPrompt, searchQuery } = body
+    const { userPrompt, searchQuery, fileContent, fileName, skipVectorSearch } = body
 
     if (!userPrompt) {
       return NextResponse.json({
@@ -1169,6 +1172,59 @@ export const POST = async (request: NextRequest): Promise<NextResponse<Processin
       }, { status: 400 })
     }
 
+    // Handle free tier with direct file content (no vector search)
+    if (skipVectorSearch && fileContent) {
+      console.log('🆓 Processing free tier request with direct file content')
+      
+      try {
+        // Use GPT-4o-mini for free tier analysis
+        const gpt4oMini = new ChatOpenAI({
+          modelName: 'gpt-4o-mini',
+          temperature: 0.3,
+          openAIApiKey: process.env.OPENAI_API_KEY,
+        })
+
+        const systemPrompt = `You are a professional legal AI assistant. Analyze the provided document and answer the user's question accurately and comprehensively.
+
+Document Content:
+${fileContent.substring(0, 30000)} 
+
+${fileContent.length > 30000 ? '\n[Note: Content truncated for processing. This is a free tier analysis.]' : ''}
+
+Provide a detailed analysis in markdown format with:
+- Clear headings and sections
+- Bullet points for key findings
+- Bold text for important terms
+- Organized structure`
+
+        const response = await gpt4oMini.invoke([
+          new SystemMessage(systemPrompt),
+          new HumanMessage(userPrompt)
+        ])
+
+        const result = response.content as string
+
+        return NextResponse.json({
+          success: true,
+          result,
+          responseMode: 'question_answering',
+          processedFiles: [{
+            fileId: 'free-tier-upload',
+            fileName: fileName || 'Uploaded Document',
+            originalName: fileName || 'Uploaded Document',
+            fileSize: fileContent.length
+          }]
+        })
+      } catch (error) {
+        console.error('Free tier processing error:', error)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to analyze document. Please try again.'
+        }, { status: 500 })
+      }
+    }
+
+    // Regular processing with vector search for paid tier
     const result = await processDocuments({ userPrompt, searchQuery })
 
     if (result.success) {
