@@ -33,7 +33,7 @@ export function IntegrationPreview({ onUpgrade }: IntegrationPreviewProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [previewResult, setPreviewResult] = useState<string | null>(null)
-  const [canUse, setCanUse] = useState({ canUse: true, remaining: 0 })
+  const [canUse, setCanUse] = useState({ canUse: true, remaining: 0, reason: undefined as string | undefined })
   const [usageStats, setUsageStats] = useState({
     daily: { used: 0, limit: 0, remaining: 0 },
     total: { used: 0, limit: 0, remaining: 0 }
@@ -43,7 +43,11 @@ export function IntegrationPreview({ onUpgrade }: IntegrationPreviewProps) {
   useEffect(() => {
     const canUseResult = limitTracker.canUseFeature('integration-tools')
     const stats = limitTracker.getFeatureStats('integration-tools')
-    setCanUse(canUseResult)
+    setCanUse({ 
+      canUse: canUseResult.canUse, 
+      remaining: canUseResult.remaining || 0,
+      reason: canUseResult.reason 
+    })
     setUsageStats(stats)
   }, [])
 

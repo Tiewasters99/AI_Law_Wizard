@@ -108,7 +108,7 @@ export function FeaturePreview({
     return new Promise((resolve) => {
       setTimeout(() => {
         // Simulate different results based on feature
-        const results = {
+        const results: Record<string, string> = {
           'legal-wizard': 'AI Legal Analysis: Based on your query, I can provide comprehensive legal guidance on contract law, including key elements, enforceability factors, and common pitfalls to avoid.',
           'document-analysis': 'Document Analysis Complete: I\'ve analyzed your document and identified 3 key legal issues, 2 potential risks, and 1 compliance concern. The document appears to be 85% compliant with current regulations.',
           'legal-research': 'Research Results: Found 12 relevant cases, 5 recent precedents, and 3 applicable statutes. The most relevant case is Smith v. Jones (2023) which directly addresses your legal question.',
@@ -123,7 +123,7 @@ export function FeaturePreview({
   }
 
   const getFeatureIcon = (featureId: string) => {
-    const icons = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       'legal-wizard': Wand2,
       'document-analysis': FileText,
       'legal-research': Search,
@@ -137,7 +137,7 @@ export function FeaturePreview({
   }
 
   const getFeatureColor = (featureId: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       'legal-wizard': 'text-purple-600 bg-purple-100',
       'document-analysis': 'text-blue-600 bg-blue-100',
       'legal-research': 'text-green-600 bg-green-100',

@@ -47,7 +47,7 @@ interface DocumentLibraryProps {
 
 const getFileIcon = (fileType: string) => {
   if (fileType.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />
-  if (fileType.includes('image')) return <Image className="w-5 h-5 text-blue-500" alt="Image file" />
+  if (fileType.includes('image')) return <Image className="w-5 h-5 text-blue-500" />
   if (fileType.includes('video')) return <Video className="w-5 h-5 text-purple-500" />
   if (fileType.includes('audio')) return <Music className="w-5 h-5 text-green-500" />
   if (fileType.includes('zip') || fileType.includes('rar')) return <Archive className="w-5 h-5 text-orange-500" />
