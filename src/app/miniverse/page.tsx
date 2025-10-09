@@ -737,7 +737,7 @@ function CameraRig() {
   const [isDragging, setIsDragging] = useState(false);
   const [lastTouch, setLastTouch] = useState({ x: 0, y: 0 });
   const keysRef = useRef({ 
-    w: false, a: false, s: false, d: false, 
+    w: false, a: false, s: false, d: false, q: false, e: false,
     ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false 
   });
 
@@ -827,12 +827,14 @@ function CameraRig() {
       else if (key === 'a') keysRef.current.a = true;
       else if (key === 's') keysRef.current.s = true;
       else if (key === 'd') keysRef.current.d = true;
+      else if (key === 'q') keysRef.current.q = true;
+      else if (key === 'e') keysRef.current.e = true;
       else if (e.key === 'ArrowUp') keysRef.current.ArrowUp = true;
       else if (e.key === 'ArrowLeft') keysRef.current.ArrowLeft = true;
       else if (e.key === 'ArrowDown') keysRef.current.ArrowDown = true;
       else if (e.key === 'ArrowRight') keysRef.current.ArrowRight = true;
       
-      if (['w', 'a', 's', 'd'].includes(key) || ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
+      if (['w', 'a', 's', 'd', 'q', 'e'].includes(key) || ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
       }
     };
@@ -844,12 +846,14 @@ function CameraRig() {
       else if (key === 'a') keysRef.current.a = false;
       else if (key === 's') keysRef.current.s = false;
       else if (key === 'd') keysRef.current.d = false;
+      else if (key === 'q') keysRef.current.q = false;
+      else if (key === 'e') keysRef.current.e = false;
       else if (e.key === 'ArrowUp') keysRef.current.ArrowUp = false;
       else if (e.key === 'ArrowLeft') keysRef.current.ArrowLeft = false;
       else if (e.key === 'ArrowDown') keysRef.current.ArrowDown = false;
       else if (e.key === 'ArrowRight') keysRef.current.ArrowRight = false;
       
-      if (['w', 'a', 's', 'd'].includes(key) || ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
+      if (['w', 'a', 's', 'd', 'q', 'e'].includes(key) || ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
       }
     };
@@ -866,17 +870,17 @@ function CameraRig() {
   // Movement animation loop
   useFrame(() => {
     const moveSpeed = 0.1;
-    const { w, a, s, d, ArrowUp, ArrowLeft, ArrowDown, ArrowRight } = keysRef.current;
+    const { w, a, s, d, q, e, ArrowUp, ArrowLeft, ArrowDown, ArrowRight } = keysRef.current;
     
     // Calculate movement direction
     let moveForward = 0;
     let moveRight = 0;
     
-    // WASD and Arrow keys
+    // WASD, QE and Arrow keys
     if (w || ArrowUp) moveForward += moveSpeed;
     if (s || ArrowDown) moveForward -= moveSpeed;
-    if (a || ArrowLeft) moveRight -= moveSpeed;
-    if (d || ArrowRight) moveRight += moveSpeed;
+    if (a || q || ArrowLeft) moveRight -= moveSpeed;
+    if (d || e || ArrowRight) moveRight += moveSpeed;
     
     // Apply movement relative to camera direction
     if (moveForward !== 0 || moveRight !== 0) {
