@@ -12,7 +12,6 @@ import {
   Briefcase, 
   Star, 
   Award,
-  Scale,
   FileText,
   Phone,
   Mail,
@@ -179,7 +178,7 @@ export default function DirectoryPage() {
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    {isShowingLawyers || !isAuthenticated ? 'Attorney Directory' : 'Client Directory'}
+                    Professional Directory
                   </h1>
                   <p className="text-sm text-gray-600">
                     {isShowingLawyers || !isAuthenticated ? 'Find expert legal assistance' : 'Connect with clients'}
@@ -266,19 +265,23 @@ export default function DirectoryPage() {
                 {/* Decorative gradient */}
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
                 
-                {/* Icon with gradient background */}
-                <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-6 shadow-xl">
-                  <Scale className="w-12 h-12 text-white" />
+                {/* Application Logo */}
+                <div className="inline-flex items-center justify-center w-24 h-24 mb-6">
+                  <img 
+                    src="/images/logo_icon.png" 
+                    alt="AI Wizard Logo" 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 
                 {/* Title */}
                 <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                  Sign In to Continue
+                  Sign In to Connect
                 </h2>
                 
                 {/* Subtitle */}
                 <p className="text-gray-700 text-lg mb-8 max-w-sm mx-auto">
-                  Access our directory of expert attorneys and start your legal journey today
+                  Connect attorneys with clients and start building professional relationships today
                 </p>
 
                 {/* Single Sign In Button */}
@@ -300,7 +303,7 @@ export default function DirectoryPage() {
                     </div>
                     <div className="flex items-center space-x-1">
                       <Users className="w-4 h-4 text-purple-500" />
-                      <span>Verified Attorneys</span>
+                      <span>Verified Professionals</span>
                     </div>
                   </div>
                 </div>
