@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
-import { CheckCircle, AlertTriangle, ArrowLeft, Clock, FileText, Phone, Mail, Star, Users, Award, X, Send } from "lucide-react";
+import { CheckCircle, AlertTriangle, ArrowLeft, Clock, FileText, Phone, Mail, Star, Users, Award, X, Send, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface AnalysisResult {
   summary: string;
@@ -54,11 +55,12 @@ const getRecommendedLawyers = (analysis: AnalysisResult): Lawyer[] => {
 };
 
 export default function AnalysisResults({ consultation, onNewConsultation }: AnalysisResultsProps) {
+  const router = useRouter();
   const { analysis } = consultation;
-  
+
   // Get recommended lawyers from LLM-generated analysis
   const recommendedLawyers = analysis ? getRecommendedLawyers(analysis) : [];
-  
+
   // Contact form state
   const [showContactForm, setShowContactForm] = useState(false);
   const [selectedLawyer, setSelectedLawyer] = useState<Lawyer | null>(null);
@@ -85,6 +87,13 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
     setShowContactForm(false);
     setFormData({ name: '', email: '', phone: '', message: '', preferredContact: 'email' });
     setSelectedLawyer(null);
+  };
+
+  const handleContinueChat = () => {
+    // Store the user's issue in localStorage to be picked up by the apprentice page
+    localStorage.setItem('initialChatMessage', consultation.user_issue);
+    // Navigate to the apprentice page
+    router.push('/apprentice');
   };
   
   // Handle case where analysis is undefined
@@ -142,14 +151,24 @@ export default function AnalysisResults({ consultation, onNewConsultation }: Ana
                 <p className="text-slate-600">Wizard insights for your legal matter</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={onNewConsultation}
-              className="border-slate-300 hover:bg-slate-50"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              New Consultation
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="default"
+                onClick={handleContinueChat}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Continue Chat
+              </Button>
+              <Button
+                variant="outline"
+                onClick={onNewConsultation}
+                className="border-slate-300 hover:bg-slate-50"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                New Consultation
+              </Button>
+            </div>
           </div>
 
           {/* User's Original Question - Prominent Display */}

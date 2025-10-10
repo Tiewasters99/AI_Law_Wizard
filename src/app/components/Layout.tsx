@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { Badge } from '@/app/components/ui/badge'
 import PremiumFeaturesModal from './PremiumFeaturesModal'
-import { 
-  Home, 
+import {
+  Home,
   Clock,
   WandSparkles,
   Wand2,
@@ -44,7 +44,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const publicNavigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Directory', href: '/directory', icon: Users },
-    { name: 'Apprentice', href: '/apprentice', icon: GraduationCap },
     { name: 'Blog', href: '/blog', icon: FileText },
     { name: 'Miniverse™', href: '/miniverse', icon: EarthIcon },
   ]
@@ -71,7 +70,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const customerNavigation: Array<{ name: string; href: string; icon: any }> = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Directory', href: '/directory', icon: Users },
-    { name: 'Apprentice', href: '/apprentice', icon: GraduationCap },
     { name: 'Wizard', href: '/wizard', icon: Wand2 },
     { name: 'Grand Wizard', href: '/grand-wizard', icon: Crown },
     { name: 'Blog', href: '/blog', icon: FileText },

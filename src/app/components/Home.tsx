@@ -1,33 +1,31 @@
 'use client'
 
-import React, { useState } from "react";
-import { Consultation } from "@/app/lib/api";
-import StreamlinedConsultation from "./consultation/StreamlinedConsultation";
-import AnalysisResults from "./consultation/AnalysisResults";
-import OneDriveInterface from "./OneDriveInterface";
-
-interface AnalysisResult {
-  summary: string;
-  key_points: string[];
-  recommendations: string[];
-  legal_areas: string[];
-  urgency_level: 'low' | 'medium' | 'high' | 'urgent';
-  disclaimer: string;
-}
+import React, { useState } from 'react'
+import { Consultation } from "@/app/lib/api"
+import StreamlinedConsultation from "./consultation/StreamlinedConsultation"
+import { Message } from '@/app/components/chat/types'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState("consultation");
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentConsultation, setCurrentConsultation] = useState<{ user_issue: string; analysis?: AnalysisResult } | null>(null);
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmitIssue = async (userIssue: string) => {
-    setIsLoading(true);
-    
+    setIsLoading(true)
+
+    // Create user message immediately
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: userIssue.trim(),
+      role: 'user',
+      timestamp: new Date()
+    }
+
     try {
       const consultation = await Consultation.create({
         user_issue: userIssue,
         status: "processing"
-      });
+      })
 
       // Call the legal analysis API endpoint
       const response = await fetch('/api/legal-analysis', {
@@ -38,141 +36,61 @@ export default function Home() {
         body: JSON.stringify({
           userIssue: userIssue
         })
-      });
+      })
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`API Error: ${response.status} - ${errorData}`);
+        const errorData = await response.text()
+        throw new Error(`API Error: ${response.status} - ${errorData}`)
       }
 
-      const responseData = await response.json();
+      const responseData = await response.json()
 
       if (responseData.error) {
-          throw new Error(responseData.error || "The backend function call failed.");
+        throw new Error(responseData.error || "The backend function call failed.")
       }
 
-      let analysisResult: AnalysisResult;
-      
-      if (responseData.success && responseData.content) {
-        console.log("Raw AI Response:", responseData.content);
-        
-        try {
-          // First, try to parse the entire response as JSON
-          analysisResult = JSON.parse(responseData.content);
-        } catch {
-          // If that fails, try to extract JSON from the response
-          try {
-            const jsonMatch = responseData.content.match(/\{[\s\S]*\}/);
-            if (jsonMatch && jsonMatch[0]) {
-              analysisResult = JSON.parse(jsonMatch[0]);
-            } else {
-              throw new Error("No valid JSON object found in the AI response.");
-            }
-          } catch (parseError) {
-            console.error("JSON parsing error:", parseError);
-            console.error("Raw content:", responseData.content);
-            
-            // Create a fallback response with the raw content
-            analysisResult = {
-              summary: "AI provided a response but it wasn't in the expected format. Here's what we got:",
-              key_points: [responseData.content.substring(0, 500) + (responseData.content.length > 500 ? "..." : "")],
-              recommendations: [
-                "The AI response format was unexpected. Please try rephrasing your question.",
-                "Contact support if this issue persists."
-              ],
-              legal_areas: ["Response Format Error"],
-              urgency_level: "medium",
-              disclaimer: "This response contains the raw AI output due to formatting issues. Please consult a qualified legal professional for actual legal advice."
-            };
-          }
-        }
-        
-        // Validate that we have all required fields
-        const missingFields: string[] = [];
-        if (!analysisResult.summary) missingFields.push('summary');
-        if (!analysisResult.key_points) missingFields.push('key_points');
-        if (!analysisResult.recommendations) missingFields.push('recommendations');
-        if (!analysisResult.legal_areas) missingFields.push('legal_areas');
-        if (!analysisResult.urgency_level) missingFields.push('urgency_level');
-        if (!analysisResult.disclaimer) missingFields.push('disclaimer');
-        
-        if (missingFields.length > 0) {
-          console.warn("Missing fields in AI response:", missingFields);
-          // Fill in missing fields with defaults
-          missingFields.forEach(field => {
-            switch (field) {
-              case 'summary':
-                analysisResult.summary = analysisResult.summary || "Analysis completed but summary was missing.";
-                break;
-              case 'key_points':
-                analysisResult.key_points = analysisResult.key_points || ["Key points were not provided by the AI."];
-                break;
-              case 'recommendations':
-                analysisResult.recommendations = analysisResult.recommendations || ["Recommendations were not provided by the AI."];
-                break;
-              case 'legal_areas':
-                analysisResult.legal_areas = analysisResult.legal_areas || ["General Legal"];
-                break;
-              case 'urgency_level':
-                analysisResult.urgency_level = analysisResult.urgency_level || "medium";
-                break;
-              case 'disclaimer':
-                analysisResult.disclaimer = analysisResult.disclaimer || "This analysis is for informational purposes only. Please consult a qualified legal professional for actual legal advice.";
-                break;
-            }
-          });
-        }
-      } else {
-          throw new Error("No content received from the AI.");
+      if (!responseData.success || !responseData.content) {
+        throw new Error("No content received from the AI.")
       }
-      
-      const updatedConsultation = await Consultation.update(consultation.id, {
-        analysis: analysisResult,
+
+      // Use the markdown content directly from the LLM
+      const markdownContent = responseData.content
+
+      await Consultation.update(consultation.id, {
+        analysis: { markdown: markdownContent } as any,
         status: "completed"
-      });
+      })
 
-      setCurrentConsultation({
-        user_issue: updatedConsultation.user_issue,
-        analysis: {
-          ...analysisResult,
-          urgency_level: analysisResult.urgency_level as 'low' | 'medium' | 'high' | 'urgent'
-        }
-      });
-      setCurrentView("results");
+      // Create assistant message with the markdown content
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: markdownContent,
+        role: 'assistant',
+        timestamp: new Date()
+      }
+
+      // Store messages in localStorage and navigate to chat page
+      localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, assistantMessage]))
+      router.push('/legal-chat')
     } catch (error) {
-      console.error("Error processing consultation:", error);
-      const errorConsultation = {
-        user_issue: userIssue,
-        analysis: {
-          summary: "An Error Occurred",
-          key_points: [(error as Error).message],
-          recommendations: ["This is a technical error. Please provide the details above to your developer. Check the API key, model access, and API endpoint in your Grok/X.ai account."],
-          legal_areas: ["API Communication Error"],
-          urgency_level: "high" as const,
-          disclaimer: "The connection to the AI service failed. Technical details are provided for debugging purposes."
-        }
-      };
-      setCurrentConsultation(errorConsultation);
-      setCurrentView("results");
+      console.error("Error processing consultation:", error)
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Error: ${(error as Error).message}\n\nPlease check your API configuration or try again later.`,
+        role: 'assistant',
+        timestamp: new Date()
+      }
+
+      // Store error messages and navigate
+      localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, errorMessage]))
+      router.push('/legal-chat')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
-
-  const handleNewConsultation = () => {
-    setCurrentView("consultation");
-    setCurrentConsultation(null);
-  };
-
-  if (currentView === "results" && currentConsultation) {
-    return (
-      <AnalysisResults
-        consultation={currentConsultation}
-        onNewConsultation={handleNewConsultation}
-      />
-    );
   }
 
+  // Consultation view
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-6">
@@ -184,12 +102,10 @@ export default function Home() {
         </p>
       </div>
 
-      {currentView === "consultation" && (
-        <StreamlinedConsultation
-          onSubmit={handleSubmitIssue}
-          isLoading={isLoading}
-        />
-      )}
+      <StreamlinedConsultation
+        onSubmit={handleSubmitIssue}
+        isLoading={isLoading}
+      />
     </div>
-  );
+  )
 }

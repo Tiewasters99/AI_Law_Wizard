@@ -1,18 +1,22 @@
 import OpenAI from 'openai';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 
-// OpenRouter configuration
+// OpenRouter configuration with required headers for data privacy compliance
 const openRouterClient = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
   apiKey: process.env.OPENROUTER_API_KEY!,
+  defaultHeaders: {
+    'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+    'X-Title': 'AI Law Wizard',
+  },
 });
 
 // Model mapping for different chat types
 export const MODEL_MAPPING = {
-  'apprentice': 'openai/gpt-4o-mini',
-  'wizard': 'deepseek/deepseek-chat-v3.1:free',
-  'grand-wizard': 'google/gemini-2.5-flash-lite-preview-09-2025',
-  'general': 'deepseek/deepseek-r1:free'
+  'apprentice': 'openai/gpt-4.1-mini',
+  'wizard': 'openai/gpt-4.1-mini',
+  'grand-wizard': 'openai/gpt-4.1-mini',
+  'general': 'openai/gpt-4.1-mini'
 } as const;
 
 export type ChatType = keyof typeof MODEL_MAPPING;

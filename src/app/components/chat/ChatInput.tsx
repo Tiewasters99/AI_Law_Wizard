@@ -50,15 +50,15 @@ export default function ChatInput({
   }
 
   return (
-    <div className="flex items-end gap-3 pb-4">
+    <div className="flex items-end gap-2 px-4 max-w-5xl mx-auto">
       <div className="flex-1">
         <Textarea
           ref={textareaRef}
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask me anything about legal matters..."
-          className="min-h-[52px] max-h-[120px] resize-none border border-gray-200 focus:border-gray-400 focus:ring-0 text-sm bg-white rounded-2xl px-4 py-3 transition-all duration-200 placeholder:text-gray-400"
+          placeholder="Ask me..."
+          className="min-h-[48px] max-h-[200px] resize-none border border-gray-300 focus:border-gray-400 focus:ring-0 text-sm bg-white rounded-lg px-3 py-2.5 placeholder:text-gray-400"
           disabled={isLoading}
         />
       </div>
@@ -66,9 +66,9 @@ export default function ChatInput({
       <Button
         onClick={handleSend}
         disabled={!inputMessage.trim() || isLoading}
-        className={`h-[52px] w-[52px] rounded-full transition-all duration-200 ${
+        className={`h-[48px] w-[48px] rounded-lg flex-shrink-0 ${
           inputMessage.trim() && !isLoading
-            ? 'bg-gray-800 hover:bg-gray-900 shadow-md hover:shadow-lg'
+            ? 'bg-gray-800 hover:bg-gray-900'
             : 'bg-gray-300 cursor-not-allowed'
         }`}
       >
