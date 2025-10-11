@@ -4,13 +4,34 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Import TokenTracker dynamically to avoid SSR issues
+const getTokenTracker = async () => {
+  const { TokenTracker } = await import('@/app/lib/tokenTracker');
+  return TokenTracker;
+};
+
 export async function POST(req: Request) {
   try {
     const { name, email, password, role } = await req.json();
 
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !password) {
       return NextResponse.json(
         { message: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    if (!role) {
+      return NextResponse.json(
+        { message: 'Role is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate role
+    if (role !== 'ATTORNEY' && role !== 'CUSTOMER') {
+      return NextResponse.json(
+        { message: 'Invalid role. Must be ATTORNEY or CUSTOMER' },
         { status: 400 }
       );
     }
@@ -31,23 +52,10 @@ export async function POST(req: Request) {
         name,
         email,
         password: hashedPassword,
-        role: role === 'LAWYER' ? Role.LAWYER : Role.CUSTOMER,
+        role: role as Role, // Set role during registration
+        profileComplete: true, // Profile is complete since role is provided
       },
     });
-
-    if (user.role === Role.LAWYER) {
-      await prisma.lawyerProfile.create({
-        data: {
-          userId: user.id,
-        },
-      });
-    } else {
-      await prisma.customerProfile.create({
-        data: {
-          userId: user.id,
-        },
-      });
-    }
 
     // Create a wallet for the user
     await prisma.wallet.create({
@@ -56,8 +64,26 @@ export async function POST(req: Request) {
       },
     });
 
+    // Reset tokens - grant 5000 tokens to new registered users
+    try {
+      const TokenTracker = await getTokenTracker();
+      TokenTracker.resetOnSignup(user.id);
+    } catch (tokenError) {
+      console.error('Error resetting tokens:', tokenError);
+      // Don't fail registration if token reset fails
+    }
+
     return NextResponse.json(
-      { message: 'User registered successfully' },
+      { 
+        message: 'User registered successfully',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          profileComplete: user.profileComplete,
+        }
+      },
       { status: 201 }
     );
   } catch (error) {

@@ -1,0 +1,221 @@
+---
+description: OAuth integration and role selection patterns
+---
+
+# OAuth Role Selection Patterns
+
+## OAuth Authentication Flow
+
+OAuth users (Google, and future providers) must select their role on first sign-in.
+
+### Flow Overview
+
+1. User clicks "Sign in with Google"
+2. OAuth authentication completes
+3. New user created with `profileComplete: false`
+4. User redirected to `/profile-setup`
+5. [OAuthRoleSelection](mdc:src/app/components/auth/OAuthRoleSelection.tsx) component displays
+6. User selects Attorney or Client role
+7. Profile marked as complete
+8. User redirected to dashboard
+
+## OAuth Handler Configuration
+
+In [src/lib/auth.ts](mdc:src/lib/auth.ts):
+
+```typescript
+async signIn({ user, account, profile }) {
+  if (account?.provider === 'google') {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: user.email! }
+    })
+
+    if (!existingUser) {
+      // Create new OAuth user - force role selection
+      await prisma.user.create({
+        data: {
+          name: user.name,
+          email: user.email,
+          emailVerified: new Date(),
+          role: 'CUSTOMER', // Default role
+          profileComplete: false, // Forces role selection
+          accounts: { create: { /* account data */ } }
+        }
+      })
+    }
+  }
+  return true
+}
+```
+
+## Role Selection Component
+
+Use [OAuthRoleSelection](mdc:src/app/components/auth/OAuthRoleSelection.tsx) for role selection:
+
+```typescript
+import { OAuthRoleSelection } from '@/app/components/auth/OAuthRoleSelection'
+
+function ProfileSetup() {
+  const [showRoleSelection, setShowRoleSelection] = useState(false)
+  
+  useEffect(() => {
+    if (!session?.user?.profileComplete) {
+      setShowRoleSelection(true)
+    }
+  }, [session])
+  
+  if (showRoleSelection) {
+    return <OAuthRoleSelection onComplete={() => router.push('/')} />
+  }
+}
+```
+
+## Role Selection UI
+
+The OAuthRoleSelection component provides:
+- Visual role cards (Attorney/Client)
+- Role descriptions and features
+- Confirmation before submission
+- Error handling
+- Loading states
+
+### Component Features
+```typescript
+// Attorney Card
+- Professional profile
+- Client management
+- AI-powered tools
+- Case research
+
+// Client Card  
+- Access legal AI assistance
+- Find attorneys
+- Document analysis
+- Legal consultations
+```
+
+## Profile Setup Integration
+
+In [src/app/profile-setup/page.tsx](mdc:src/app/profile-setup/page.tsx):
+
+```typescript
+export default function ProfileSetupPage() {
+  const { data: session } = useSession()
+  const [showRoleSelection, setShowRoleSelection] = useState(false)
+  
+  useEffect(() => {
+    if (session?.user?.profileComplete) {
+      router.push('/')
+      return
+    }
+    
+    // Show role selection for incomplete profiles
+    setShowRoleSelection(true)
+  }, [session])
+  
+  if (showRoleSelection) {
+    return <OAuthRoleSelection onComplete={() => router.push('/')} />
+  }
+}
+```
+
+## Google Sign-In Component
+
+In [src/app/components/auth/GoogleSignIn.tsx](mdc:src/app/components/auth/GoogleSignIn.tsx):
+
+```typescript
+import { signIn } from 'next-auth/react'
+
+export const GoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
+    await signIn('google', {
+      callbackUrl: '/profile-setup', // Redirect to role selection
+      redirect: true
+    })
+  }
+  
+  return (
+    <Button onClick={handleGoogleSignIn}>
+      Continue with Google
+    </Button>
+  )
+}
+```
+
+## Adding New OAuth Providers
+
+To add new OAuth providers (Microsoft, GitHub, etc.):
+
+1. **Add provider to NextAuth config** in [src/lib/auth.ts](mdc:src/lib/auth.ts):
+```typescript
+providers: [
+  GoogleProvider({ /* config */ }),
+  MicrosoftProvider({ /* config */ }), // New provider
+]
+```
+
+2. **Update signIn callback** to handle new provider:
+```typescript
+async signIn({ user, account, profile }) {
+  // Handle all OAuth providers the same way
+  if (account?.provider === 'google' || account?.provider === 'microsoft') {
+    // Same logic: create user with profileComplete: false
+  }
+}
+```
+
+3. **Create provider sign-in component** (optional):
+```typescript
+export const MicrosoftSignIn = () => {
+  return (
+    <Button onClick={() => signIn('microsoft', { callbackUrl: '/profile-setup' })}>
+      Continue with Microsoft
+    </Button>
+  )
+}
+```
+
+## Session Token Handling
+
+JWT callback normalizes roles:
+
+```typescript
+async jwt({ token, user }) {
+  if (user) {
+    // Normalize LAWYER to ATTORNEY
+    token.role = user.role === 'LAWYER' ? 'ATTORNEY' : user.role
+  }
+  
+  // Refresh from database
+  const dbUser = await prisma.user.findUnique({
+    where: { email: token.email }
+  })
+  
+  if (dbUser) {
+    token.role = dbUser.role === 'LAWYER' ? 'ATTORNEY' : dbUser.role
+    token.profileComplete = dbUser.profileComplete
+  }
+  
+  return token
+}
+```
+
+## Best Practices
+
+1. **Always redirect OAuth to `/profile-setup`**: Let the profile setup page handle role selection
+2. **Set `profileComplete: false`**: Force role selection for new users
+3. **Provide default role**: Use CUSTOMER as sensible default
+4. **Handle existing users**: Check for existing user before creating new one
+5. **Normalize roles**: Always normalize LAWYER to ATTORNEY in callbacks
+6. **Provider-agnostic**: Design components to work with any OAuth provider
+
+## Testing OAuth Flow
+
+1. Sign in with Google as new user
+2. Verify redirect to `/profile-setup`
+3. Verify OAuthRoleSelection component appears
+4. Select Attorney role
+5. Verify profile marked complete
+6. Verify redirect to dashboard
+7. Sign out and sign in again
+8. Verify no role selection needed (profile complete)

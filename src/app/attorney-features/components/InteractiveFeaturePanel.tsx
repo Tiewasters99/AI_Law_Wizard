@@ -67,7 +67,7 @@ export function InteractiveFeaturePanel({
   }
 
   const canUseFreebie = !session && triesUsed < 1 // Only 1 try for document upload
-  const isLawyer = session?.user?.role === 'LAWYER'
+  const isLawyer = session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER'
   const remainingTries = 1 - triesUsed // Only 1 free try
 
   return (

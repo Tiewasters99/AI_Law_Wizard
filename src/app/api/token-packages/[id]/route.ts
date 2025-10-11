@@ -10,7 +10,7 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.role || session.user.role !== 'LAWYER') {
+    if (!session?.user?.role || (session.user.role !== 'ATTORNEY' && session.user.role !== 'LAWYER')) {
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
@@ -42,7 +42,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.role || session.user.role !== 'LAWYER') {
+    if (!session?.user?.role || (session.user.role !== 'ATTORNEY' && session.user.role !== 'LAWYER')) {
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }

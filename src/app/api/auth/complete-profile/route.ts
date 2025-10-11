@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update profile based on user role
-    if (user.role === 'LAWYER' && user.lawyerProfile) {
+    if ((user.role === 'ATTORNEY' || user.role === 'LAWYER') && user.lawyerProfile) {
       await prisma.lawyerProfile.update({
         where: { userId: session.user.id },
         data: {

@@ -1,16 +1,41 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Consultation } from "@/app/lib/api"
 import StreamlinedConsultation from "./consultation/StreamlinedConsultation"
 import { Message } from '@/app/components/chat/types'
 import { useRouter } from 'next/navigation'
+import { TokenTracker } from '@/app/lib/tokenTracker'
+import { UpgradeModal } from '@/app/components/auth/UpgradeModal'
 
 export default function Home() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [tokenUsage, setTokenUsage] = useState({ used: 0, limit: 0 })
+
+  useEffect(() => {
+    // Load current token usage
+    const userId = session?.user?.id
+    const used = TokenTracker.getTokenUsage(userId)
+    const limit = TokenTracker.getLimit(userId)
+    setTokenUsage({ used, limit })
+  }, [session])
 
   const handleSubmitIssue = async (userIssue: string) => {
+    // Check token limit before proceeding
+    const userId = session?.user?.id
+    const hasExceeded = TokenTracker.hasExceededLimit(userId)
+    
+    if (hasExceeded) {
+      const usage = TokenTracker.getUsageSummary(userId)
+      setTokenUsage({ used: usage.used, limit: usage.limit })
+      setShowUpgradeModal(true)
+      return
+    }
+
     setIsLoading(true)
 
     // Create user message immediately
@@ -43,35 +68,103 @@ export default function Home() {
         throw new Error(`API Error: ${response.status} - ${errorData}`)
       }
 
-      const responseData = await response.json()
+      // Check if response is streaming
+      const contentType = response.headers.get('content-type')
+      if (contentType?.includes('text/event-stream')) {
+        // Handle streaming response
+        let markdownContent = ''
+        let responseStructure: string[] = []
 
-      if (responseData.error) {
-        throw new Error(responseData.error || "The backend function call failed.")
+        // Create initial assistant message with empty content
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: '',
+          role: 'assistant',
+          timestamp: new Date()
+        }
+
+        // Store initial messages and navigate to chat page immediately
+        localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, assistantMessage]))
+        router.push('/legal-chat')
+
+        // Process the stream
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+
+              const chunk = decoder.decode(value)
+              const lines = chunk.split('\n')
+
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = JSON.parse(line.slice(6))
+
+                  if (data.type === 'metadata') {
+                    responseStructure = data.responseStructure
+                  } else if (data.type === 'content') {
+                    markdownContent += data.content
+                    // Update localStorage with accumulated content
+                    const updatedAssistantMessage = { ...assistantMessage, content: markdownContent }
+                    localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, updatedAssistantMessage]))
+                    // Trigger a custom event to update the chat page
+                    window.dispatchEvent(new CustomEvent('chat-update'))
+                  } else if (data.type === 'done') {
+                    // Streaming complete - track token usage
+                    if (data.tokensUsed) {
+                      TokenTracker.addTokenUsage(data.tokensUsed, userId)
+                      // Update local state
+                      const updatedUsage = TokenTracker.getUsageSummary(userId)
+                      setTokenUsage({ used: updatedUsage.used, limit: updatedUsage.limit })
+                    }
+                    
+                    await Consultation.update(consultation.id, {
+                      analysis: { markdown: markdownContent } as any,
+                      status: "completed"
+                    })
+                  } else if (data.type === 'error') {
+                    throw new Error(data.error)
+                  }
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock()
+          }
+        }
+      } else {
+        // Fallback to JSON response for non-streaming responses
+        const responseData = await response.json()
+
+        if (responseData.error) {
+          throw new Error(responseData.error || "The backend function call failed.")
+        }
+
+        if (!responseData.success || !responseData.content) {
+          throw new Error("No content received from the AI.")
+        }
+
+        const markdownContent = responseData.content
+
+        await Consultation.update(consultation.id, {
+          analysis: { markdown: markdownContent } as any,
+          status: "completed"
+        })
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: markdownContent,
+          role: 'assistant',
+          timestamp: new Date()
+        }
+
+        localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, assistantMessage]))
+        router.push('/legal-chat')
       }
-
-      if (!responseData.success || !responseData.content) {
-        throw new Error("No content received from the AI.")
-      }
-
-      // Use the markdown content directly from the LLM
-      const markdownContent = responseData.content
-
-      await Consultation.update(consultation.id, {
-        analysis: { markdown: markdownContent } as any,
-        status: "completed"
-      })
-
-      // Create assistant message with the markdown content
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: markdownContent,
-        role: 'assistant',
-        timestamp: new Date()
-      }
-
-      // Store messages in localStorage and navigate to chat page
-      localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, assistantMessage]))
-      router.push('/legal-chat')
     } catch (error) {
       console.error("Error processing consultation:", error)
       
@@ -92,20 +185,30 @@ export default function Home() {
 
   // Consultation view
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-          The Future Awaits
-        </h1>
-        <p className="text-sm sm:text-base text-gray-600 mb-4">
-          Get instant legal guidance, manage and manipulate your documents with AI agents, generate and read custom blogs, create your own legal Miniverse™ — tomorrow today!
-        </p>
+    <>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+            The Future Awaits
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mb-4">
+            Get instant legal guidance, manage and manipulate your documents with AI agents, generate and read custom blogs, create your own legal Miniverse™ — tomorrow today!
+          </p>
+        </div>
+
+        <StreamlinedConsultation
+          onSubmit={handleSubmitIssue}
+          isLoading={isLoading}
+        />
       </div>
 
-      <StreamlinedConsultation
-        onSubmit={handleSubmitIssue}
-        isLoading={isLoading}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentUsage={tokenUsage.used}
+        limit={tokenUsage.limit}
+        feature="home"
       />
-    </div>
+    </>
   )
 }

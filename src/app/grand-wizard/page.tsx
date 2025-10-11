@@ -19,8 +19,8 @@ import { TOKEN_REQUIREMENTS } from '@/app/hooks/useTokenAccess'
 export default function GrandWizardPage() {
   const { data: session } = useSession()
   
-  // Check if user is a lawyer
-  const isLawyer = session?.user?.role === 'LAWYER'
+  // Check if user is an attorney
+  const isLawyer = session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER'
   
   // Chat interface state (for clients)
   const [messages, setMessages] = useState<Message[]>([])

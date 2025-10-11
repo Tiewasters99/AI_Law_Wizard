@@ -16,18 +16,21 @@ export async function POST(request: NextRequest) {
 
     const { role } = await request.json();
 
-    if (!role || !['LAWYER', 'CUSTOMER'].includes(role)) {
+    if (!role || !['ATTORNEY', 'LAWYER', 'CUSTOMER'].includes(role)) {
       return NextResponse.json(
         { error: 'Invalid role' },
         { status: 400 }
       );
     }
 
+    // Normalize LAWYER to ATTORNEY for backward compatibility
+    const normalizedRole = role === 'LAWYER' ? 'ATTORNEY' : role;
+
     // Update user role and mark profile as complete in database
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: { 
-        role,
+        role: normalizedRole,
         profileComplete: true // Mark profile as complete when role is selected
       },
       include: {
@@ -37,13 +40,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Create appropriate profile if it doesn't exist
-    if (role === 'LAWYER' && !updatedUser.lawyerProfile) {
+    if (normalizedRole === 'ATTORNEY' && !updatedUser.lawyerProfile) {
       await prisma.lawyerProfile.create({
         data: {
           userId: session.user.id,
         },
       });
-    } else if (role === 'CUSTOMER' && !updatedUser.customerProfile) {
+    } else if (normalizedRole === 'CUSTOMER' && !updatedUser.customerProfile) {
       await prisma.customerProfile.create({
         data: {
           userId: session.user.id,

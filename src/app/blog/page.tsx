@@ -225,8 +225,8 @@ export default function BlogPage() {
     editBlogWithAI
   } = useBlogManagement()
 
-  // Check if user is a lawyer
-  const isLawyer = session?.user?.role === 'LAWYER'
+  // Check if user is an attorney
+  const isLawyer = session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER'
 
   const [mode, setMode] = useState<'list' | 'create-custom' | 'create-ai' | 'edit' | 'canvas' | 'manage-all'>('list')
   const [viewMode, setViewMode] = useState<'management' | 'public'>('management')

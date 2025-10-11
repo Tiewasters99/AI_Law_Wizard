@@ -133,4 +133,67 @@ export class OpenRouterService {
     
     return inputCost + outputCost;
   }
+
+  /**
+   * Send a streaming message using OpenRouter with the appropriate model for the chat type
+   * Returns an async generator that yields content chunks and token usage
+   */
+  static async *sendStreamingMessage(
+    messages: (HumanMessage | AIMessage | SystemMessage)[],
+    chatType: ChatType = 'general'
+  ): AsyncGenerator<{ type: 'content' | 'usage', content?: string, usage?: { promptTokens: number, completionTokens: number, totalTokens: number } }, void, unknown> {
+    try {
+      const model = MODEL_MAPPING[chatType];
+      
+      if (!model) {
+        throw new Error(`No model configured for chat type: ${chatType}`);
+      }
+
+      // Convert LangChain messages to OpenAI format
+      const openAIMessages = messages.map(msg => {
+        const content = typeof msg.content === 'string' ? msg.content : String(msg.content);
+        
+        if (msg instanceof HumanMessage) {
+          return { role: 'user' as const, content };
+        } else if (msg instanceof AIMessage) {
+          return { role: 'assistant' as const, content };
+        } else if (msg instanceof SystemMessage) {
+          return { role: 'system' as const, content };
+        }
+        return { role: 'user' as const, content };
+      });
+
+      const stream = await openRouterClient.chat.completions.create({
+        model,
+        messages: openAIMessages,
+        max_tokens: 4000,
+        temperature: 0.3,
+        stream: true,
+        stream_options: { include_usage: true }
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          yield { type: 'content', content };
+        }
+
+        // Check for usage data in the final chunk
+        if (chunk.usage) {
+          yield {
+            type: 'usage',
+            usage: {
+              promptTokens: chunk.usage.prompt_tokens || 0,
+              completionTokens: chunk.usage.completion_tokens || 0,
+              totalTokens: chunk.usage.total_tokens || 0
+            }
+          };
+        }
+      }
+
+    } catch (error) {
+      console.error('OpenRouter streaming API error:', error);
+      throw new Error(`OpenRouter streaming API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 }

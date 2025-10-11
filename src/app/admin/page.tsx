@@ -36,7 +36,7 @@ const AdminPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    if (session?.user?.role !== 'LAWYER') {
+    if (session?.user?.role !== 'ATTORNEY' && session?.user?.role !== 'LAWYER') {
       router.push('/');
       return;
     }
@@ -108,7 +108,7 @@ const AdminPage = () => {
     }
   };
 
-  if (session?.user?.role !== 'LAWYER') {
+  if (session?.user?.role !== 'ATTORNEY' && session?.user?.role !== 'LAWYER') {
     return (
       <Layout>
         <div className="max-w-4xl mx-auto px-4 py-8">

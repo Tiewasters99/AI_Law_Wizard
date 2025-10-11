@@ -6,6 +6,7 @@ import { useAuth } from '@/app/stores/authStore'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Layout from '@/app/components/Layout'
+import { colors, badgeTypes, practiceAreas } from '@/app/lib/designSystem'
 import { 
   Users, 
   MapPin, 
@@ -17,25 +18,29 @@ import {
   Mail,
   Calendar,
   Shield,
-  Lock,
   LogIn,
-  UserPlus,
   MessageSquare,
   Building,
   Clock,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Filter,
+  CheckCircle,
+  Gavel,
+  Scale
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
+import { Input } from '@/app/components/ui/input'
 
 interface DirectoryUser {
   id: string
   name: string | null
   email: string | null
   image: string | null
-  role: 'LAWYER' | 'CUSTOMER'
+  role: 'ATTORNEY' | 'LAWYER' | 'CUSTOMER' // Support both ATTORNEY and legacy LAWYER
   createdAt: string
   lawyerProfile?: {
     specialty: string | null
@@ -63,7 +68,10 @@ export default function DirectoryPage() {
   const [users, setUsers] = useState<DirectoryUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [targetRole, setTargetRole] = useState<'LAWYER' | 'CUSTOMER' | null>(null)
+  const [targetRole, setTargetRole] = useState<'ATTORNEY' | 'LAWYER' | 'CUSTOMER' | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>('All Practice Areas')
+  const [sortBy, setSortBy] = useState<'experience' | 'name' | 'verified'>('experience')
 
   // Fetch directory users from API
   useEffect(() => {
@@ -96,7 +104,7 @@ export default function DirectoryPage() {
     fetchUsers()
   }, [isAuthenticated])
 
-  const isShowingLawyers = targetRole === 'LAWYER'
+  const isShowingLawyers = targetRole === 'ATTORNEY' || targetRole === 'LAWYER'
   const profiles = users
 
   // Sample preview profiles for guests (show lawyers by default)
@@ -155,41 +163,81 @@ export default function DirectoryPage() {
 
   return (
     <Layout>
-      <div className="h-[calc(100vh-4rem)] bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 overflow-hidden relative">
-        {/* Animated Background Orbs */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 -left-20 w-96 h-96 bg-blue-400/30 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
-          <div className="absolute top-40 -right-20 w-96 h-96 bg-purple-400/30 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute -bottom-20 left-1/2 w-96 h-96 bg-pink-400/30 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
-
-        {/* Compact Header Section */}
-        <div className="bg-white/40 backdrop-blur-xl border-b border-white/60 shadow-sm py-5 relative">
+      <div className="h-[calc(100vh-4rem)] bg-white overflow-hidden relative">
+        {/* Professional Header Section */}
+        <div className="border-b shadow-sm py-5 relative" style={{ 
+          backgroundColor: colors.secondary[50],
+          borderColor: colors.secondary[200]
+        }}>
           <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="flex items-center justify-between"
+              transition={{ duration: 0.3 }}
             >
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Users className="w-6 h-6 text-white" />
+              {/* Header Row */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm" style={{ backgroundColor: colors.primary[700] }}>
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: colors.text }}>
+                      Attorney Directory
+                    </h1>
+                    <p className="text-sm" style={{ color: colors.secondary[600] }}>
+                      {isShowingLawyers || !isAuthenticated ? 'Connect with qualified legal professionals' : 'Professional client network'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    Professional Directory
-                  </h1>
-                  <p className="text-sm text-gray-600">
-                    {isShowingLawyers || !isAuthenticated ? 'Find expert legal assistance' : 'Connect with clients'}
-                  </p>
-                </div>
+                
+                {isAuthenticated && (
+                  <div className="hidden sm:flex items-center space-x-2 px-4 py-2 rounded-lg border shadow-sm" style={{ 
+                    backgroundColor: colors.primary[50],
+                    borderColor: colors.primary[200]
+                  }}>
+                    <CheckCircle className="w-4 h-4" style={{ color: colors.primary[700] }} />
+                    <span className="text-sm font-medium" style={{ color: colors.primary[900] }}>{profiles.length} Verified Attorneys</span>
+                  </div>
+                )}
               </div>
-              
+
+              {/* Search and Filter Bar */}
               {isAuthenticated && (
-                <div className="hidden sm:flex items-center space-x-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full border border-blue-200/50 shadow-sm">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">{profiles.length} Available</span>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: colors.secondary[400] }} />
+                    <Input
+                      placeholder="Search by name, specialty, or location..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 border shadow-sm"
+                      style={{ borderColor: colors.secondary[300] }}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedSpecialty}
+                      onChange={(e) => setSelectedSpecialty(e.target.value)}
+                      className="px-4 py-2 rounded-lg border shadow-sm text-sm"
+                      style={{ borderColor: colors.secondary[300], color: colors.text }}
+                    >
+                      <option>All Practice Areas</option>
+                      {practiceAreas.map(area => (
+                        <option key={area}>{area}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'experience' | 'name' | 'verified')}
+                      className="px-4 py-2 rounded-lg border shadow-sm text-sm"
+                      style={{ borderColor: colors.secondary[300], color: colors.text }}
+                    >
+                      <option value="experience">Most Experienced</option>
+                      <option value="name">Name (A-Z)</option>
+                      <option value="verified">Verified First</option>
+                    </select>
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -252,57 +300,69 @@ export default function DirectoryPage() {
           </motion.div>
         )}
         
-        {/* Unauthenticated Overlay - Glassmorphic Sign In */}
+        {/* Professional Unauthenticated Overlay */}
         {!isAuthenticated && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center bg-white/30 backdrop-blur-md">
+          <div className="absolute inset-0 z-40 flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, type: "spring" }}
+              transition={{ duration: 0.3 }}
               className="text-center"
             >
-              <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-12 max-w-lg mx-4 shadow-2xl border border-white/60 relative overflow-hidden">
-                {/* Decorative gradient */}
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
-                
-                {/* Application Logo */}
-                <div className="inline-flex items-center justify-center w-24 h-24 mb-6">
-                  <img 
-                    src="/images/logo_icon.png" 
-                    alt="AI Wizard Logo" 
-                    className="w-full h-full object-contain"
-                  />
+              <div className="bg-white rounded-2xl p-12 max-w-lg mx-4 shadow-xl border" style={{ borderColor: colors.secondary[200] }}>
+                {/* Professional header */}
+                <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-6 shadow-sm" style={{ backgroundColor: colors.primary[700] }}>
+                  <Scale className="w-8 h-8 text-white" />
                 </div>
                 
                 {/* Title */}
-                <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                  Sign In to Connect
+                <h2 className="text-3xl font-bold mb-3" style={{ color: colors.text }}>
+                  Access Attorney Directory
                 </h2>
                 
                 {/* Subtitle */}
-                <p className="text-gray-700 text-lg mb-8 max-w-sm mx-auto">
-                  Connect attorneys with clients and start building professional relationships today
+                <p className="text-base mb-8 max-w-sm mx-auto" style={{ color: colors.secondary[600] }}>
+                  Sign in to connect with qualified attorneys and access comprehensive legal professional network
                 </p>
 
-                {/* Single Sign In Button */}
+                {/* Professional Benefits */}
+                <div className="grid grid-cols-2 gap-3 mb-8">
+                  {[
+                    { icon: Shield, label: 'Bar Verified' },
+                    { icon: Award, label: 'Certified Attorneys' },
+                    { icon: Gavel, label: 'Legal Expertise' },
+                    { icon: MessageSquare, label: 'Direct Contact' },
+                  ].map((item, idx) => (
+                    <div key={idx} className="p-3 rounded-lg border text-center" style={{ 
+                      backgroundColor: colors.secondary[50],
+                      borderColor: colors.secondary[200]
+                    }}>
+                      <item.icon className="w-5 h-5 mx-auto mb-1" style={{ color: colors.primary[700] }} />
+                      <span className="text-xs font-medium" style={{ color: colors.text }}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Professional Sign In Button */}
                 <Button
                   onClick={() => router.push('/auth')}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
+                  className="w-full py-6 rounded-xl font-semibold text-base shadow-sm"
                   size="lg"
+                  style={{ backgroundColor: colors.primary[700] }}
                 >
-                  <LogIn className="w-6 h-6 mr-3" />
-                  Sign In
+                  <LogIn className="w-5 h-5 mr-2" />
+                  Sign In to Directory
                 </Button>
 
-                {/* Trust indicators */}
-                <div className="mt-8 pt-6 border-t border-gray-200/50">
-                  <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
+                {/* Professional trust indicators */}
+                <div className="mt-6 pt-6 border-t" style={{ borderColor: colors.secondary[200] }}>
+                  <div className="flex items-center justify-center space-x-6 text-xs" style={{ color: colors.secondary[600] }}>
                     <div className="flex items-center space-x-1">
-                      <Shield className="w-4 h-4 text-blue-500" />
-                      <span>Secure</span>
+                      <Shield className="w-4 h-4" style={{ color: colors.success[600] }} />
+                      <span>Secure Platform</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <Users className="w-4 h-4 text-purple-500" />
+                      <CheckCircle className="w-4 h-4" style={{ color: colors.success[600] }} />
                       <span>Verified Professionals</span>
                     </div>
                   </div>
@@ -312,9 +372,9 @@ export default function DirectoryPage() {
           </div>
         )}
 
-        {/* Profiles Grid - Show for all users, blur for guests */}
+        {/* Professional Profiles Grid */}
         {(!loading && !error && (users.length > 0 || !isAuthenticated)) && (
-          <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 h-full overflow-auto pb-4 ${!isAuthenticated ? 'blur-[2px] pointer-events-none' : ''}`}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 h-full overflow-auto pb-4 ${!isAuthenticated ? 'opacity-30 pointer-events-none' : ''}`}>
             {displayProfiles.map((profile: DirectoryUser, index: number) => {
               const isLawyerProfile = profile.role === 'LAWYER'
               const lawyerData = profile.lawyerProfile
@@ -326,37 +386,42 @@ export default function DirectoryPage() {
                 key={profile.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
+                transition={{ duration: 0.3, delay: index * 0.03 }}
                 className="group"
               >
-                <Card className="h-full bg-white/70 backdrop-blur-xl hover:bg-white/90 hover:shadow-2xl hover:shadow-blue-300/30 hover:-translate-y-2 transition-all duration-300 border border-white/60 shadow-lg overflow-hidden">
-                  {/* Gradient Top Border */}
-                  <div className="h-1.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
-                  
-                  {/* Decorative Background */}
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full -translate-y-20 translate-x-20 group-hover:scale-150 transition-transform duration-500"></div>
+                <Card className="h-full bg-white hover:shadow-lg transition-all duration-200 border overflow-hidden" style={{ 
+                  borderColor: colors.secondary[200]
+                }}>
+                  {/* Professional Top Border */}
+                  <div className="h-1" style={{ backgroundColor: colors.primary[700] }}></div>
                   
                   <CardHeader className="relative z-10 pb-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-4">
                         <div className="relative">
-                          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <div className="w-16 h-16 rounded-xl flex items-center justify-center text-2xl shadow-sm" style={{ 
+                            backgroundColor: colors.primary[100]
+                          }}>
                           {profile.image ? (
-                            <img src={profile.image} alt={profile.name || 'User'} className="w-full h-full rounded-full object-cover" />
+                            <img src={profile.image} alt={profile.name || 'User'} className="w-full h-full rounded-xl object-cover" />
                           ) : (
-                            <span>{isLawyerProfile ? '⚖️' : '👤'}</span>
+                            <Scale className="w-8 h-8" style={{ color: colors.primary[700] }} />
                           )}
                           </div>
-                          {/* Status indicator dot */}
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-4 border-white rounded-full"></div>
+                          {/* Professional status indicator */}
+                          {isLawyerProfile && lawyerData?.verified && (
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full flex items-center justify-center" style={{ backgroundColor: colors.success[500] }}>
+                              <CheckCircle className="w-3 h-3 text-white" />
+                            </div>
+                          )}
                         </div>
                         <div>
-                          <CardTitle className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-purple-600 transition-all duration-300">
+                          <CardTitle className="text-base font-bold" style={{ color: colors.text }}>
                             {profile.name || 'Anonymous User'}
                           </CardTitle>
-                          <p className="text-sm text-gray-600 font-medium mt-1">
+                          <p className="text-sm font-medium mt-0.5" style={{ color: colors.secondary[600] }}>
                             {isLawyerProfile 
-                              ? (lawyerData?.firmName || 'Attorney')
+                              ? (lawyerData?.firmName || 'Private Practice')
                               : (customerData?.companyName || 'Individual Client')
                             }
                           </p>
@@ -364,85 +429,107 @@ export default function DirectoryPage() {
                       </div>
                       
                       <Badge 
-                        variant={isLawyerProfile && lawyerData?.verified ? 'default' : 'secondary'}
-                        className={`${isLawyerProfile && lawyerData?.verified ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'} text-white border-0 shadow-md`}
+                        variant="outline"
+                        className="border"
+                        style={isLawyerProfile && lawyerData?.verified ? {
+                          color: colors.success[700],
+                          backgroundColor: colors.success[50],
+                          borderColor: colors.success[200]
+                        } : {
+                          color: colors.primary[700],
+                          backgroundColor: colors.primary[50],
+                          borderColor: colors.primary[200]
+                        }}
                       >
-                        {isLawyerProfile ? (lawyerData?.verified ? '✓ Verified' : 'Attorney') : 'Client'}
+                        {isLawyerProfile ? (lawyerData?.verified ? <><CheckCircle className="w-3 h-3 mr-1 inline" /> Bar Verified</> : 'Attorney') : 'Client'}
                       </Badge>
                     </div>
                   </CardHeader>
 
                   <CardContent className="space-y-3 pt-0 relative z-10">
-                    {/* Lawyer: Experience | Customer: Join Date */}
-                    <div className="flex items-center justify-between">
+                    {/* Professional Experience and Specialty */}
+                    <div className="space-y-2">
                       {isLawyerProfile ? (
                         <>
                           {lawyerData?.yearsOfExperience && (
-                            <div className="flex items-center space-x-2 text-sm text-gray-700 bg-blue-50 px-3 py-1.5 rounded-lg">
-                              <Award className="w-4 h-4 text-blue-600" />
-                              <span className="font-semibold">{lawyerData.yearsOfExperience}+ years</span>
+                            <div className="flex items-center space-x-2 text-sm px-3 py-2 rounded-lg border" style={{ 
+                              color: colors.primary[900],
+                              backgroundColor: colors.primary[50],
+                              borderColor: colors.primary[200]
+                            }}>
+                              <Award className="w-4 h-4" style={{ color: colors.primary[700] }} />
+                              <span className="font-semibold">{lawyerData.yearsOfExperience}+ Years Experience</span>
+                            </div>
+                          )}
+                          {lawyerData?.specialty && (
+                            <div className="px-3 py-2 rounded-lg border" style={{ 
+                              backgroundColor: colors.secondary[50],
+                              borderColor: colors.secondary[200]
+                            }}>
+                              <div className="flex items-center space-x-2">
+                                <Briefcase className="w-4 h-4" style={{ color: colors.secondary[700] }} />
+                                <span className="text-sm font-medium" style={{ color: colors.text }}>{lawyerData.specialty}</span>
+                              </div>
                             </div>
                           )}
                         </>
                       ) : (
-                        <div className="flex items-center space-x-2 text-sm text-gray-700 bg-purple-50 px-3 py-1.5 rounded-lg">
-                          <Clock className="w-4 h-4 text-purple-600" />
-                          <span className="font-medium">{joinDate}</span>
-                        </div>
+                        <>
+                          <div className="flex items-center space-x-2 text-sm px-3 py-2 rounded-lg border" style={{ 
+                            backgroundColor: colors.secondary[50],
+                            borderColor: colors.secondary[200],
+                            color: colors.secondary[700]
+                          }}>
+                            <Clock className="w-4 h-4" />
+                            <span className="font-medium">Member since {joinDate}</span>
+                          </div>
+                          {customerData?.industry && (
+                            <div className="px-3 py-2 rounded-lg border" style={{ 
+                              backgroundColor: colors.secondary[50],
+                              borderColor: colors.secondary[200]
+                            }}>
+                              <div className="flex items-center space-x-2">
+                                <Building className="w-4 h-4" style={{ color: colors.secondary[700] }} />
+                                <span className="text-sm font-medium" style={{ color: colors.text }}>{customerData.industry}</span>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
-                    {/* Lawyer: Specialty | Customer: Industry */}
-                    {isLawyerProfile && lawyerData?.specialty && (
-                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 rounded-lg border border-indigo-100">
-                        <div className="flex items-center space-x-2">
-                          <Briefcase className="w-4 h-4 text-indigo-600" />
-                          <span className="text-sm font-medium text-indigo-900">{lawyerData.specialty}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {!isLawyerProfile && customerData?.industry && (
-                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-3 py-2 rounded-lg border border-blue-100">
-                        <div className="flex items-center space-x-2">
-                          <Building className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">{customerData.industry}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Bio - compact */}
+                    {/* Professional Bio */}
                     {(isLawyerProfile && lawyerData?.bio) && (
-                      <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                      <p className="text-sm line-clamp-2 leading-relaxed" style={{ color: colors.secondary[700] }}>
                         {lawyerData.bio}
                       </p>
                     )}
                     
                     {(!isLawyerProfile && customerData?.needs) && (
-                      <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                      <p className="text-sm line-clamp-2 leading-relaxed" style={{ color: colors.secondary[700] }}>
                         {customerData.needs}
                       </p>
                     )}
 
-                    {/* Contact Information - Only visible when authenticated */}
+                    {/* Professional Contact Information */}
                     {isAuthenticated && (
-                      <div className="pt-3 border-t border-gray-100 space-y-2">
+                      <div className="pt-3 border-t space-y-2" style={{ borderColor: colors.secondary[200] }}>
                         {profile.email && (
-                          <div className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                              <Mail className="w-4 h-4 text-blue-600" />
+                          <div className="flex items-center space-x-2 text-sm transition-colors">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: colors.primary[50] }}>
+                              <Mail className="w-4 h-4" style={{ color: colors.primary[700] }} />
                             </div>
-                            <a href={`mailto:${profile.email}`} className="truncate flex-1">
+                            <a href={`mailto:${profile.email}`} className="truncate flex-1" style={{ color: colors.secondary[700] }}>
                               {profile.email}
                             </a>
                           </div>
                         )}
                         {customerData?.phone && (
-                          <div className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                            <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
-                              <Phone className="w-4 h-4 text-purple-600" />
+                          <div className="flex items-center space-x-2 text-sm transition-colors">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: colors.secondary[100] }}>
+                              <Phone className="w-4 h-4" style={{ color: colors.secondary[700] }} />
                             </div>
-                            <a href={`tel:${customerData.phone}`} className="flex-1">
+                            <a href={`tel:${customerData.phone}`} className="flex-1" style={{ color: colors.secondary[700] }}>
                               {customerData.phone}
                             </a>
                           </div>
@@ -450,23 +537,24 @@ export default function DirectoryPage() {
                       </div>
                     )}
 
-                    {/* Action Button */}
+                    {/* Professional Action Button */}
                     {isAuthenticated && (
                       <Button 
-                        className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]"
+                        className="w-full text-white shadow-sm transition-all"
+                        style={{ backgroundColor: colors.primary[700] }}
                         onClick={() => {
-                          console.log(`${isShowingLawyers ? 'Booking consultation with' : 'Connecting with client'} ${profile.name}`)
+                          console.log(`${isShowingLawyers ? 'Scheduling consultation with' : 'Connecting with client'} ${profile.name}`)
                         }}
                       >
                         {isShowingLawyers ? (
                           <>
                             <Calendar className="w-4 h-4 mr-2" />
-                            <span className="font-semibold">Book Consultation</span>
+                            <span className="font-semibold">Schedule Consultation</span>
                           </>
                         ) : (
                           <>
                             <MessageSquare className="w-4 h-4 mr-2" />
-                            <span className="font-semibold">Connect</span>
+                            <span className="font-semibold">Contact Client</span>
                           </>
                         )}
                       </Button>

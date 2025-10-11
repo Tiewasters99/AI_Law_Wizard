@@ -2,8 +2,30 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useEffect } from 'react';
+import { TokenTracker } from '../lib/tokenTracker';
 
-export type UserRole = 'LAWYER' | 'CUSTOMER';
+export type UserRole = 'ATTORNEY' | 'CUSTOMER';
+export type PrismaRole = 'ATTORNEY' | 'CUSTOMER' | 'LAWYER'; // Support legacy
+
+export const ROLE_MAPPING = {
+  ATTORNEY: 'ATTORNEY',
+  CUSTOMER: 'CUSTOMER',
+  LAWYER: 'ATTORNEY', // Legacy support - maps old LAWYER to new ATTORNEY
+} as const;
+
+// Helper function to normalize role from database
+export function normalizeRole(role: PrismaRole | string | null | undefined): UserRole | null {
+  if (!role) return null;
+  if (role === 'LAWYER') return 'ATTORNEY'; // Map legacy LAWYER to ATTORNEY
+  if (role === 'ATTORNEY' || role === 'CUSTOMER') return role;
+  return null;
+}
+
+// Helper function to get role display name
+export function getRoleDisplayName(role: UserRole | null | undefined): string {
+  if (!role) return 'User';
+  return role === 'ATTORNEY' ? 'Attorney' : 'Client';
+}
 
 export interface User {
   id: string;
@@ -17,8 +39,10 @@ export interface User {
 export interface AuthState {
   // State
   user: User | null;
-  isLawyer: boolean;
+  isLawyer: boolean; // Deprecated: Use isAttorney instead
+  isAttorney: boolean;
   isCustomer: boolean;
+  isClient: boolean; // Alias for isCustomer
   isAuthenticated: boolean;
   isLoading: boolean;
   profileComplete: boolean;
@@ -38,6 +62,18 @@ export interface AuthState {
   // Navigation
   redirectAfterRoleSelection: (role: UserRole) => void;
   
+  // Role Helpers
+  getRoleDisplayName: () => string;
+  hasRole: (role: UserRole) => boolean;
+  checkRoleAccess: (allowedRoles: UserRole[]) => boolean;
+  
+  // Token Tracking
+  getTokenUsage: () => number;
+  hasTokensRemaining: () => boolean;
+  trackTokenUsage: (count: number) => void;
+  getTokenLimit: () => number;
+  getTokenSummary: () => { used: number; limit: number; remaining: number; percentage: number; isExceeded: boolean };
+  
   // Utility Actions
   checkAuthStatus: () => Promise<void>;
 }
@@ -47,25 +83,36 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       // Initial state
       user: null,
-      isLawyer: false,
+      isLawyer: false, // Deprecated
+      isAttorney: false,
       isCustomer: false,
+      isClient: false,
       isAuthenticated: false,
       isLoading: true, // Initial loading state
       profileComplete: false,
 
       // Basic setters
-      setAuthUser: (user) => set({ 
-        user, 
-        isLawyer: user?.role === 'LAWYER', 
-        isCustomer: user?.role === 'CUSTOMER',
-        isAuthenticated: !!user,
-        profileComplete: user?.profileComplete || false,
-        isLoading: false,
-      }),
+      setAuthUser: (user) => {
+        const normalizedRole = user ? normalizeRole(user.role) : null;
+        const userWithNormalizedRole = user && normalizedRole ? { ...user, role: normalizedRole } : user;
+        
+        set({ 
+          user: userWithNormalizedRole, 
+          isLawyer: normalizedRole === 'ATTORNEY', // Deprecated, kept for backward compatibility
+          isAttorney: normalizedRole === 'ATTORNEY',
+          isCustomer: normalizedRole === 'CUSTOMER',
+          isClient: normalizedRole === 'CUSTOMER',
+          isAuthenticated: !!userWithNormalizedRole,
+          profileComplete: userWithNormalizedRole?.profileComplete || false,
+          isLoading: false,
+        });
+      },
       clearAuthUser: () => set({ 
         user: null, 
         isLawyer: false, 
+        isAttorney: false,
         isCustomer: false, 
+        isClient: false,
         isAuthenticated: false, 
         profileComplete: false,
         isLoading: false,
@@ -130,8 +177,10 @@ export const useAuthStore = create<AuthState>()(
           set((state) => ({
             user: state.user ? { ...state.user, role, profileComplete: true } : null,
             profileComplete: true,
-            isLawyer: role === 'LAWYER',
+            isLawyer: role === 'ATTORNEY', // Deprecated, kept for backward compatibility
+            isAttorney: role === 'ATTORNEY',
             isCustomer: role === 'CUSTOMER',
+            isClient: role === 'CUSTOMER',
           }));
           
           return { success: true };
@@ -145,6 +194,49 @@ export const useAuthStore = create<AuthState>()(
       redirectAfterRoleSelection: (role) => {
         // Force a page refresh to ensure the session is updated
         window.location.href = '/';
+      },
+
+      // Role Helpers
+      getRoleDisplayName: () => {
+        const state = get();
+        return getRoleDisplayName(state.user?.role);
+      },
+
+      hasRole: (role) => {
+        const state = get();
+        return state.user?.role === role;
+      },
+
+      checkRoleAccess: (allowedRoles) => {
+        const state = get();
+        if (!state.user?.role) return false;
+        return allowedRoles.includes(state.user.role);
+      },
+
+      // Token Tracking Methods
+      getTokenUsage: () => {
+        const state = get();
+        return TokenTracker.getTokenUsage(state.user?.id);
+      },
+
+      hasTokensRemaining: () => {
+        const state = get();
+        return !TokenTracker.hasExceededLimit(state.user?.id);
+      },
+
+      trackTokenUsage: (count) => {
+        const state = get();
+        TokenTracker.addTokenUsage(count, state.user?.id);
+      },
+
+      getTokenLimit: () => {
+        const state = get();
+        return TokenTracker.getLimit(state.user?.id);
+      },
+
+      getTokenSummary: () => {
+        const state = get();
+        return TokenTracker.getUsageSummary(state.user?.id);
       },
 
       completeProfile: async (profileData) => {
@@ -181,12 +273,13 @@ export const useAuthStore = create<AuthState>()(
           if (response.ok) {
             const session = await response.json();
             if (session.user) {
+              const normalizedRole = normalizeRole(session.user.role);
               get().setAuthUser({
                 id: session.user.id,
                 name: session.user.name,
                 email: session.user.email,
                 image: session.user.image,
-                role: session.user.role as UserRole,
+                role: normalizedRole as UserRole,
                 profileComplete: session.user.profileComplete,
               });
             } else {
@@ -204,7 +297,9 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isLawyer: state.isLawyer,
+        isAttorney: state.isAttorney,
         isCustomer: state.isCustomer,
+        isClient: state.isClient,
         isAuthenticated: state.isAuthenticated,
         profileComplete: state.profileComplete,
       }),
@@ -219,7 +314,9 @@ export const useAuth = () => {
   const { 
     user, 
     isLawyer, 
+    isAttorney,
     isCustomer, 
+    isClient,
     isAuthenticated, 
     profileComplete, 
     isLoading, 
@@ -230,17 +327,26 @@ export const useAuth = () => {
     signOut, 
     updateUserRole, 
     completeProfile,
-    redirectAfterRoleSelection
+    redirectAfterRoleSelection,
+    getRoleDisplayName,
+    hasRole,
+    checkRoleAccess,
+    getTokenUsage,
+    hasTokensRemaining,
+    trackTokenUsage,
+    getTokenLimit,
+    getTokenSummary,
   } = useAuthStore();
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
+      const normalizedRole = normalizeRole(session.user.role);
       setAuthUser({
         id: session.user.id,
         name: session.user.name,
         email: session.user.email,
         image: session.user.image,
-        role: session.user.role as 'LAWYER' | 'CUSTOMER',
+        role: normalizedRole as UserRole,
         profileComplete: session.user.profileComplete,
       });
     } else if (status === 'unauthenticated') {
@@ -250,8 +356,10 @@ export const useAuth = () => {
 
   return { 
     user, 
-    isLawyer, 
+    isLawyer, // Deprecated: Use isAttorney instead
+    isAttorney,
     isCustomer, 
+    isClient,
     isAuthenticated, 
     profileComplete, 
     isLoading, 
@@ -262,6 +370,14 @@ export const useAuth = () => {
     updateUserRole, 
     completeProfile, 
     redirectAfterRoleSelection,
+    getRoleDisplayName,
+    hasRole,
+    checkRoleAccess,
+    getTokenUsage,
+    hasTokensRemaining,
+    trackTokenUsage,
+    getTokenLimit,
+    getTokenSummary,
     update 
   };
 };

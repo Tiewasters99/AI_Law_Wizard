@@ -1,0 +1,120 @@
+---
+alwaysApply: true
+description: Role management patterns and ATTORNEY migration guidelines
+---
+
+# Role Management Patterns
+
+## Current Role System
+
+The application uses a two-role system:
+- **ATTORNEY**: Legal professionals (formerly LAWYER)
+- **CUSTOMER**: Clients seeking legal services
+
+### Type Definitions
+
+```typescript
+// Application-level roles (use these in new code)
+type UserRole = 'ATTORNEY' | 'CUSTOMER'
+
+// Database-level roles (includes legacy support)
+type PrismaRole = 'ATTORNEY' | 'LAWYER' | 'CUSTOMER'
+```
+
+## Role Checking Patterns
+
+### ✅ Correct - Use ATTORNEY with Legacy Support
+```typescript
+// For role checks, always include legacy LAWYER support
+const isAttorney = user?.role === 'ATTORNEY' || user?.role === 'LAWYER'
+const isClient = user?.role === 'CUSTOMER'
+```
+
+### ✅ Correct - Use Auth Store Helper
+```typescript
+import { useAuth } from '@/app/stores/authStore'
+
+const { isAttorney, isClient, hasRole, checkRoleAccess } = useAuth()
+
+if (isAttorney) {
+  // Attorney-specific logic
+}
+```
+
+### ✅ Correct - Use Role Hook
+```typescript
+import { useRole } from '@/app/hooks/useRole'
+
+const { isAttorney, canManageClients, hasAccess } = useRole()
+
+if (hasAccess(['ATTORNEY'])) {
+  // Attorney-only feature
+}
+```
+
+### ❌ Incorrect - Don't Use LAWYER in New Code
+```typescript
+// DON'T DO THIS - use ATTORNEY instead
+const isAttorney = user?.role === 'LAWYER'
+```
+
+## Role Display Names
+
+Always use "Attorney" (not "Lawyer") in UI:
+
+```typescript
+import { getRoleDisplayName } from '@/app/stores/authStore'
+
+const displayName = getRoleDisplayName(user?.role) // Returns "Attorney" or "Client"
+```
+
+## API Route Patterns
+
+### Role Validation
+```typescript
+// Accept both ATTORNEY and LAWYER, normalize to ATTORNEY
+if (!role || !['ATTORNEY', 'LAWYER', 'CUSTOMER'].includes(role)) {
+  return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+}
+
+const normalizedRole = role === 'LAWYER' ? 'ATTORNEY' : role
+```
+
+### Role-Based Access Control
+```typescript
+// For admin/attorney-only routes
+const isAttorney = session.user.role === 'ATTORNEY' || session.user.role === 'LAWYER'
+
+if (!isAttorney) {
+  return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+}
+```
+
+## Database Queries
+
+### Fetching Users by Role
+```typescript
+// Include both ATTORNEY and legacy LAWYER
+const attorneys = await prisma.user.findMany({
+  where: {
+    OR: [
+      { role: 'ATTORNEY' },
+      { role: 'LAWYER' } // Legacy support
+    ]
+  }
+})
+```
+
+## Key Files
+
+- Auth Store: [src/app/stores/authStore.ts](mdc:src/app/stores/authStore.ts)
+- Role Hook: [src/app/hooks/useRole.ts](mdc:src/app/hooks/useRole.ts)
+- Auth Config: [src/lib/auth.ts](mdc:src/lib/auth.ts)
+- Type Definitions: [src/types/next-auth.d.ts](mdc:src/types/next-auth.d.ts)
+
+## Migration Notes
+
+- Database migration completed: [prisma/migrations/20251010000000_migrate_lawyer_to_attorney/migration.sql](mdc:prisma/migrations/20251010000000_migrate_lawyer_to_attorney/migration.sql)
+- All LAWYER users migrated to ATTORNEY
+- Backward compatibility maintained for existing sessions
+- OAuth users must select role on first login

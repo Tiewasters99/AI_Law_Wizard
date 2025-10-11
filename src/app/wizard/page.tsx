@@ -11,16 +11,17 @@ import ChatMessages from '@/app/components/chat/ChatMessages'
 import ChatInput from '@/app/components/chat/ChatInput'
 import { Message } from '@/app/components/chat/types'
 import { Button } from '@/app/components/ui/button'
-import { Menu, X, MessageSquare, Sparkles, Users, BookOpen, Scale, Shield, Wand2 } from 'lucide-react'
+import { Menu, X, MessageSquare, Users, BookOpen, Scale, Shield, Brain, FileSearch, Gavel } from 'lucide-react'
 import { DocumentAnalysisInterface } from '@/app/components/document-processing/DocumentAnalysisInterface'
 import { TokenGuard } from '@/app/components/auth/TokenGuard'
 import { TOKEN_REQUIREMENTS } from '@/app/hooks/useTokenAccess'
+import { colors } from '@/app/lib/designSystem'
 
 export default function WizardPage() {
   const { data: session } = useSession()
   
-  // Check if user is a lawyer
-  const isLawyer = session?.user?.role === 'LAWYER'
+  // Check if user is an attorney
+  const isLawyer = session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER'
   
   // Chat interface state (for clients)
   const [messages, setMessages] = useState<Message[]>([])
@@ -188,14 +189,14 @@ export default function WizardPage() {
     "Explain liability in business law",
   ]
 
-  // If user is a lawyer, show enhanced document analysis interface
+  // If user is a lawyer, show professional document analysis interface
   if (isLawyer) {
     return (
       <TokenGuard 
         requiredTokens={TOKEN_REQUIREMENTS.WIZARD}
-        featureName="Legal Wizard"
-        featureIcon={<Wand2 className="w-10 h-10 text-purple-600" />}
-        featureDescription="Access advanced AI-powered legal analysis with document processing, file management, and intelligent legal insights."
+        featureName="Advanced Legal Analysis"
+        featureIcon={<Brain className="w-10 h-10" style={{ color: colors.primary[700] }} />}
+        featureDescription="Professional AI-powered legal analysis platform with comprehensive document processing, case law research, and intelligent legal insights for attorneys."
       >
         <Layout>
           <div className="max-w-7xl mx-auto">
@@ -206,17 +207,17 @@ export default function WizardPage() {
     )
   }
 
-  // Client interface - chat only
+  // Client interface - professional chat
   return (
     <TokenGuard 
       requiredTokens={TOKEN_REQUIREMENTS.WIZARD}
-      featureName="Legal Wizard"
-      featureIcon={<Wand2 className="w-10 h-10 text-purple-600" />}
-      featureDescription="Access advanced AI-powered legal chat with intelligent responses and legal guidance."
+      featureName="Advanced Legal Consultation"
+      featureIcon={<Gavel className="w-10 h-10" style={{ color: colors.primary[700] }} />}
+      featureDescription="Professional AI-powered legal consultation with intelligent analysis and comprehensive legal guidance from advanced AI systems."
     >
     <div className="min-h-screen bg-white">
       <Layout>
-        <div className="h-[calc(100vh-64px)] bg-white flex overflow-hidden -mt-2 sm:-mt-4">
+        <div className="h-[calc(100vh-64px)] bg-white flex overflow-hidden -mt-2 sm:-mt-4" style={{ backgroundColor: colors.background }}>
           {/* Sidebar */}
           <AnimatePresence>
             {isSidebarOpen && (
@@ -260,35 +261,36 @@ export default function WizardPage() {
 
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col min-h-0 bg-white">
-            {/* Header - Only show when there are messages */}
+            {/* Professional Header */}
             {messages.length > 0 && (
-              <div className="flex items-center justify-between px-6 py-3">
+              <div className="flex items-center justify-between px-6 py-3 border-b" style={{ borderColor: colors.secondary[200] }}>
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Wand2 className="w-4 h-4 text-purple-600" />
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: colors.primary[100] }}>
+                    <Brain className="w-4 h-4" style={{ color: colors.primary[700] }} />
                   </div>
                   <div>
-                    <h1 className="text-lg font-semibold text-gray-900">Legal Wizard</h1>
-                    <p className="text-sm text-gray-500">Advanced AI-powered legal assistance</p>
+                    <h1 className="text-lg font-semibold" style={{ color: colors.text }}>Advanced Legal Analysis</h1>
+                    <p className="text-sm" style={{ color: colors.secondary[600] }}>Professional AI-Powered Legal Consultation</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* User Status Banner - Only show when there are messages */}
+            {/* Professional Status Banner */}
             {messages.length > 0 && !session?.user && (
-              <div className="bg-blue-50 px-6 py-2">
+              <div className="bg-gray-50 px-6 py-2 border-b" style={{ borderColor: colors.secondary[200] }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm text-blue-700 font-medium">
-                      Sign in to save your conversations
+                    <Shield className="w-4 h-4" style={{ color: colors.primary[700] }} />
+                    <span className="text-sm font-medium" style={{ color: colors.text }}>
+                      Sign in for secure legal analysis and document processing
                     </span>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    className="border"
+                    style={{ borderColor: colors.primary[300], color: colors.primary[700] }}
                     onClick={() => window.location.href = '/login'}
                   >
                     Sign In
@@ -325,13 +327,28 @@ export default function WizardPage() {
               {messages.length === 0 ? (
                 <div className="max-w-2xl mx-auto">
                   <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Wand2 className="w-8 h-8 text-purple-600" />
+                    <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm" style={{ backgroundColor: colors.primary[700] }}>
+                      <Brain className="w-8 h-8 text-white" />
                     </div>
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome to Legal Wizard</h2>
-                    <p className="text-gray-600 mb-6">
-                      Experience the next generation of AI-powered legal assistance. Get expert-level legal insights and guidance with our advanced AI Wizard technology.
+                    <h2 className="text-2xl font-semibold mb-2" style={{ color: colors.text }}>Advanced Legal Analysis System</h2>
+                    <p className="mb-6" style={{ color: colors.secondary[600] }}>
+                      Professional AI-powered legal consultation platform. Receive comprehensive legal analysis, case law research, and expert-level guidance from our advanced legal AI system.
                     </p>
+                    <div className="grid grid-cols-3 gap-3 mb-8 max-w-lg mx-auto">
+                      {[
+                        { icon: Scale, label: 'Case Analysis' },
+                        { icon: FileSearch, label: 'Legal Research' },
+                        { icon: Shield, label: 'Confidential' },
+                      ].map((item, idx) => (
+                        <div key={idx} className="p-3 rounded-lg border text-center" style={{ 
+                          backgroundColor: colors.secondary[50],
+                          borderColor: colors.secondary[200]
+                        }}>
+                          <item.icon className="w-5 h-5 mx-auto mb-1" style={{ color: colors.primary[700] }} />
+                          <span className="text-xs font-medium" style={{ color: colors.text }}>{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <ChatInput
                     inputMessage={inputMessage}

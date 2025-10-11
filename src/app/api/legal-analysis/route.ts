@@ -142,26 +142,69 @@ export async function POST(request: NextRequest) {
       new HumanMessage(analysisPrompt)
     ]
 
-    console.log('Calling OpenRouter with LangChain for legal analysis...')
+    console.log('Calling OpenRouter with LangChain for legal analysis (streaming)...')
     
-    // Use OpenRouter with wizard model (Grok-4-fast) for faster response
-    const openRouterResponse = await OpenRouterService.sendMessage(messages, 'wizard' as ChatType)
-    
-    console.log('OpenRouter response successful:', {
-      modelUsed: openRouterResponse.modelUsed,
-      tokenCount: openRouterResponse.tokenCount,
-      contentLength: openRouterResponse.content.length
+    // Create a TransformStream to handle the streaming response
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // Send metadata first
+          const metadata = {
+            type: 'metadata',
+            responseStructure: responseStructure.sections.map((s: any) => s.name)
+          }
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(metadata)}\n\n`))
+
+          // Stream the content and track tokens
+          let fullContent = ''
+          let tokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+          
+          for await (const chunk of OpenRouterService.sendStreamingMessage(messages, 'wizard' as ChatType)) {
+            if (chunk.type === 'content' && chunk.content) {
+              fullContent += chunk.content
+              const data = {
+                type: 'content',
+                content: chunk.content
+              }
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+            } else if (chunk.type === 'usage' && chunk.usage) {
+              tokenUsage = chunk.usage
+            }
+          }
+
+          // Send completion signal with token usage
+          const completion = {
+            type: 'done',
+            success: true,
+            tokensUsed: tokenUsage.totalTokens
+          }
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(completion)}\n\n`))
+          
+          console.log('OpenRouter streaming response completed:', {
+            contentLength: fullContent.length,
+            tokensUsed: tokenUsage.totalTokens
+          })
+
+          controller.close()
+        } catch (error) {
+          console.error('Error during streaming:', error)
+          const errorData = {
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorData)}\n\n`))
+          controller.close()
+        }
+      }
     })
 
-    const responseText = openRouterResponse.content
-    console.log('Response text (first 100 chars):', responseText.substring(0, 100) + '...')
-
-    return NextResponse.json({ 
-      success: true,
-      content: responseText,
-      modelUsed: openRouterResponse.modelUsed,
-      tokenCount: openRouterResponse.tokenCount,
-      responseStructure: responseStructure.sections.map((s: any) => s.name) // Include the custom format used
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     })
   } catch (error) {
     console.error('Legal Analysis API error:', error)

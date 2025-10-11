@@ -7,14 +7,14 @@ import { Loader2 } from 'lucide-react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  requiredRole?: 'LAWYER' | 'CUSTOMER';
+  requiredRole?: 'ATTORNEY' | 'CUSTOMER' | 'LAWYER'; // LAWYER for backward compatibility
   fallbackUrl?: string;
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ 
   children, 
   requiredRole, 
-  fallbackUrl = '/login' 
+  fallbackUrl = '/auth' 
 }) => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -35,10 +35,14 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
         return;
       }
 
+      // Normalize roles for comparison
+      const userRole = session.user.role === 'LAWYER' ? 'ATTORNEY' : session.user.role;
+      const normalizedRequiredRole = requiredRole === 'LAWYER' ? 'ATTORNEY' : requiredRole;
+
       // Check role-based access
-      if (requiredRole && session.user.role !== requiredRole) {
+      if (normalizedRequiredRole && userRole !== normalizedRequiredRole) {
         // Redirect based on user's actual role
-        if (session.user.role === 'LAWYER') {
+        if (userRole === 'ATTORNEY') {
           router.push('/wizard');
         } else {
           router.push('/');
@@ -73,7 +77,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
 // Higher-order component for easier usage
 export const withAuthGuard = <P extends object>(
   Component: React.ComponentType<P>,
-  requiredRole?: 'LAWYER' | 'CUSTOMER',
+  requiredRole?: 'ATTORNEY' | 'CUSTOMER' | 'LAWYER', // LAWYER for backward compatibility
   fallbackUrl?: string
 ) => {
   const WrappedComponent = (props: P) => (

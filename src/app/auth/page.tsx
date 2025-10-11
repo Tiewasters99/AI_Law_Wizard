@@ -46,8 +46,9 @@ function AuthPageContent() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'LAWYER' | 'CUSTOMER'>('CUSTOMER');
-  const [isRoleLocked, setIsRoleLocked] = useState(false); // Track if role is locked from URL
+  const [role, setRole] = useState<'ATTORNEY' | 'CUSTOMER'>('CUSTOMER'); // Only used for URL-locked existing users
+  const [isRoleLocked, setIsRoleLocked] = useState(false); // Track if role is locked from URL for sign-in
+  const [feature, setFeature] = useState<'home' | 'directory' | 'attorney-features' | null>(null); // Track feature source
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,17 +68,30 @@ function AuthPageContent() {
     }
   }, []);
 
-  // Handle role parameter from URL - lock role if provided
+  // Handle role and feature parameters from URL
   useEffect(() => {
     const roleParam = searchParams.get('role');
-    if (roleParam === 'attorney') {
-      setRole('LAWYER');
-      setIsRoleLocked(true); // Lock role to LAWYER
-    } else if (roleParam === 'client') {
+    const featureParam = searchParams.get('feature');
+    
+    // Set role if provided
+    if (roleParam === 'attorney' || roleParam === 'ATTORNEY') {
+      setRole('ATTORNEY');
+      setIsRoleLocked(true); // Lock role to ATTORNEY
+    } else if (roleParam === 'client' || roleParam === 'CUSTOMER') {
       setRole('CUSTOMER');
       setIsRoleLocked(true); // Lock role to CUSTOMER
     } else {
       setIsRoleLocked(false); // Allow role selection if no param
+    }
+    
+    // Set feature source if provided
+    if (featureParam === 'home' || featureParam === 'directory' || featureParam === 'attorney-features') {
+      setFeature(featureParam as 'home' | 'directory' | 'attorney-features');
+      // Store in localStorage for OAuth callback
+      localStorage.setItem('auth_feature', featureParam);
+      if (roleParam) {
+        localStorage.setItem('auth_preselected_role', roleParam);
+      }
     }
   }, [searchParams]);
 
@@ -117,6 +131,10 @@ function AuthPageContent() {
 
   const validateRegistration = () => {
     const newErrors: {[key: string]: string} = {};
+    
+    if (!role) {
+      newErrors.role = 'Please select your role';
+    }
     
     if (!name.trim()) {
       newErrors.name = 'Name is required';
@@ -165,7 +183,7 @@ function AuthPageContent() {
           const actualRole = data.user.role;
           
           if (expectedRole !== actualRole) {
-            const expectedRoleText = expectedRole === 'LAWYER' ? 'Attorney' : 'Client';
+            const expectedRoleText = expectedRole === 'ATTORNEY' ? 'Attorney' : 'Client';
             const actualRoleText = actualRole === 'LAWYER' ? 'Attorney' : 'Client';
             
             toast({
@@ -243,7 +261,18 @@ function AuthPageContent() {
           description: "Successfully signed in to AI Law Wizard.",
         });
         
-        router.push('/profile-setup');
+        // Check profile completion status and redirect accordingly
+        // Use a small delay to ensure session is updated
+        setTimeout(async () => {
+          const sessionResponse = await fetch('/api/auth/session');
+          const session = await sessionResponse.json();
+          
+          if (session?.user?.profileComplete) {
+            router.push('/'); // Profile complete, go home
+          } else {
+            router.push('/profile-setup'); // OAuth user, needs role
+          }
+        }, 500);
       }
     } catch (error) {
       toast({
@@ -278,7 +307,7 @@ function AuthPageContent() {
           name: name.trim(),
           email,
           password,
-          role,
+          role, // Include role in registration
         }),
       });
 
@@ -288,12 +317,24 @@ function AuthPageContent() {
         
         toast({
           title: "Account Created!",
-          description: "Your account has been created successfully. Please sign in.",
+          description: `Welcome! Your ${role === 'ATTORNEY' ? 'attorney' : 'client'} account has been created with 5,000 free tokens.`,
         });
         
-        // Switch to password step for immediate sign-in
-        setStep('password');
-        setUserInfo({ exists: true, user: null });
+        // Auto sign-in after registration
+        const signInResult = await signIn('credentials', {
+          redirect: false,
+          email,
+          password,
+        });
+
+        if (signInResult?.ok) {
+          // Redirect to home since profile is complete
+          router.push('/');
+        } else {
+          // If auto sign-in fails, switch to password step
+          setStep('password');
+          setUserInfo({ exists: true, user: null });
+        }
       } else {
         const data = await res.json();
         toast({
@@ -322,7 +363,7 @@ function AuthPageContent() {
       if (isRoleLocked) {
         const roleParam = searchParams.get('role');
         if (roleParam === 'attorney') {
-          setRole('LAWYER');
+          setRole('ATTORNEY');
         } else if (roleParam === 'client') {
           setRole('CUSTOMER');
         }
@@ -348,21 +389,19 @@ function AuthPageContent() {
       case 'email':
         // For email step, show role from URL if locked
         if (isRoleLocked) {
-          const roleText = role === 'LAWYER' ? 'Attorney' : 'Client';
+          const roleText = role === 'ATTORNEY' ? 'Attorney' : 'Client';
           return `Enter your email address to get started as a ${roleText}`;
         }
         return 'Enter your email address to sign in';
       case 'password':
         // For existing users, show their actual role from database
         if (userInfo?.user?.role) {
-          const roleText = userInfo.user.role === 'LAWYER' ? 'Attorney' : 'Client';
+          const roleText = userInfo.user.role === 'ATTORNEY' || userInfo.user.role === 'LAWYER' ? 'Attorney' : 'Client';
           return `Welcome back! You're signing in as a ${roleText}`;
         }
         return 'Enter your password to continue';
       case 'register':
-        // For new users, show role (locked or selected)
-        const roleText = role === 'LAWYER' ? 'Attorney' : 'Client';
-        return `Complete your ${roleText.toLowerCase()} account setup`;
+        return 'Complete your account details';
       default:
         return '';
     }
@@ -396,7 +435,7 @@ function AuthPageContent() {
                 <div className="relative">
                   <div className="w-20 h-20 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center p-2 shadow-lg border border-white/20">
                     <Image
-                      src="/images/ai_law_wizard_logo.svg"
+                      src="/images/logo_icon.png"
                       alt="AI Law Wizard Logo"
                       width={60}
                       height={60}
@@ -415,21 +454,20 @@ function AuthPageContent() {
                 {getStepDescription()}
               </CardDescription>
               
-              {/* Role Indicator - only show when role is locked or user exists with role */}
+              {/* Role Indicator - only show for existing users or locked sign-in */}
               {((step === 'password' && userInfo?.user?.role) || 
-                (step === 'register' && isRoleLocked) || 
                 (step === 'email' && isRoleLocked)) && (
                 <div className="flex justify-center mt-4">
                   <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                     (() => {
                       // For existing users (password step), use their actual role from database
                       if (step === 'password' && userInfo?.user?.role) {
-                        return userInfo.user.role === 'LAWYER' 
+                        return (userInfo.user.role === 'ATTORNEY' || userInfo.user.role === 'LAWYER')
                           ? 'bg-green-100 text-green-800 border border-green-200'
                           : 'bg-blue-100 text-blue-800 border border-blue-200';
                       }
                       // For new users with locked role, use the locked role
-                      return role === 'LAWYER' 
+                      return role === 'ATTORNEY' 
                         ? 'bg-green-100 text-green-800 border border-green-200' 
                         : 'bg-blue-100 text-blue-800 border border-blue-200';
                     })()
@@ -437,10 +475,10 @@ function AuthPageContent() {
                     {(() => {
                       // For existing users (password step), use their actual role from database
                       if (step === 'password' && userInfo?.user?.role) {
-                        return userInfo.user.role === 'LAWYER' ? '⚖️ Attorney' : '👤 Client';
+                        return (userInfo.user.role === 'ATTORNEY' || userInfo.user.role === 'LAWYER') ? '⚖️ Attorney' : '👤 Client';
                       }
                       // For new users with locked role
-                      return role === 'LAWYER' ? '⚖️ Attorney' : '👤 Client';
+                      return role === 'ATTORNEY' ? '⚖️ Attorney' : '👤 Client';
                     })()}
                   </div>
                 </div>
@@ -465,7 +503,7 @@ function AuthPageContent() {
               {step === 'email' && isRoleLocked && (
                 <div className="flex justify-center mb-4">
                   <div className="text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-                    Signing in as {role === 'LAWYER' ? 'Attorney' : 'Client'}
+                    Signing in as {role === 'ATTORNEY' ? 'Attorney' : 'Client'}
                   </div>
                 </div>
               )}
@@ -603,58 +641,121 @@ function AuthPageContent() {
               {/* Register Step */}
               {step === 'register' && (
                 <form onSubmit={handleRegister} className="space-y-5">
-                  {/* Role Selection - Only show if role is not locked */}
-                  {!isRoleLocked ? (
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-gray-700">
-                        I am a:
-                      </label>
+                  {/* Role Selection */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-700">
+                      Select Your Role {isRoleLocked && <span className="text-gray-500">(Pre-selected)</span>}
+                    </label>
+                    
+                    {!isRoleLocked || feature === 'home' || feature === 'directory' ? (
                       <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setRole('CUSTOMER')}
-                          className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                            role === 'CUSTOMER'
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <div className="text-2xl mb-2">👤</div>
-                            <div className="font-medium">Client</div>
-                            <div className="text-xs text-gray-500 mt-1">Looking for legal help</div>
-                          </div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRole('LAWYER')}
-                          className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                            role === 'LAWYER'
-                              ? 'border-green-500 bg-green-50 text-green-700'
-                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <div className="text-2xl mb-2">⚖️</div>
-                            <div className="font-medium">Attorney</div>
-                            <div className="text-xs text-gray-500 mt-1">Providing legal services</div>
-                          </div>
-                        </button>
+                        {/* Client/Customer Role */}
+                        {(!isRoleLocked || (isRoleLocked && role === 'CUSTOMER')) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isRoleLocked) {
+                                setRole('CUSTOMER');
+                                if (errors.role) setErrors(prev => ({...prev, role: ''}));
+                              }
+                            }}
+                            disabled={isRoleLocked && role !== 'CUSTOMER'}
+                            className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                              role === 'CUSTOMER'
+                                ? 'border-blue-500 bg-blue-50 shadow-md'
+                                : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                            } ${isRoleLocked && role !== 'CUSTOMER' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {role === 'CUSTOMER' && (
+                              <div className="absolute top-2 right-2">
+                                <CheckCircle className="w-5 h-5 text-blue-600" />
+                              </div>
+                            )}
+                            <div className="text-center mb-2">
+                              <div className="text-3xl mb-2">👤</div>
+                              <h3 className={`text-base font-bold mb-1 ${
+                                role === 'CUSTOMER' ? 'text-blue-700' : 'text-gray-900'
+                              }`}>
+                                Client
+                              </h3>
+                            </div>
+                            <p className="text-xs text-gray-600 text-center">
+                              Seeking legal guidance and services
+                            </p>
+                          </button>
+                        )}
+
+                        {/* Attorney Role */}
+                        {(!isRoleLocked || (isRoleLocked && role === 'ATTORNEY')) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isRoleLocked) {
+                                setRole('ATTORNEY');
+                                if (errors.role) setErrors(prev => ({...prev, role: ''}));
+                              }
+                            }}
+                            disabled={isRoleLocked && role !== 'ATTORNEY'}
+                            className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                              role === 'ATTORNEY'
+                                ? 'border-green-500 bg-green-50 shadow-md'
+                                : 'border-gray-200 hover:border-green-300 hover:shadow-sm'
+                            } ${isRoleLocked && role !== 'ATTORNEY' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {role === 'ATTORNEY' && (
+                              <div className="absolute top-2 right-2">
+                                <CheckCircle className="w-5 h-5 text-green-600" />
+                              </div>
+                            )}
+                            <div className="text-center mb-2">
+                              <div className="text-3xl mb-2">⚖️</div>
+                              <h3 className={`text-base font-bold mb-1 ${
+                                role === 'ATTORNEY' ? 'text-green-700' : 'text-gray-900'
+                              }`}>
+                                Attorney
+                              </h3>
+                            </div>
+                            <p className="text-xs text-gray-600 text-center">
+                              Legal professional providing services
+                            </p>
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4">
-                      <div className="flex items-center justify-center space-x-3">
-                        <div className="text-3xl">{role === 'LAWYER' ? '⚖️' : '👤'}</div>
-                        <div>
-                          <div className="text-sm text-gray-600">Creating account as:</div>
-                          <div className="text-lg font-bold text-gray-900">
-                            {role === 'LAWYER' ? 'Attorney' : 'Client'}
+                    ) : (
+                      /* Single role display for locked attorney-features */
+                      <div className="flex justify-center">
+                        <div className="relative p-4 rounded-xl border-2 border-green-500 bg-green-50 shadow-md max-w-xs w-full">
+                          <div className="absolute top-2 right-2">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
                           </div>
+                          <div className="text-center mb-2">
+                            <div className="text-3xl mb-2">⚖️</div>
+                            <h3 className="text-base font-bold mb-1 text-green-700">
+                              Attorney
+                            </h3>
+                          </div>
+                          <p className="text-xs text-gray-600 text-center">
+                            Legal professional providing services
+                          </p>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                    
+                    <AnimatePresence>
+                      {errors.role && (
+                        <motion.p 
+                          className="text-sm text-red-500 flex items-center gap-1"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.role}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
                   {/* Name Field */}
                   <div className="space-y-2">

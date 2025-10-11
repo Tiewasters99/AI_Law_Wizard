@@ -1,0 +1,377 @@
+---
+globs: **/auth/page.tsx,**/login/**,**/register/**
+description: Authentication page patterns and unified auth flow
+---
+
+# Authentication Page Patterns
+
+## Unified Auth Flow
+
+The auth page at [src/app/auth/page.tsx](mdc:src/app/auth/page.tsx) handles both sign-in and registration in a single unified flow.
+
+## Flow Steps
+
+1. **Email Step**: User enters email
+2. **Email Check**: System checks if email exists
+3. **Password Step** (existing user): Sign in with password
+4. **Register Step** (new user): Complete registration
+
+## Role Locking from URL
+
+The auth page supports role locking via URL parameters:
+
+```typescript
+// Attorney sign-up
+/auth?role=attorney  // Locks role to ATTORNEY
+
+// Client sign-up  
+/auth?role=client    // Locks role to CUSTOMER
+
+// No parameter
+/auth                // User can select role
+```
+
+### Implementation
+
+```typescript
+useEffect(() => {
+  const roleParam = searchParams.get('role')
+  if (roleParam === 'attorney') {
+    setRole('ATTORNEY')
+    setIsRoleLocked(true)
+  } else if (roleParam === 'client') {
+    setRole('CUSTOMER')
+    setIsRoleLocked(true)
+  } else {
+    setIsRoleLocked(false)
+  }
+}, [searchParams])
+```
+
+## Step Management
+
+### Step Types
+
+```typescript
+type AuthStep = 'email' | 'password' | 'register'
+```
+
+### Navigation
+
+```typescript
+const goBack = () => {
+  if (step === 'password' || step === 'register') {
+    setStep('email')
+    setUserInfo(null)
+    setErrors({})
+    
+    // Restore locked role if applicable
+    if (isRoleLocked) {
+      const roleParam = searchParams.get('role')
+      if (roleParam === 'attorney') {
+        setRole('ATTORNEY')
+      } else if (roleParam === 'client') {
+        setRole('CUSTOMER')
+      }
+    }
+  }
+}
+```
+
+## Role Validation for Existing Users
+
+When checking email of existing users:
+
+```typescript
+const checkEmailExists = async () => {
+  const data = await fetch('/api/auth/check-email', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  }).then(res => res.json())
+
+  if (data.exists && isRoleLocked) {
+    // Verify role matches
+    const expectedRole = role // From URL parameter
+    const actualRole = data.user.role
+    
+    if (expectedRole !== actualRole) {
+      // Mismatch - redirect to correct auth page
+      toast({
+        title: "Role Mismatch",
+        description: `This account is registered as ${actualRoleText}. Please sign in from the appropriate page.`
+      })
+      
+      setTimeout(() => {
+        const correctRole = actualRole === 'ATTORNEY' ? 'attorney' : 'client'
+        router.push(`/auth?role=${correctRole}`)
+      }, 2000)
+      
+      return
+    }
+  }
+}
+```
+
+## Dynamic Titles and Descriptions
+
+```typescript
+const getStepTitle = () => {
+  switch (step) {
+    case 'email':
+      return 'Sign in to AI Law Wizard'
+    case 'password':
+      return `Welcome back, ${userInfo?.user?.name || 'there'}!`
+    case 'register':
+      return 'Create your account'
+  }
+}
+
+const getStepDescription = () => {
+  switch (step) {
+    case 'email':
+      if (isRoleLocked) {
+        const roleText = role === 'ATTORNEY' ? 'Attorney' : 'Client'
+        return `Enter your email address to get started as a ${roleText}`
+      }
+      return 'Enter your email address to sign in'
+    case 'password':
+      if (userInfo?.user?.role) {
+        // Support both ATTORNEY and legacy LAWYER
+        const roleText = userInfo.user.role === 'ATTORNEY' || userInfo.user.role === 'LAWYER' 
+          ? 'Attorney' 
+          : 'Client'
+        return `Welcome back! You're signing in as a ${roleText}`
+      }
+      return 'Enter your password to continue'
+    case 'register':
+      const roleText = role === 'ATTORNEY' ? 'Attorney' : 'Client'
+      return `Complete your ${roleText.toLowerCase()} account setup`
+  }
+}
+```
+
+## Role Indicator Display
+
+Show role badge when:
+- Role is locked from URL (email step)
+- User exists with role (password step)
+- Creating account with locked role (register step)
+
+```typescript
+{((step === 'password' && userInfo?.user?.role) || 
+  (step === 'register' && isRoleLocked) || 
+  (step === 'email' && isRoleLocked)) && (
+  <div className="role-indicator">
+    {/* Display role badge */}
+  </div>
+)}
+```
+
+## Role Selection (Register Step)
+
+### When Role is NOT Locked
+
+```typescript
+{!isRoleLocked ? (
+  <div className="role-selection grid grid-cols-2 gap-3">
+    <button onClick={() => setRole('CUSTOMER')}>
+      <div className="text-2xl">👤</div>
+      <div className="font-medium">Client</div>
+    </button>
+    <button onClick={() => setRole('ATTORNEY')}>
+      <div className="text-2xl">⚖️</div>
+      <div className="font-medium">Attorney</div>
+    </button>
+  </div>
+) : (
+  <div className="locked-role-display">
+    {/* Show locked role with icon */}
+  </div>
+)}
+```
+
+## Form Validation
+
+### Email Validation
+
+```typescript
+const validateEmail = () => {
+  if (!email) {
+    setErrors({ email: 'Email is required' })
+    return false
+  }
+  if (!/\S+@\S+\.\S+/.test(email)) {
+    setErrors({ email: 'Please enter a valid email address' })
+    return false
+  }
+  setErrors({})
+  return true
+}
+```
+
+### Password Validation
+
+```typescript
+const validatePassword = () => {
+  const newErrors: {[key: string]: string} = {}
+  
+  if (!password) {
+    newErrors.password = 'Password is required'
+  } else if (password.length < 6) {
+    newErrors.password = 'Password must be at least 6 characters'
+  }
+  
+  if (step === 'register') {
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password'
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match'
+    }
+  }
+  
+  setErrors(newErrors)
+  return Object.keys(newErrors).length === 0
+}
+```
+
+### Registration Validation
+
+```typescript
+const validateRegistration = () => {
+  const newErrors: {[key: string]: string} = {}
+  
+  if (!name.trim()) {
+    newErrors.name = 'Name is required'
+  } else if (name.trim().length < 2) {
+    newErrors.name = 'Name must be at least 2 characters'
+  }
+  
+  // Also validate password and confirmPassword
+  
+  setErrors(newErrors)
+  return Object.keys(newErrors).length === 0
+}
+```
+
+## Sign In Handler
+
+```typescript
+const handleSignIn = async (e: React.FormEvent) => {
+  e.preventDefault()
+  
+  if (!validatePassword()) {
+    toast({
+      title: "Validation Error",
+      description: "Please check your input and try again.",
+      variant: "destructive"
+    })
+    return
+  }
+
+  setIsLoading(true)
+
+  try {
+    const result = await signIn('credentials', {
+      redirect: false,
+      email,
+      password,
+    })
+
+    if (result?.error) {
+      toast({
+        title: "Authentication Failed",
+        description: "Invalid email or password. Please try again.",
+        variant: "destructive"
+      })
+    } else {
+      // Remember email
+      localStorage.setItem('rememberedEmail', email)
+      
+      toast({
+        title: "Welcome back!",
+        description: "Successfully signed in to AI Law Wizard.",
+      })
+      
+      router.push('/profile-setup')
+    }
+  } finally {
+    setIsLoading(false)
+  }
+}
+```
+
+## Registration Handler
+
+```typescript
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault()
+  
+  if (!validateRegistration()) return
+
+  setIsLoading(true)
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name.trim(),
+        email,
+        password,
+        role, // ATTORNEY or CUSTOMER
+      }),
+    })
+
+    if (res.ok) {
+      localStorage.setItem('rememberedEmail', email)
+      
+      toast({
+        title: "Account Created!",
+        description: "Your account has been created successfully. Please sign in.",
+      })
+      
+      // Switch to password step for immediate sign-in
+      setStep('password')
+      setUserInfo({ exists: true, user: null })
+    }
+  } finally {
+    setIsLoading(false)
+  }
+}
+```
+
+## Best Practices
+
+1. **Always validate inputs** before submission
+2. **Show specific error messages** for each field
+3. **Remember user email** in localStorage for convenience
+4. **Clear errors** when user starts typing
+5. **Handle locked roles** properly to prevent role mismatches
+6. **Support both ATTORNEY and LAWYER** in role checks
+7. **Provide visual feedback** for loading states
+8. **Use toast notifications** for success/error messages
+9. **Redirect to profile-setup** after authentication
+10. **Implement back navigation** to allow email changes
+
+## Google Sign-In Integration
+
+```typescript
+{step === 'email' && (
+  <>
+    {/* Divider */}
+    <div className="relative">
+      <div className="absolute inset-0 flex items-center">
+        <span className="w-full border-t border-gray-200" />
+      </div>
+      <div className="relative flex justify-center text-xs uppercase">
+        <span className="bg-white px-2 text-gray-500">Or continue with</span>
+      </div>
+    </div>
+
+    {/* Google Sign In */}
+    <GoogleSignIn />
+  </>
+)}
+```
+
+Only show OAuth options on the email step to keep flow clean.

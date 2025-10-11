@@ -55,7 +55,7 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Handle Google OAuth sign-in
+      // Handle OAuth sign-in (Google and future providers)
       if (account?.provider === 'google') {
         try {
           const existingUser = await prisma.user.findUnique({
@@ -64,15 +64,15 @@ export const authOptions: AuthOptions = {
           });
 
           if (!existingUser) {
-            // Create new user with default CUSTOMER role
+            // Create new OAuth user without role - they must select it
             await prisma.user.create({
               data: {
                 name: user.name,
                 email: user.email,
                 image: user.image,
                 emailVerified: new Date(),
-                role: 'CUSTOMER',
-                profileComplete: false,
+                role: 'CUSTOMER', // Default role, will prompt for selection if profileComplete is false
+                profileComplete: false, // Forces role selection on first login
                 accounts: {
                   create: {
                     type: account.type,
@@ -91,7 +91,7 @@ export const authOptions: AuthOptions = {
             });
           }
         } catch (error) {
-          console.error('Error during Google sign-in:', error);
+          console.error('Error during OAuth sign-in:', error);
           return false;
         }
       }
@@ -100,7 +100,8 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
+        // Normalize LAWYER to ATTORNEY for backward compatibility
+        token.role = user.role === 'LAWYER' ? 'ATTORNEY' : user.role;
         token.profileComplete = user.profileComplete;
       }
       
@@ -115,7 +116,8 @@ export const authOptions: AuthOptions = {
             },
           });
           if (dbUser) {
-            token.role = dbUser.role || 'CUSTOMER';
+            // Normalize LAWYER to ATTORNEY for backward compatibility
+            token.role = dbUser.role === 'LAWYER' ? 'ATTORNEY' : (dbUser.role || 'CUSTOMER');
             token.profileComplete = dbUser.profileComplete;
           }
         } catch (error) {
@@ -128,7 +130,7 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.role = (token.role === 'LAWYER' ? 'ATTORNEY' : token.role) as 'ATTORNEY' | 'LAWYER' | 'CUSTOMER';
         session.user.profileComplete = token.profileComplete as boolean;
       }
       return session;

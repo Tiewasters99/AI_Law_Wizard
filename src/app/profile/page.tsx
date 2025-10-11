@@ -9,6 +9,7 @@ import { useTokenAccess } from '@/app/hooks/useTokenAccess';
 import { TOKEN_COSTS } from '@/app/lib/tokenUtils';
 import { fetchTokenPackages, TokenPackage } from '@/app/lib/stripe';
 import { TokenPurchase } from '@/app/components/payment/TokenPurchase';
+import { colors, practiceAreas, badgeTypes } from '@/app/lib/designSystem';
 import { 
   User, 
   Settings, 
@@ -22,13 +23,18 @@ import {
   Edit,
   Save,
   X,
-  Activity,
   FileText,
   Calendar,
   TrendingUp,
   CreditCard,
   BarChart3,
-  Clock
+  Clock,
+  Scale,
+  Briefcase,
+  CheckCircle,
+  Upload,
+  Star,
+  Gavel
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -60,21 +66,27 @@ interface UserProfile {
 const sidebarItems = [
   {
     id: 'profile',
-    name: 'Profile Management',
+    name: 'Professional Profile',
     icon: User,
-    description: 'Manage your personal information'
+    description: 'Attorney credentials & information'
   },
   {
-    id: 'tokens',
-    name: 'Token Management',
+    id: 'credentials',
+    name: 'Credentials & Certifications',
+    icon: Award,
+    description: 'Bar license & certifications'
+  },
+  {
+    id: 'credits',
+    name: 'Service Credits',
     icon: Coins,
-    description: 'View and manage your tokens'
+    description: 'Manage legal analysis credits'
   },
   {
     id: 'settings',
-    name: 'Settings',
+    name: 'Account Settings',
     icon: Settings,
-    description: 'Account and privacy settings'
+    description: 'Privacy & security'
   }
 ];
 
@@ -103,10 +115,10 @@ export default function ProfilePage() {
           bio: 'Legal professional with expertise in corporate law and AI-assisted legal research.',
           location: 'New York, NY',
           phone: '+1 (555) 123-4567',
-          company: session.user?.role === 'LAWYER' ? 'Smith & Associates Law Firm' : 'TechCorp Inc.',
-          specialty: session.user?.role === 'LAWYER' ? 'Corporate Law' : undefined,
-          barLicense: session.user?.role === 'LAWYER' ? 'NY-123456' : undefined,
-          yearsOfExperience: session.user?.role === 'LAWYER' ? 8 : undefined,
+          company: (session.user?.role === 'ATTORNEY' || session.user?.role === 'LAWYER') ? 'Smith & Associates Law Firm' : 'TechCorp Inc.',
+          specialty: (session.user?.role === 'ATTORNEY' || session.user?.role === 'LAWYER') ? 'Corporate Law' : undefined,
+          barLicense: (session.user?.role === 'ATTORNEY' || session.user?.role === 'LAWYER') ? 'NY-123456' : undefined,
+          yearsOfExperience: (session.user?.role === 'ATTORNEY' || session.user?.role === 'LAWYER') ? 8 : undefined,
           joinedAt: '2024-01-15',
           lastActive: new Date().toISOString(),
           totalQueries: 47,
@@ -354,7 +366,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {profile.role === 'LAWYER' && (
+          {(profile.role === 'ATTORNEY' || profile.role === 'LAWYER') && (
             <>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -650,51 +662,88 @@ export default function ProfilePage() {
     </div>
   );
 
+  const isAttorney = session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER';
+
   return (
     <Layout>
-      <div className="min-h-[calc(100vh-200px)] bg-white/90 backdrop-blur-sm shadow-2xl rounded-lg mx-auto max-w-7xl">
+      <div className="min-h-[calc(100vh-200px)] bg-white shadow-sm rounded-lg mx-auto max-w-7xl" style={{ borderColor: colors.secondary[200] }}>
         <div className="flex h-full">
-          {/* Sidebar */}
-          <div className="w-80 bg-gray-50 border-r border-gray-200 p-6">
+          {/* Professional Sidebar */}
+          <div className="w-80 border-r p-6" style={{ backgroundColor: colors.secondary[50], borderColor: colors.secondary[200] }}>
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-              <p className="text-gray-600">Manage your account settings</p>
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: colors.primary[700] }}>
+                  <User className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold" style={{ color: colors.text }}>Professional Profile</h1>
+                  {isAttorney && (
+                    <Badge variant="outline" className="mt-1" style={{ 
+                      color: colors.accent[700], 
+                      backgroundColor: colors.accent[50],
+                      borderColor: colors.accent[200]
+                    }}>
+                      <Shield className="w-3 h-3 mr-1" />
+                      Attorney
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm" style={{ color: colors.secondary[600] }}>Manage credentials & account</p>
             </div>
             
-            <nav className="space-y-2">
+            <nav className="space-y-1">
               {sidebarItems.map((item) => {
                 const Icon = item.icon;
+                const isActive = activeTab === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                        : 'text-gray-600 hover:bg-gray-100'
+                    className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-all ${
+                      isActive ? 'shadow-sm' : 'hover:bg-gray-100'
                     }`}
+                    style={isActive ? {
+                      backgroundColor: colors.primary[50],
+                      borderLeft: `3px solid ${colors.primary[700]}`,
+                    } : {}}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-5 h-5" style={{ color: isActive ? colors.primary[700] : colors.secondary[600] }} />
                     <div>
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-sm text-gray-500">{item.description}</div>
+                      <div className="font-medium text-sm" style={{ color: isActive ? colors.primary[900] : colors.text }}>{item.name}</div>
+                      <div className="text-xs" style={{ color: colors.secondary[500] }}>{item.description}</div>
                     </div>
                   </button>
                 );
               })}
             </nav>
+
+            {/* Professional Footer */}
+            <div className="mt-6 pt-6 border-t" style={{ borderColor: colors.secondary[200] }}>
+              <div className="p-3 rounded-lg" style={{ backgroundColor: colors.primary[50] }}>
+                <div className="flex items-center space-x-2 mb-2">
+                  <CheckCircle className="w-4 h-4" style={{ color: colors.primary[700] }} />
+                  <span className="text-xs font-semibold" style={{ color: colors.primary[900] }}>Profile Completion</span>
+                </div>
+                <div className="w-full bg-white rounded-full h-2">
+                  <div className="h-2 rounded-full" style={{ backgroundColor: colors.primary[600], width: '75%' }}></div>
+                </div>
+                <p className="text-xs mt-2" style={{ color: colors.primary[800] }}>75% Complete</p>
+              </div>
+            </div>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1 p-8 overflow-y-auto">
+          {/* Professional Main Content */}
+          <div className="flex-1 p-8 overflow-y-auto" style={{ backgroundColor: colors.background }}>
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.2 }}
             >
               {activeTab === 'profile' && renderProfileManagement()}
-              {activeTab === 'tokens' && renderTokenManagement()}
+              {activeTab === 'credentials' && renderCredentials()}
+              {activeTab === 'credits' && renderTokenManagement()}
               {activeTab === 'settings' && renderSettings()}
             </motion.div>
           </div>
@@ -702,4 +751,130 @@ export default function ProfilePage() {
       </div>
     </Layout>
   );
+
+  // New Credentials Section
+  function renderCredentials() {
+    if (!isAttorney) {
+      return (
+        <div className="text-center py-12">
+          <Scale className="w-16 h-16 mx-auto mb-4" style={{ color: colors.secondary[400] }} />
+          <h3 className="text-lg font-semibold mb-2" style={{ color: colors.text }}>Attorney Access Required</h3>
+          <p style={{ color: colors.secondary[600] }}>This section is only available for licensed attorneys.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: colors.text }}>Professional Credentials</h2>
+          <p style={{ color: colors.secondary[600] }}>Manage your bar license, certifications, and professional achievements</p>
+        </div>
+
+        {/* Bar License Card */}
+        <Card className="shadow-sm" style={{ borderColor: colors.secondary[200] }}>
+          <CardHeader>
+            <CardTitle className="flex items-center" style={{ color: colors.text }}>
+              <Shield className="w-5 h-5 mr-2" style={{ color: colors.primary[700] }} />
+              Bar License Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: colors.text }}>Bar License Number</label>
+                <Input
+                  value={profile?.barLicense || ''}
+                  placeholder="NY-123456"
+                  disabled={!isEditing}
+                  style={{ borderColor: colors.secondary[300] }}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block" style={{ color: colors.text }}>Years of Experience</label>
+                <Input
+                  type="number"
+                  value={profile?.yearsOfExperience || ''}
+                  placeholder="8"
+                  disabled={!isEditing}
+                  style={{ borderColor: colors.secondary[300] }}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block" style={{ color: colors.text }}>Practice Areas</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 rounded-lg" style={{ backgroundColor: colors.secondary[50] }}>
+                {practiceAreas.slice(0, 6).map((area) => (
+                  <label key={area} className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" className="rounded" disabled={!isEditing} />
+                    <span style={{ color: colors.text }}>{area}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Certifications Card */}
+        <Card className="shadow-sm" style={{ borderColor: colors.secondary[200] }}>
+          <CardHeader>
+            <CardTitle className="flex items-center" style={{ color: colors.text }}>
+              <Award className="w-5 h-5 mr-2" style={{ color: colors.accent[600] }} />
+              Professional Certifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[
+                { title: 'Board Certified - Corporate Law', issuer: 'State Bar Association', date: '2020' },
+                { title: 'Mediation Certification', issuer: 'American Bar Association', date: '2019' },
+              ].map((cert, idx) => (
+                <div key={idx} className="flex items-start justify-between p-3 rounded-lg" style={{ backgroundColor: colors.secondary[50] }}>
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 mt-0.5" style={{ color: colors.success[600] }} />
+                    <div>
+                      <h4 className="font-semibold text-sm" style={{ color: colors.text }}>{cert.title}</h4>
+                      <p className="text-xs" style={{ color: colors.secondary[600] }}>{cert.issuer} • {cert.date}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" className="w-full" size="sm" style={{ borderColor: colors.primary[300], color: colors.primary[700] }}>
+                <Upload className="w-4 h-4 mr-2" />
+                Add Certification
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Professional Achievements */}
+        <Card className="shadow-sm" style={{ borderColor: colors.secondary[200] }}>
+          <CardHeader>
+            <CardTitle className="flex items-center" style={{ color: colors.text }}>
+              <Star className="w-5 h-5 mr-2" style={{ color: colors.accent[600] }} />
+              Professional Achievements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                { label: 'Cases Won', value: '150+', icon: Gavel },
+                { label: 'Client Rating', value: '4.9/5.0', icon: Star },
+                { label: 'Years Practice', value: profile?.yearsOfExperience || '8', icon: Award },
+              ].map((stat, idx) => (
+                <div key={idx} className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.primary[50] }}>
+                  <stat.icon className="w-6 h-6 mx-auto mb-2" style={{ color: colors.primary[700] }} />
+                  <p className="text-2xl font-bold mb-1" style={{ color: colors.primary[900] }}>{stat.value}</p>
+                  <p className="text-xs" style={{ color: colors.primary[700] }}>{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 }

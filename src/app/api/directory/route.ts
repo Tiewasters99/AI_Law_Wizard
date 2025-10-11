@@ -22,13 +22,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Determine which users to fetch based on current user's role
-    // Lawyers see customers, Customers see lawyers
-    const targetRole = currentUser.role === 'LAWYER' ? 'CUSTOMER' : 'LAWYER'
+    // Attorneys see customers, Customers see attorneys
+    const isAttorney = currentUser.role === 'ATTORNEY' || currentUser.role === 'LAWYER';
+    const targetRole = isAttorney ? 'CUSTOMER' : 'ATTORNEY'
 
     // Fetch users with their profiles
     const users = await prisma.user.findMany({
       where: {
-        role: targetRole,
+        OR: targetRole === 'ATTORNEY' 
+          ? [{ role: 'ATTORNEY' }, { role: 'LAWYER' }] // Include both ATTORNEY and legacy LAWYER
+          : [{ role: targetRole }],
         profileComplete: true, // Only show users with complete profiles
       },
       select: {
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
             verified: true,
           }
         } : false,
-        customerProfile: currentUser.role === 'LAWYER' ? {
+        customerProfile: isAttorney ? {
           select: {
             companyName: true,
             address: true,
