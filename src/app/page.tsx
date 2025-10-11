@@ -2,7 +2,6 @@
 
 import { useAuth } from '@/app/stores/authStore'
 import { LawyerDashboard } from '@/app/components/role-based/LawyerDashboard'
-import Layout from '@/app/components/Layout'
 import Home from '@/app/components/Home'
 
 export default function Page() {
@@ -26,9 +25,5 @@ export default function Page() {
   }
 
   // Home page for all users (authenticated and guest)
-  return (
-    <Layout>
-      <Home />
-    </Layout>
-  )
+  return <Home />
 }

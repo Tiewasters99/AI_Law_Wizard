@@ -15,6 +15,8 @@ import { Menu, X, MessageSquare, Sparkles, Users, BookOpen, Scale, Shield, Crown
 import { DocumentAnalysisInterface } from '@/app/components/document-processing/DocumentAnalysisInterface'
 import { TokenGuard } from '@/app/components/auth/TokenGuard'
 import { TOKEN_REQUIREMENTS } from '@/app/hooks/useTokenAccess'
+import { colors } from '@/app/lib/designSystem'
+import Link from 'next/link'
 
 export default function GrandWizardPage() {
   const { data: session } = useSession()
@@ -197,11 +199,9 @@ export default function GrandWizardPage() {
         featureIcon={<Crown className="w-10 h-10 text-yellow-600" />}
         featureDescription="Access the ultimate AI-powered legal analysis with advanced document processing, comprehensive file management, and premium legal insights."
       >
-        <Layout>
-          <div className="max-w-7xl mx-auto">
-            <DocumentAnalysisInterface />
-          </div>
-        </Layout>
+        <div className="bg-white h-full overflow-hidden">
+          <DocumentAnalysisInterface />
+        </div>
       </TokenGuard>
     )
   }
@@ -329,9 +329,25 @@ export default function GrandWizardPage() {
                       <Crown className="w-8 h-8 text-yellow-600" />
                     </div>
                     <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome to Legal Grand Wizard</h2>
-                    <p className="text-gray-600 mb-6">
+                    <p className="text-gray-600 mb-4">
                       Experience the ultimate AI-powered legal assistance. Get the most sophisticated legal insights and guidance with our premium AI Wizard technology.
                     </p>
+                    <div className="mb-6 p-3 rounded-lg border" style={{ 
+                      backgroundColor: colors.primary[50],
+                      borderColor: colors.primary[200]
+                    }}>
+                      <p className="text-xs" style={{ color: colors.primary[900] }}>
+                        💡 For personalized legal representation, {' '}
+                        <Link 
+                          href="/directory" 
+                          className="font-semibold underline hover:no-underline transition-all"
+                          style={{ color: colors.primary[700] }}
+                        >
+                          find an attorney
+                        </Link>
+                        {' '} to handle your case directly.
+                      </p>
+                    </div>
                   </div>
                   <ChatInput
                     inputMessage={inputMessage}

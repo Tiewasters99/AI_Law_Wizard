@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import Layout from '@/app/components/Layout';
 import { useTokenAccess } from '@/app/hooks/useTokenAccess';
@@ -29,7 +30,6 @@ import {
   CreditCard,
   BarChart3,
   Clock,
-  Scale,
   Briefcase,
   CheckCircle,
   Upload,
@@ -62,8 +62,8 @@ interface UserProfile {
   totalDocuments: number;
 }
 
-// Sidebar navigation items
-const sidebarItems = [
+// Sidebar navigation items - moved outside component
+const SIDEBAR_ITEMS = [
   {
     id: 'profile',
     name: 'Professional Profile',
@@ -97,6 +97,12 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Check if user is attorney
+  const isAttorney = useMemo(
+    () => session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER',
+    [session?.user?.role]
+  );
   const [editForm, setEditForm] = useState<Partial<UserProfile>>({});
   const [tokenPackages, setTokenPackages] = useState<TokenPackage[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(false);
@@ -150,7 +156,7 @@ export default function ProfilePage() {
     loadTokenPackages();
   }, [session]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setProfile(prev => prev ? { ...prev, ...editForm } : null);
@@ -158,12 +164,12 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Failed to save profile:', error);
     }
-  };
+  }, [editForm]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setEditForm(profile || {});
     setIsEditing(false);
-  };
+  }, [profile]);
 
   if (status === 'loading' || isLoading) {
     return (
@@ -662,14 +668,10 @@ export default function ProfilePage() {
     </div>
   );
 
-  const isAttorney = session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER';
-
   return (
-    <Layout>
-      <div className="min-h-[calc(100vh-200px)] bg-white shadow-sm rounded-lg mx-auto max-w-7xl" style={{ borderColor: colors.secondary[200] }}>
-        <div className="flex h-full">
+    <div className="h-full flex flex-col lg:flex-row bg-white overflow-hidden">
           {/* Professional Sidebar */}
-          <div className="w-80 border-r p-6" style={{ backgroundColor: colors.secondary[50], borderColor: colors.secondary[200] }}>
+          <div className="w-full lg:w-80 border-b lg:border-r lg:border-b-0 p-6" style={{ backgroundColor: colors.secondary[50], borderColor: colors.secondary[200] }}>
             <div className="mb-6">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: colors.primary[700] }}>
@@ -693,7 +695,7 @@ export default function ProfilePage() {
             </div>
             
             <nav className="space-y-1">
-              {sidebarItems.map((item) => {
+              {SIDEBAR_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
@@ -734,7 +736,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Professional Main Content */}
-          <div className="flex-1 p-8 overflow-y-auto" style={{ backgroundColor: colors.background }}>
+          <div className="flex-1 p-4 sm:p-8 overflow-y-auto overflow-x-hidden" style={{ backgroundColor: colors.background }}>
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, x: 20 }}
@@ -747,9 +749,7 @@ export default function ProfilePage() {
               {activeTab === 'settings' && renderSettings()}
             </motion.div>
           </div>
-        </div>
-      </div>
-    </Layout>
+    </div>
   );
 
   // New Credentials Section
@@ -757,7 +757,13 @@ export default function ProfilePage() {
     if (!isAttorney) {
       return (
         <div className="text-center py-12">
-          <Scale className="w-16 h-16 mx-auto mb-4" style={{ color: colors.secondary[400] }} />
+          <Image 
+            src="/logo_icon.png" 
+            alt="AI Wizard Logo" 
+            width={64} 
+            height={64}
+            className="mx-auto mb-4"
+          />
           <h3 className="text-lg font-semibold mb-2" style={{ color: colors.text }}>Attorney Access Required</h3>
           <p style={{ color: colors.secondary[600] }}>This section is only available for licensed attorneys.</p>
         </div>

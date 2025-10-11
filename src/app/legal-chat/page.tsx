@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/app/components/ui/use-toast'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Layout from '@/app/components/Layout'
+import Link from 'next/link'
+import Image from 'next/image'
 import ChatMessages from '@/app/components/chat/ChatMessages'
 import ChatInput from '@/app/components/chat/ChatInput'
 import ChatSidebar from '@/app/components/chat/ChatSidebar'
@@ -19,7 +20,6 @@ import { TokenTracker } from '@/app/lib/tokenTracker'
 import { colors, disclaimers, practiceAreas } from '@/app/lib/designSystem'
 import { 
   ArrowLeft, 
-  Scale, 
   Menu, 
   Shield, 
   AlertCircle, 
@@ -48,8 +48,11 @@ export default function LegalChatPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
-  // Check if user is an attorney
-  const isAttorney = session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER'
+  // Check if user is an attorney (memoized)
+  const isAttorney = useMemo(
+    () => session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER',
+    [session?.user?.role]
+  )
 
   useEffect(() => {
     setIsClient(true)
@@ -88,29 +91,31 @@ export default function LegalChatPage() {
     return () => {
       window.removeEventListener('chat-update', handleChatUpdate)
     }
-  }, [session])
+  }, [session?.user?.id])
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, scrollToBottom])
+
+  const handleScroll = useCallback(() => {
+    const el = scrollAreaRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+    setShowScrollDown(!nearBottom)
+  }, [])
 
   useEffect(() => {
     const el = scrollAreaRef.current
     if (!el) return
 
-    const onScroll = () => {
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
-      setShowScrollDown(!nearBottom)
-    }
-
-    el.addEventListener('scroll', onScroll)
-    onScroll()
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [])
+    el.addEventListener('scroll', handleScroll)
+    handleScroll()
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [handleScroll])
 
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() || isLoading) return
@@ -258,16 +263,16 @@ export default function LegalChatPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [inputMessage, isLoading, session])
+  }, [inputMessage, isLoading, session, toast])
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
     }
-  }
+  }, [sendMessage])
 
-  const handleCopy = async (content: string, id: string) => {
+  const handleCopy = useCallback(async (content: string, id: string) => {
     try {
       await navigator.clipboard.writeText(content)
       setCopiedMessageId(id)
@@ -276,24 +281,24 @@ export default function LegalChatPage() {
     } catch {
       toast({ title: 'Copy failed', variant: 'destructive' })
     }
-  }
+  }, [toast])
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     router.push('/')
-  }
+  }, [router])
 
-  const handleNewChat = () => {
+  const handleNewChat = useCallback(() => {
     setMessages([])
     setCurrentChatId(null)
     setInputMessage('')
-  }
+  }, [])
 
-  const handleSelectChat = (chatId: string) => {
+  const handleSelectChat = useCallback((chatId: string) => {
     setCurrentChatId(chatId)
     setIsSidebarOpen(false)
-  }
+  }, [])
 
-  const handleLoadChatHistory = async (chatId: string) => {
+  const handleLoadChatHistory = useCallback(async (chatId: string) => {
     try {
       const response = await fetch(`/api/chat/sessions/${chatId}`)
       if (!response.ok) {
@@ -318,14 +323,14 @@ export default function LegalChatPage() {
         variant: 'destructive'
       })
     }
-  }
+  }, [toast])
 
-  const toggleSidebar = () => {
+  const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(!isSidebarOpen)
-  }
+  }, [isSidebarOpen])
 
   return (
-    <Layout>
+    <>
       <div className="h-[calc(100vh-64px)] bg-gray-50 flex overflow-hidden">
         {/* Sidebar */}
         <AnimatePresence>
@@ -399,7 +404,12 @@ export default function LegalChatPage() {
                     <Menu className="w-5 h-5" />
                   </Button>
                   <div className="hidden lg:block p-2 rounded-lg" style={{ backgroundColor: colors.primary[50] }}>
-                    <Scale className="w-5 h-5" style={{ color: colors.primary[700] }} />
+                    <Image 
+                      src="/logo_icon.png" 
+                      alt="AI Wizard Logo" 
+                      width={20} 
+                      height={20}
+                    />
                   </div>
                   <div>
                     <h1 className="text-base sm:text-lg font-semibold" style={{ color: colors.text }}>
@@ -437,9 +447,22 @@ export default function LegalChatPage() {
           <div className="flex-shrink-0 px-4 py-2 border-b" style={{ backgroundColor: colors.accent[50], borderColor: colors.accent[200] }}>
             <div className="flex items-start space-x-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: colors.accent[700] }} />
-              <p className="text-xs" style={{ color: colors.accent[900] }}>
-                <strong>Professional Disclaimer:</strong> {disclaimers.general}
-              </p>
+              <div className="text-xs" style={{ color: colors.accent[900] }}>
+                <p className="mb-1">
+                  <strong>Professional Disclaimer:</strong> {disclaimers.general}
+                </p>
+                <p>
+                  Need personalized legal advice? {' '}
+                  <Link 
+                    href="/directory" 
+                    className="font-semibold underline hover:no-underline transition-all"
+                    style={{ color: colors.primary[700] }}
+                  >
+                    Find an attorney
+                  </Link>
+                  {' '} to discuss your specific situation.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -496,12 +519,21 @@ export default function LegalChatPage() {
                   {[
                     { icon: MessageSquare, title: 'Secure Consultation', desc: 'Confidential legal discussions' },
                     { icon: FileText, title: 'Document Analysis', desc: 'AI-powered contract review' },
-                    { icon: Scale, title: 'Legal Research', desc: 'Case law and precedent analysis' },
+                    { icon: 'logo', title: 'Legal Research', desc: 'Case law and precedent analysis' },
                     { icon: CheckCircle, title: 'Expert Guidance', desc: 'Professional legal insights' },
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                       <div className="p-2 rounded" style={{ backgroundColor: colors.primary[50] }}>
-                        <feature.icon className="w-4 h-4" style={{ color: colors.primary[700] }} />
+                        {feature.icon === 'logo' ? (
+                          <Image 
+                            src="/logo_icon.png" 
+                            alt="AI Wizard Logo" 
+                            width={16} 
+                            height={16}
+                          />
+                        ) : (
+                          <feature.icon className="w-4 h-4" style={{ color: colors.primary[700] }} />
+                        )}
                       </div>
                       <div>
                         <h4 className="text-sm font-medium" style={{ color: colors.text }}>{feature.title}</h4>
@@ -540,7 +572,7 @@ export default function LegalChatPage() {
         limit={tokenUsage.limit}
         feature="home"
       />
-    </Layout>
+    </>
   )
 }
 

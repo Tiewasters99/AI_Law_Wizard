@@ -8,6 +8,9 @@ import { Hero } from './sections/Hero';
 import { RoleSelection } from './sections/RoleSelection';
 import { Features } from './sections/Features';
 import { FeatureComparison } from './sections/FeatureComparison';
+import { TrustSection } from './sections/TrustSection';
+import { PricingSection } from './sections/PricingSection';
+import { FinalCTA } from './sections/FinalCTA';
 import { Footer } from './sections/Footer';
 import { LandingPageProps } from './types/landing.types';
 import { 
@@ -100,16 +103,10 @@ export const LandingPage: React.FC = () => {
       capabilities: ["Real-time Legal Chat", "Case Guidance", "Legal Q&A", "Expert Consultation"]
     },
     {
-      icon: Search,
-      title: "Advanced Legal Search",
-      description: "Find relevant legal information across your documents and our knowledge base with semantic search capabilities.",
-      capabilities: ["Vector-based Search", "Semantic Analysis", "Document Retrieval", "Case Matching"]
-    },
-    {
-      icon: Database,
-      title: "Legal Knowledge Base",
-      description: "Organize and manage your legal knowledge with intelligent categorization and easy access to case histories.",
-      capabilities: ["Case Management", "Document Organization", "Legal Database", "Knowledge Sharing"]
+      icon: Users,
+      title: "Attorney Directory & Matching",
+      description: "Connect with qualified legal professionals through our directory. Send consultation requests and manage attorney relationships.",
+      capabilities: ["Browse Attorneys", "Send Requests", "Secure Messaging", "Track Consultations"]
     },
     {
       icon: Shield,
@@ -122,12 +119,6 @@ export const LandingPage: React.FC = () => {
       title: "3D Miniverse™ Experience",
       description: "Step into our immersive 3D law office environment for interactive legal consultation and virtual meetings.",
       capabilities: ["3D Virtual Office", "Interactive Consultation", "Virtual Meetings", "Immersive Experience"]
-    },
-    {
-      icon: BarChart3,
-      title: "Legal Practice Analytics",
-      description: "Track your legal practice performance with comprehensive analytics and insights on case outcomes and efficiency.",
-      capabilities: ["Performance Metrics", "Case Analytics", "Time Tracking", "Success Rates"]
     }
   ];
 
@@ -165,18 +156,19 @@ export const LandingPage: React.FC = () => {
           {/* Legal Journey Section - 3rd */}
           <motion.section 
             data-section="journey"
-            className="py-20 bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden"
+            className="py-20 relative overflow-hidden"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
+            style={{ backgroundColor: '#f8fafc' }}
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-16">
-                <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+                <h2 className="text-4xl sm:text-5xl font-bold mb-6" style={{ color: '#1e293b' }}>
                   How AI Law Wizard Works
                 </h2>
-                <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+                <p className="text-xl max-w-3xl mx-auto" style={{ color: '#475569' }}>
                   Experience the future of legal assistance through our intelligent, step-by-step process designed for both lawyers and clients.
                 </p>
               </div>
@@ -194,27 +186,31 @@ export const LandingPage: React.FC = () => {
                       className="relative group"
                     >
                       {/* Card */}
-                      <div className="bg-white rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 h-full relative overflow-hidden">
-                        {/* Decorative Background Elements */}
-                        <div className={`absolute top-0 ${index % 2 === 0 ? 'right-0' : 'left-0'} w-16 h-16 bg-gradient-to-br ${step.color} opacity-10 rounded-full -translate-y-8 ${index % 2 === 0 ? 'translate-x-8' : '-translate-x-8'}`}></div>
-                        
+                      <div 
+                        className="backdrop-blur-md rounded-2xl p-6 lg:p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full relative overflow-hidden"
+                        style={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                          border: '1px solid rgba(226, 232, 240, 0.5)',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                        }}
+                      >
                         {/* Icon */}
                         <div className="relative z-10 text-center mb-6">
-                          <div className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r ${step.color} rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
                             <Icon className="w-8 h-8 text-white" />
                           </div>
                         </div>
                         
                         {/* Content */}
                         <div className="relative z-10">
-                          <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 text-center">{step.title}</h3>
-                          <p className="text-gray-600 text-sm lg:text-base leading-relaxed">{step.description}</p>
+                          <h3 className="text-lg lg:text-xl font-bold mb-3 text-center" style={{ color: '#1e293b' }}>{step.title}</h3>
+                          <p className="text-sm lg:text-base leading-relaxed" style={{ color: '#475569' }}>{step.description}</p>
                         </div>
                       </div>
                       
                       {/* Connector Line */}
                       {index < journeySteps.length - 1 && (
-                        <div className="hidden lg:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-gray-300 to-gray-400 transform -translate-y-1/2 z-20" />
+                        <div className="hidden lg:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-blue-400 to-blue-500 transform -translate-y-1/2 z-20" />
                       )}
                     </motion.div>
                   );
@@ -226,7 +222,7 @@ export const LandingPage: React.FC = () => {
           {/* Comprehensive Features Section */}
           <motion.section 
             data-section="features"
-            className="py-20 bg-white/50 backdrop-blur-sm"
+            className="py-20 bg-white"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
@@ -234,15 +230,22 @@ export const LandingPage: React.FC = () => {
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-16">
-                <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-sm font-medium mb-6">
+                <div 
+                  className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-6"
+                  style={{
+                    backgroundColor: 'rgba(239, 246, 255, 0.8)',
+                    color: '#1e40af',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                  }}
+                >
                   <Sparkles className="w-4 h-4 mr-2" />
                   Powerful Features
                 </div>
                 
-                <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+                <h2 className="text-4xl sm:text-5xl font-bold mb-6" style={{ color: '#1e293b' }}>
                   AI-Powered Legal Tools
                 </h2>
-                <p className="text-xl text-gray-700 max-w-3xl mx-auto drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}>
+                <p className="text-xl max-w-3xl mx-auto" style={{ color: '#475569' }}>
                   Discover the comprehensive suite of AI-powered tools designed to revolutionize how lawyers and clients work together.
                 </p>
               </div>
@@ -257,28 +260,41 @@ export const LandingPage: React.FC = () => {
                       whileInView={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.6, delay: index * 0.1 }}
                       viewport={{ once: true }}
-                      className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 group"
+                      className="backdrop-blur-md rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid rgba(226, 232, 240, 0.5)',
+                      }}
                     >
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl mb-6 group-hover:scale-110 transition-transform duration-300">
+                      <div 
+                        className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-6 group-hover:scale-110 transition-transform duration-300"
+                        style={{
+                          background: 'linear-gradient(to right, #2563eb, #1e40af)',
+                        }}
+                      >
                         <Icon className="w-8 h-8 text-white" />
                       </div>
                       
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 group-hover:text-indigo-600 transition-colors drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}>{feature.title}</h3>
-                      <p className="text-gray-700 mb-6 drop-shadow-sm" style={{ textShadow: '1px 1px 1px rgba(0,0,0,0.1)' }}>{feature.description}</p>
+                      <h3 className="text-xl font-bold mb-4 transition-colors" style={{ color: '#1e293b' }}>{feature.title}</h3>
+                      <p className="mb-6" style={{ color: '#475569' }}>{feature.description}</p>
                       
                       <div className="space-y-2">
                         {feature.capabilities.map((capability, capIndex) => (
-                                <motion.div 
-                                  key={capIndex} 
-                                  className="flex items-center text-sm text-gray-600"
-                                  initial={{ opacity: 0, x: -10 }}
-                                  whileInView={{ opacity: 1, x: 0 }}
-                                  transition={{ duration: 0.4, delay: capIndex * 0.1 }}
-                                  viewport={{ once: true }}
-                                >
-                                  <div className="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0" />
-                                  {capability}
-                                </motion.div>
+                          <motion.div 
+                            key={capIndex} 
+                            className="flex items-center text-sm"
+                            initial={{ opacity: 0, x: -10 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.4, delay: capIndex * 0.1 }}
+                            viewport={{ once: true }}
+                            style={{ color: '#64748b' }}
+                          >
+                            <div 
+                              className="w-2 h-2 rounded-full mr-3 flex-shrink-0"
+                              style={{ backgroundColor: '#10b981' }}
+                            />
+                            {capability}
+                          </motion.div>
                         ))}
                       </div>
                     </motion.div>
@@ -301,6 +317,15 @@ export const LandingPage: React.FC = () => {
               caption="Explore each expertise level when you log in and discover your perfect AI legal assistant journey."
             />
           </div>
+
+          {/* Trust & Social Proof Section */}
+          <TrustSection />
+
+          {/* Pricing Section */}
+          <PricingSection />
+
+          {/* Final CTA Section */}
+          <FinalCTA />
         </main>
         
         <Footer links={footerLinks} />

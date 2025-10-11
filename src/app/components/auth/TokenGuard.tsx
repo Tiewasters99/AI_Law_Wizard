@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app
 import { Badge } from '@/app/components/ui/badge'
 import { Coins, AlertTriangle, ArrowRight, Zap, Crown } from 'lucide-react'
 import { fetchWallet } from '@/app/lib/stripe'
-import Layout from '@/app/components/Layout'
 
 interface TokenGuardProps {
   children: React.ReactNode
@@ -54,49 +53,44 @@ export function TokenGuard({
 
   if (loading) {
     return (
-      <Layout>
-        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Checking your tokens...</p>
-          </div>
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking your tokens...</p>
         </div>
-      </Layout>
+      </div>
     )
   }
 
   if (!session?.user) {
     return (
-      <Layout>
-        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle className="w-8 h-8 text-red-600" />
-              </div>
-              <CardTitle className="text-xl">Authentication Required</CardTitle>
-              <CardDescription>
-                Please sign in to access {featureName}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center">
-              <Button 
-                onClick={() => window.location.href = '/auth'}
-                className="w-full"
-              >
-                Sign In
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </Layout>
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+            <CardTitle className="text-xl">Authentication Required</CardTitle>
+            <CardDescription>
+              Please sign in to access {featureName}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button 
+              onClick={() => window.location.href = '/auth'}
+              className="w-full"
+            >
+              Sign In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   if (!hasEnoughTokens) {
     return (
-      <Layout>
-        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -109,10 +103,10 @@ export function TokenGuard({
                 {featureIcon || <Coins className="w-10 h-10 text-orange-600" />}
               </div>
               <CardTitle className="text-2xl text-gray-900">
-                Insufficient Tokens
+                Service Credits Required
               </CardTitle>
               <CardDescription className="text-lg text-gray-600">
-                You need more tokens to access {featureName}
+                {featureName} requires service credits. Purchase credits below to get started.
               </CardDescription>
             </CardHeader>
             
@@ -120,15 +114,15 @@ export function TokenGuard({
               {/* Current Token Status */}
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-600">Your Current Tokens</span>
+                  <span className="text-sm font-medium text-gray-600">Your Current Credits</span>
                   <Badge variant="outline" className="text-orange-600 border-orange-200">
-                    {wallet?.tokens || 0} tokens
+                    {wallet?.tokens || 0} credits
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">Required Tokens</span>
+                  <span className="text-sm font-medium text-gray-600">Required Credits</span>
                   <Badge variant="outline" className="text-blue-600 border-blue-200">
-                    {requiredTokens} tokens
+                    {requiredTokens} credits
                   </Badge>
                 </div>
                 <div className="mt-3 bg-gray-200 rounded-full h-2">
@@ -140,7 +134,7 @@ export function TokenGuard({
                   ></div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  {requiredTokens - (wallet?.tokens || 0)} more tokens needed
+                  {requiredTokens - (wallet?.tokens || 0)} more credits needed
                 </p>
               </div>
 
@@ -161,11 +155,11 @@ export function TokenGuard({
               <div className="space-y-3">
                 <Button 
                   onClick={() => window.location.href = '/tokens'}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
                   size="lg"
                 >
                   <Coins className="w-5 h-5 mr-2" />
-                  Add More Tokens
+                  Purchase Service Credits
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
                 
@@ -176,26 +170,29 @@ export function TokenGuard({
                 >
                   Go Back
                 </Button>
+                
+                <p className="text-xs text-center text-gray-500 mt-2">
+                  💡 Tip: Credits never expire and work across all features
+                </p>
               </div>
 
               {/* Token Usage Tips */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                   <Crown className="w-4 h-4 mr-2 text-yellow-600" />
-                  Token Usage Tips
+                  Service Credit Benefits
                 </h4>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Each AI analysis typically uses 1-3 tokens</li>
-                  <li>• Complex legal documents may require more tokens</li>
-                  <li>• Tokens never expire - use them anytime</li>
-                  <li>• Bulk purchases offer better value per token</li>
+                  <li>• Access to advanced AI legal analysis tools</li>
+                  <li>• Professional document processing capabilities</li>
+                  <li>• Credits never expire - use them anytime</li>
+                  <li>• Works across all premium features</li>
                 </ul>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-        </div>
-      </Layout>
+      </div>
     )
   }
 

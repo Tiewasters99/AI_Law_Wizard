@@ -1,14 +1,14 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import Layout from '@/app/components/Layout'
+import Image from 'next/image'
 import { TokenPurchase } from '@/app/components/payment/TokenPurchase'
 import { colors } from '@/app/lib/designSystem'
-import { Coins, TrendingUp, History, Settings, CreditCard, Scale, Award, Shield, FileText, BarChart3, Clock } from 'lucide-react'
+import { Coins, TrendingUp, History, Settings, CreditCard, Award, Shield, FileText, BarChart3, Clock, Scale } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { fetchWallet } from '@/app/lib/stripe'
 
@@ -34,9 +34,14 @@ export default function TokensPage() {
     }
 
     loadWallet()
-  }, [session])
+  }, [session?.user])
 
-  const serviceStats = [
+  const isAttorney = useMemo(
+    () => session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER',
+    [session?.user?.role]
+  );
+
+  const serviceStats = useMemo(() => [
     {
       title: 'Available Credits',
       value: wallet?.tokens || 0,
@@ -61,9 +66,9 @@ export default function TokensPage() {
       bgColor: colors.secondary[50],
       borderColor: colors.secondary[200]
     }
-  ]
+  ], [wallet?.tokens])
 
-  const professionalActions = [
+  const professionalActions = useMemo(() => [
     {
       title: 'Purchase Credits',
       description: 'Acquire analysis credits for legal services',
@@ -88,18 +93,15 @@ export default function TokensPage() {
       icon: Scale,
       action: 'settings'
     }
-  ]
-
-  const isAttorney = session?.user?.role === 'ATTORNEY' || session?.user?.role === 'LAWYER';
+  ], [])
 
   return (
-    <Layout>
+    <div className="h-full overflow-y-auto">
       <motion.div 
-        className="min-h-[calc(100vh-200px)] bg-white shadow-sm rounded-lg mx-auto max-w-6xl p-8"
+        className="bg-white mx-auto max-w-6xl p-4 sm:p-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        style={{ borderColor: colors.secondary[200] }}
       >
         {/* Professional Header */}
         <div className="flex items-center justify-between mb-8 pb-6 border-b" style={{ borderColor: colors.secondary[200] }}>
@@ -227,7 +229,13 @@ export default function TokensPage() {
                 <span className="text-sm" style={{ color: colors.secondary[700] }}>Complex document processing: 3-5 credits per document</span>
               </div>
               <div className="flex items-start space-x-2">
-                <Scale className="w-4 h-4 mt-0.5" style={{ color: colors.primary[700] }} />
+                <Image 
+                  src="/logo_icon.png" 
+                  alt="AI Wizard Logo" 
+                  width={16} 
+                  height={16}
+                  className="mt-0.5"
+                />
                 <span className="text-sm" style={{ color: colors.secondary[700] }}>Advanced case law research: 5-10 credits per session</span>
               </div>
             </div>
@@ -249,6 +257,6 @@ export default function TokensPage() {
           </div>
         </div>
       </motion.div>
-    </Layout>
+    </div>
   )
 }

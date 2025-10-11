@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -14,7 +15,6 @@ import {
   Sparkles, 
   ArrowRight, 
   CheckCircle,
-  Scale,
   Briefcase,
   Users
 } from 'lucide-react'
@@ -27,6 +27,16 @@ interface UpgradeModalProps {
   feature: 'home' | 'directory' | 'attorney-features'
 }
 
+// Benefits array - moved outside component
+const BENEFITS = [
+  '5,000 tokens after sign-up',
+  'Access to all AI features',
+  'Save conversation history',
+  'Priority support',
+  'Advanced document analysis',
+  'No daily limits'
+]
+
 export function UpgradeModal({ 
   isOpen, 
   onClose, 
@@ -38,31 +48,22 @@ export function UpgradeModal({
   const [step, setStep] = useState<'limit' | 'role'>('limit')
   const [selectedRole, setSelectedRole] = useState<'ATTORNEY' | 'CUSTOMER' | null>(null)
 
-  const percentage = (currentUsage / limit) * 100
-  const showBothRoles = feature === 'home' || feature === 'directory'
+  const percentage = useMemo(() => (currentUsage / limit) * 100, [currentUsage, limit])
+  const showBothRoles = useMemo(() => feature === 'home' || feature === 'directory', [feature])
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (showBothRoles) {
       setStep('role')
     } else {
       // Attorney features only - go directly to sign-up with ATTORNEY role
       router.push(`/auth?role=ATTORNEY&feature=${feature}`)
     }
-  }
+  }, [showBothRoles, router, feature])
 
-  const handleRoleSelect = (role: 'ATTORNEY' | 'CUSTOMER') => {
+  const handleRoleSelect = useCallback((role: 'ATTORNEY' | 'CUSTOMER') => {
     setSelectedRole(role)
     router.push(`/auth?role=${role}&feature=${feature}`)
-  }
-
-  const benefits = [
-    '5,000 tokens after sign-up',
-    'Access to all AI features',
-    'Save conversation history',
-    'Priority support',
-    'Advanced document analysis',
-    'No daily limits'
-  ]
+  }, [router, feature])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -113,7 +114,7 @@ export function UpgradeModal({
                     What you get with a free account:
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {benefits.map((benefit, idx) => (
+                    {BENEFITS.map((benefit, idx) => (
                       <div key={idx} className="flex items-start space-x-2">
                         <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <span className="text-sm text-gray-700">{benefit}</span>
@@ -164,7 +165,12 @@ export function UpgradeModal({
                 >
                   <CardContent className="pt-6 text-center">
                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Scale className="w-8 h-8 text-blue-600" />
+                      <Image 
+                        src="/logo_icon.png" 
+                        alt="AI Wizard Logo" 
+                        width={32} 
+                        height={32}
+                      />
                     </div>
                     <h3 className="font-bold text-lg mb-2">Attorney</h3>
                     <p className="text-sm text-gray-600 mb-4">

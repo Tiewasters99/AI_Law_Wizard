@@ -65,7 +65,7 @@ export const authOptions: AuthOptions = {
 
           if (!existingUser) {
             // Create new OAuth user without role - they must select it
-            await prisma.user.create({
+            const newUser = await prisma.user.create({
               data: {
                 name: user.name,
                 email: user.email,
@@ -89,6 +89,41 @@ export const authOptions: AuthOptions = {
                 },
               },
             });
+            
+            // Create wallet with starter tokens for new OAuth users
+            try {
+              await prisma.wallet.create({
+                data: {
+                  userId: newUser.id,
+                  tokens: 5000, // Give 5000 starter tokens to new OAuth users
+                },
+              });
+              console.log(`Created wallet with 5000 tokens for OAuth user: ${newUser.email}`);
+            } catch (walletError) {
+              console.error('Error creating wallet for OAuth user:', walletError);
+              // Don't fail sign-in if wallet creation fails
+            }
+          }
+          
+          // Ensure ALL existing users have a wallet (covers all cases including completed profiles)
+          if (existingUser) {
+            try {
+              const existingWallet = await prisma.wallet.findUnique({
+                where: { userId: existingUser.id },
+              });
+              
+              if (!existingWallet) {
+                await prisma.wallet.create({
+                  data: {
+                    userId: existingUser.id,
+                    tokens: 5000, // Give 5000 starter tokens if wallet doesn't exist
+                  },
+                });
+                console.log(`Created wallet with 5000 tokens for user without wallet: ${existingUser.email}`);
+              }
+            } catch (walletError) {
+              console.error('Error ensuring wallet exists:', walletError);
+            }
           }
         } catch (error) {
           console.error('Error during OAuth sign-in:', error);

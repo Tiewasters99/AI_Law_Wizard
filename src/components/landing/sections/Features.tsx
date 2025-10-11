@@ -21,11 +21,11 @@ export const Features: React.FC<FeaturePreviewProps> = ({ title, tabs, caption }
             AI Expertise Levels
           </div>
           
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+          <h2 className="text-4xl sm:text-5xl font-bold mb-6" style={{ color: '#1e293b' }}>
             {title}
           </h2>
           
-          <p className="text-xl text-gray-700 max-w-3xl mx-auto drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}>
+          <p className="text-xl max-w-3xl mx-auto" style={{ color: '#475569' }}>
             {caption}
           </p>
         </div>
@@ -41,15 +41,22 @@ export const Features: React.FC<FeaturePreviewProps> = ({ title, tabs, caption }
               whileHover={{ y: -8, scale: 1.02 }}
               className="group"
             >
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 h-full relative overflow-hidden">
-                {/* Decorative Background */}
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -translate-y-10 translate-x-10"></div>
-                <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-purple-500/10 to-pink-500/10 rounded-full translate-y-8 -translate-x-8"></div>
-                
+              <div 
+                className="backdrop-blur-md rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full relative"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: '1px solid rgba(226, 232, 240, 0.5)',
+                }}
+              >
                 {/* Content */}
                 <div className="relative z-10 text-center">
                   {/* Icon */}
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <div 
+                    className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300"
+                    style={{
+                      background: 'linear-gradient(to right, #2563eb, #1e40af)',
+                    }}
+                  >
                     <span className="text-2xl">
                       {tab.name === 'Apprentice' && '🎓'}
                       {tab.name === 'Wizard' && '🧙‍♂️'}
@@ -59,19 +66,19 @@ export const Features: React.FC<FeaturePreviewProps> = ({ title, tabs, caption }
                   </div>
                   
                   {/* Title */}
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 group-hover:text-indigo-600 transition-colors drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}>
+                  <h3 className="text-xl font-bold mb-4 transition-colors" style={{ color: '#1e293b' }}>
                     {tab.name}
                   </h3>
                   
                   {/* Description */}
                   {tab.description && (
-                    <p className="text-gray-600 mb-6 drop-shadow-sm" style={{ textShadow: '1px 1px 1px rgba(0,0,0,0.1)' }}>
+                    <p className="mb-6" style={{ color: '#475569' }}>
                       {tab.description}
                     </p>
                   )}
                   
                   {/* Action Indicator */}
-                  <div className="flex items-center justify-center text-indigo-600 group-hover:text-indigo-700 transition-colors">
+                  <div className="flex items-center justify-center transition-colors" style={{ color: '#2563eb' }}>
                     <span className="text-sm font-medium mr-2">Explore</span>
                     <motion.div
                       animate={{ x: [0, 4, 0] }}
@@ -81,13 +88,6 @@ export const Features: React.FC<FeaturePreviewProps> = ({ title, tabs, caption }
                     </motion.div>
                   </div>
                 </div>
-                
-                {/* Hover Effect Overlay */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  initial={{ opacity: 0 }}
-                  whileHover={{ opacity: 1 }}
-                />
               </div>
             </motion.div>
           ))}
@@ -95,7 +95,7 @@ export const Features: React.FC<FeaturePreviewProps> = ({ title, tabs, caption }
         
         {/* Enhanced Footer */}
         <div className="text-center mt-16">
-          <p className="text-gray-600 text-lg drop-shadow-sm" style={{ textShadow: '1px 1px 1px rgba(0,0,0,0.1)' }}>
+          <p className="text-lg" style={{ color: '#64748b' }}>
             Choose your expertise level to get started with AI-powered legal assistance
           </p>
         </div>

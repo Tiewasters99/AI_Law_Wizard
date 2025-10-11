@@ -291,6 +291,8 @@ model User {
   role            Role      @default(CUSTOMER)
   profileComplete Boolean   @default(false)
   profileData     Json?     // Store additional profile information
+  freeConsultationRequestsUsed Int @default(0) // Track free consultation requests used
+  maxFreeConsultationRequests  Int @default(1) // Max free consultation requests allowed
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -303,6 +305,12 @@ model User {
   purchases               Purchase[]
   chatSessions            ChatSession[]
   documentAnalysisSessions DocumentAnalysisSession[]
+  clientConsultationRequests ConsultationRequest[] @relation("ClientRequests")
+  attorneyConsultationRequests ConsultationRequest[] @relation("AttorneyRequests")
+  clientConversations     Conversation[] @relation("ClientConversations")
+  attorneyConversations   Conversation[] @relation("AttorneyConversations")
+  sentMessages            Message[] @relation("SentMessages")
+  notifications           Notification[]
 
   @@map("users")
 }
@@ -451,6 +459,109 @@ model Purchase {
   package TokenPackage @relation(fields: [packageId], references: [id])
 
   @@map("purchases")
+}
+
+// Consultation Request System Models
+
+// Consultation request from client to attorney
+model ConsultationRequest {
+  id          String              @id @default(cuid())
+  clientId    String
+  attorneyId  String
+  caseType    String              // Case type (Corporate, Criminal, Family, etc.)
+  description String              @db.Text
+  urgency     RequestUrgency      @default(MEDIUM)
+  status      RequestStatus       @default(PENDING)
+  documents   Json?               // Optional document references
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  // Relations
+  client       User         @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)
+  attorney     User         @relation("AttorneyRequests", fields: [attorneyId], references: [id], onDelete: Cascade)
+  conversation Conversation?
+
+  @@map("consultation_requests")
+}
+
+// Conversation between client and attorney
+model Conversation {
+  id                    String   @id @default(cuid())
+  consultationRequestId String   @unique
+  clientId              String
+  attorneyId            String
+  lastMessageAt         DateTime @default(now())
+  unreadByClient        Int      @default(0)
+  unreadByAttorney      Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  consultationRequest ConsultationRequest @relation(fields: [consultationRequestId], references: [id], onDelete: Cascade)
+  client              User                @relation("ClientConversations", fields: [clientId], references: [id], onDelete: Cascade)
+  attorney            User                @relation("AttorneyConversations", fields: [attorneyId], references: [id], onDelete: Cascade)
+  messages            Message[]
+
+  @@map("conversations")
+}
+
+// Individual message in conversation
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String   @db.Text
+  attachments    Json?    // Optional file attachments
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+// Notification system
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  relatedId String?          // ID of related entity (request, message, etc.)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Enums for consultation request system
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RequestUrgency {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  NEW_REQUEST
+  MESSAGE_RECEIVED
+  REQUEST_ACCEPTED
+  REQUEST_REJECTED
+  REQUEST_CANCELLED
 }
 
 

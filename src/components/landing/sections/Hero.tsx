@@ -36,41 +36,30 @@ export const Hero: React.FC<HeroProps> = ({ headline, subtext, stats }) => {
 
         {/* Enhanced Main Headline */}
         <motion.h1 
-          className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight drop-shadow-lg"
+          className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}
         >
-          <motion.span 
-            className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent"
-            animate={{ 
-              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
-            }}
-            transition={{ 
-              duration: 3, 
-              repeat: Infinity, 
-              ease: "easeInOut" 
-            }}
-          >
+          <span className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 bg-clip-text text-transparent">
             {headline}
-          </motion.span>
+          </span>
         </motion.h1>
 
         {/* Enhanced Subtext */}
         <motion.p 
-          className="text-xl sm:text-2xl text-gray-700 max-w-4xl mx-auto leading-relaxed mb-12 drop-shadow-md"
+          className="text-xl sm:text-2xl max-w-4xl mx-auto leading-relaxed mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}
+          style={{ color: '#475569' }}
         >
           {subtext}
         </motion.p>
 
         {/* Stats Section */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
             {stats.map((stat: any, index: number) => {
               const Icon = stat.icon;
               return (
@@ -79,13 +68,17 @@ export const Hero: React.FC<HeroProps> = ({ headline, subtext, stats }) => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
-                  className="text-center"
+                  className="backdrop-blur-md p-6 rounded-2xl transition-all hover:shadow-lg"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid rgba(226, 232, 240, 0.5)',
+                  }}
                 >
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg mb-4">
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg mb-3">
                     <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-2 drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}>{stat.value}</div>
-                  <div className="text-sm text-gray-700 drop-shadow-sm" style={{ textShadow: '1px 1px 1px rgba(0,0,0,0.1)' }}>{stat.label}</div>
+                  <div className="text-3xl font-bold mb-1" style={{ color: '#1e40af' }}>{stat.value}</div>
+                  <div className="text-sm" style={{ color: '#475569' }}>{stat.label}</div>
                 </motion.div>
               );
             })}

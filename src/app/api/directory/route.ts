@@ -22,50 +22,128 @@ export async function GET(request: NextRequest) {
     }
 
     // Determine which users to fetch based on current user's role
-    // Attorneys see customers, Customers see attorneys
     const isAttorney = currentUser.role === 'ATTORNEY' || currentUser.role === 'LAWYER';
     const targetRole = isAttorney ? 'CUSTOMER' : 'ATTORNEY'
 
-    // Fetch users with their profiles
-    const users = await prisma.user.findMany({
-      where: {
-        OR: targetRole === 'ATTORNEY' 
-          ? [{ role: 'ATTORNEY' }, { role: 'LAWYER' }] // Include both ATTORNEY and legacy LAWYER
-          : [{ role: targetRole }],
-        profileComplete: true, // Only show users with complete profiles
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-        profileData: true,
-        createdAt: true,
-        lawyerProfile: currentUser.role === 'CUSTOMER' ? {
-          select: {
-            specialty: true,
-            barLicense: true,
-            bio: true,
-            yearsOfExperience: true,
-            firmName: true,
-            verified: true,
+    let users
+
+    if (isAttorney) {
+      // Attorneys ONLY see clients who have sent them consultation requests
+      const consultationRequests = await prisma.consultationRequest.findMany({
+        where: {
+          attorneyId: session.user.id
+        },
+        select: {
+          clientId: true,
+          status: true,
+          id: true,
+          caseType: true,
+          urgency: true,
+          createdAt: true,
+          conversation: {
+            select: {
+              id: true,
+              unreadByAttorney: true
+            }
           }
-        } : false,
-        customerProfile: isAttorney ? {
-          select: {
-            companyName: true,
-            address: true,
-            phone: true,
-            industry: true,
-            needs: true,
+        }
+      })
+
+      // Get unique client IDs
+      const clientIds = [...new Set(consultationRequests.map(req => req.clientId))]
+
+      // Fetch client details
+      users = await prisma.user.findMany({
+        where: {
+          id: {
+            in: clientIds
+          },
+          role: 'CUSTOMER',
+          profileComplete: true
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          role: true,
+          profileData: true,
+          createdAt: true,
+          customerProfile: {
+            select: {
+              companyName: true,
+              address: true,
+              phone: true,
+              industry: true,
+              needs: true,
+            }
           }
-        } : false,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+
+      // Attach consultation request info to each user
+      users = users.map(user => {
+        const userRequests = consultationRequests.filter(req => req.clientId === user.id)
+        return {
+          ...user,
+          consultationRequests: userRequests
+        }
+      })
+    } else {
+      // Customers see all attorneys
+      users = await prisma.user.findMany({
+        where: {
+          OR: [{ role: 'ATTORNEY' }, { role: 'LAWYER' }],
+          profileComplete: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          role: true,
+          profileData: true,
+          createdAt: true,
+          lawyerProfile: {
+            select: {
+              specialty: true,
+              barLicense: true,
+              bio: true,
+              yearsOfExperience: true,
+              firmName: true,
+              verified: true,
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+
+      // Check if client has sent requests to any attorneys
+      const clientRequests = await prisma.consultationRequest.findMany({
+        where: {
+          clientId: session.user.id
+        },
+        select: {
+          attorneyId: true,
+          status: true,
+          id: true
+        }
+      })
+
+      // Attach request status to each attorney
+      users = users.map(user => {
+        const existingRequest = clientRequests.find(req => req.attorneyId === user.id)
+        return {
+          ...user,
+          existingRequest: existingRequest || null
+        }
+      })
+    }
 
     return NextResponse.json({ 
       users,

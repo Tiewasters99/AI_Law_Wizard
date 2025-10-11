@@ -1,0 +1,115 @@
+Phase,Priority,Component,File Path,Status,Notes
+Phase 1,1,Home Component,src/app/components/Home.tsx,✅ Complete,"Wrapped handleSubmitIssue in useCallback, fixed useEffect deps"
+Phase 1,1,Legal Chat Page,src/app/legal-chat/page.tsx,✅ Complete,"Added useMemo for isAttorney, wrapped all 9 handlers in useCallback"
+Phase 1,1,Directory Page,src/app/directory/page.tsx,✅ Complete,"Moved static data outside, memoized computed values, wrapped handlers"
+Phase 1,1,Attorney Features Page,src/app/attorney-features/page.tsx,✅ Complete,"Wrapped all handlers in useCallback, optimized mobile detection"
+Phase 1,1,Profile Page,src/app/profile/page.tsx,✅ Complete,"Moved SIDEBAR_ITEMS outside, memoized isAttorney, wrapped handlers"
+Phase 2,2,Layout Component,src/app/components/Layout.tsx,✅ Complete,"Moved 5 navigation arrays outside, memoized navigation, wrapped handler"
+Phase 2,2,Attorney Layout,src/app/components/attorney/AttorneyLayout.tsx,❌ Pending,Review navigation and handlers
+Phase 2,2,Client Layout,src/app/components/client/ClientLayout.tsx,❌ Pending,Review navigation and handlers
+Phase 2,2,Attorney TopBar,src/app/components/attorney/AttorneyTopBar.tsx,❌ Pending,Review handlers and computed values
+Phase 2,2,Client TopBar,src/app/components/client/ClientTopBar.tsx,❌ Pending,Review handlers and computed values
+Phase 2,2,Attorney Sidebar,src/app/components/attorney/AttorneySidebar.tsx,❌ Pending,Review navigation items
+Phase 2,2,Client Sidebar,src/app/components/client/ClientSidebar.tsx,❌ Pending,Review navigation items
+Phase 2,2,Guest Header,src/app/components/guest/GuestHeader.tsx,❌ Pending,Review navigation and handlers
+Phase 3,2,OneDrive Interface,src/app/components/OneDriveInterface.tsx,❌ Pending,⚠️ LARGE FILE (1138 lines) - wrap all async handlers
+Phase 3,2,Document Analysis Interface,src/app/components/document-processing/DocumentAnalysisInterface.tsx,❌ Pending,Review handlers and state
+Phase 3,2,Query History Dashboard,src/app/components/document-processing/QueryHistoryDashboard.tsx,❌ Pending,Review handlers
+Phase 3,2,Query History List,src/app/components/document-processing/QueryHistoryList.tsx,❌ Pending,Review handlers
+Phase 3,2,Query Details Modal,src/app/components/document-processing/QueryDetailsModal.tsx,❌ Pending,Review handlers
+Phase 3,2,Query Analytics Dashboard,src/app/components/document-processing/QueryAnalyticsDashboard.tsx,❌ Pending,Review handlers
+Phase 3,2,Recent Queries Widget,src/app/components/document-processing/RecentQueriesWidget.tsx,❌ Pending,Review handlers
+Phase 3,2,Document Viewer,src/app/components/document-processing/DocumentViewer.tsx,❌ Pending,Review handlers
+Phase 3,2,Document Library,src/app/components/document-processing/DocumentLibrary.tsx,❌ Pending,Review handlers
+Phase 3,2,Processing Status Indicators,src/app/components/document-processing/ProcessingStatusIndicators.tsx,❌ Pending,Review handlers
+Phase 3,2,Processed Files List,src/app/components/document-processing/ProcessedFilesList.tsx,❌ Pending,Review handlers
+Phase 4,2,Chat Input,src/app/components/chat/ChatInput.tsx,❌ Pending,Review handlers
+Phase 4,2,Chat Messages,src/app/components/chat/ChatMessages.tsx,❌ Pending,Likely presentational - verify if optimization needed
+Phase 4,2,Chat Message,src/app/components/chat/ChatMessage.tsx,❌ Pending,Review message rendering
+Phase 4,2,Chat Sidebar,src/app/components/chat/ChatSidebar.tsx,❌ Pending,Review chat list rendering
+Phase 4,2,Streamlined Consultation,src/app/components/consultation/StreamlinedConsultation.tsx,✅ Complete,"Wrapped 4 handlers in useCallback"
+Phase 4,2,Consultation Request Modal,src/app/components/consultation/ConsultationRequestModal.tsx,❌ Pending,Review handlers
+Phase 4,2,Consultation Request Card,src/app/components/consultation/ConsultationRequestCard.tsx,❌ Pending,Review handlers
+Phase 4,2,Conversation View,src/app/components/consultation/ConversationView.tsx,❌ Pending,Review handlers
+Phase 4,2,Notification Bell,src/app/components/consultation/NotificationBell.tsx,❌ Pending,Review handlers
+Phase 4,2,Analysis Results,src/app/components/consultation/AnalysisResults.tsx,❌ Pending,⚠️ LARGE FILE (688 lines) - review handlers
+Phase 5,3,Wizard Page,src/app/wizard/page.tsx,❌ Pending,Wrap scrollToBottom and handlers
+Phase 5,3,Grand Wizard Page,src/app/grand-wizard/page.tsx,❌ Pending,Similar to wizard page
+Phase 5,3,Integrations Page,src/app/integrations/page.tsx,❌ Pending,Move animation variants outside
+Phase 5,3,Wizard Container,src/app/components/wizard/WizardContainer.tsx,❌ Pending,Review step management
+Phase 5,3,Wizard Header,src/app/components/wizard/WizardHeader.tsx,❌ Pending,Review handlers
+Phase 5,3,Wallet Sidebar,src/app/components/wizard/WalletSidebar.tsx,❌ Pending,Review handlers
+Phase 5,3,Step Indicator,src/app/components/wizard/StepIndicator.tsx,❌ Pending,Review handlers
+Phase 5,3,Notification Banner,src/app/components/wizard/NotificationBanner.tsx,❌ Pending,Review handlers
+Phase 5,3,Document Section,src/app/components/wizard/DocumentSection.tsx,❌ Pending,Review handlers
+Phase 5,3,Analysis Section,src/app/components/wizard/AnalysisSection.tsx,❌ Pending,Review handlers
+Phase 6,3,Upgrade Modal,src/app/components/auth/UpgradeModal.tsx,✅ Complete,"Moved BENEFITS outside, memoized computed values, wrapped handlers"
+Phase 6,3,OAuth Role Selection,src/app/components/auth/OAuthRoleSelection.tsx,❌ Pending,Review handlers
+Phase 6,3,Auth Guard,src/app/components/auth/AuthGuard.tsx,❌ Pending,Review handlers
+Phase 6,3,Token Guard,src/app/components/auth/TokenGuard.tsx,❌ Pending,Review handlers
+Phase 6,3,Role Selection,src/app/components/auth/RoleSelection.tsx,❌ Pending,Review handlers
+Phase 6,3,Google SignIn,src/app/components/auth/GoogleSignIn.tsx,❌ Pending,Review handlers
+Phase 6,3,Premium Features Modal,src/app/components/PremiumFeaturesModal.tsx,❌ Pending,Review handlers
+Phase 6,3,Limit Exceeded Modal (attorney-features),src/app/components/attorney-features/LimitExceededModal.tsx,❌ Pending,Review handlers
+Phase 6,3,Limit Exceeded Modal (components),src/app/attorney-features/components/LimitExceededModal.tsx,❌ Pending,Check if duplicate
+Phase 7,3,Tokens Page,src/app/tokens/page.tsx,✅ Complete,"Memoized isAttorney, serviceStats, professionalActions"
+Phase 7,3,Inbox Page,src/app/inbox/page.tsx,❌ Pending,Review handlers
+Phase 7,3,Blog Page,src/app/blog/page.tsx,❌ Pending,Review handlers
+Phase 7,3,Blog Detail Page,src/app/blog/[id]/page.tsx,❌ Pending,Review handlers
+Phase 7,3,Embedding Progress,src/app/embedding-progress/page.tsx,❌ Pending,Review handlers
+Phase 7,3,Query History,src/app/query-history/page.tsx,❌ Pending,Review handlers
+Phase 7,3,Miniverse,src/app/miniverse/page.tsx,❌ Pending,Review handlers
+Phase 7,3,Landing,src/app/landing/page.tsx,❌ Pending,Review handlers
+Phase 7,3,Marketing,src/app/marketing/page.tsx,❌ Pending,Review handlers
+Phase 7,3,Admin,src/app/admin/page.tsx,❌ Pending,Review handlers
+Phase 8,4,Token Purchase,src/app/components/payment/TokenPurchase.tsx,❌ Pending,Review handlers
+Phase 8,4,Payment Form,src/app/components/payment/PaymentForm.tsx,❌ Pending,Review handlers
+Phase 8,4,Interactive Feature Panel,src/app/attorney-features/components/InteractiveFeaturePanel.tsx,❌ Pending,Review handlers
+Phase 8,4,Feature Demos,src/app/attorney-features/components/FeatureDemos.tsx,❌ Pending,⚠️ LARGE FILE (1155 lines)
+Phase 8,4,Feature Preview (attorney-features),src/app/attorney-features/components/FeaturePreview.tsx,❌ Pending,Review handlers
+Phase 8,4,Integration Preview (attorney-features),src/app/attorney-features/components/IntegrationPreview.tsx,❌ Pending,Review handlers
+Phase 8,4,Feature Preview (components),src/app/components/attorney-features/FeaturePreview.tsx,❌ Pending,Check if duplicate
+Phase 8,4,Integration Preview (components),src/app/components/attorney-features/IntegrationPreview.tsx,❌ Pending,Check if duplicate
+Phase 9,4,Tab Navigation,src/app/components/document-processing/components/TabNavigation.tsx,❌ Pending,Review handlers
+Phase 9,4,Recent Queries Sidebar,src/app/components/document-processing/components/RecentQueriesSidebar.tsx,❌ Pending,Review handlers
+Phase 9,4,Chat Section,src/app/components/document-processing/components/ChatSection.tsx,❌ Pending,Review handlers
+Phase 9,4,Error Display,src/app/components/document-processing/components/ErrorDisplay.tsx,❌ Pending,Likely presentational
+Phase 9,4,Processing Indicator,src/app/components/document-processing/components/ProcessingIndicator.tsx,❌ Pending,Likely presentational
+Phase 9,4,Result Display,src/app/components/document-processing/components/ResultDisplay.tsx,❌ Pending,Review handlers
+Phase 9,4,Analysis Input,src/app/components/document-processing/components/AnalysisInput.tsx,❌ Pending,Review handlers
+Phase 9,4,Analysis Header,src/app/components/document-processing/components/AnalysisHeader.tsx,❌ Pending,Review handlers
+Phase 9,4,QA Chat Interface,src/app/components/document-processing/QAChatInterface.tsx,❌ Pending,Review handlers
+Phase 9,4,Continue Chat Interface,src/app/components/document-processing/ContinueChatInterface.tsx,❌ Pending,Review handlers
+Phase 9,4,Action Chat Interface,src/app/components/document-processing/ActionChatInterface.tsx,❌ Pending,Review handlers
+Phase 10,4,Quick Prompts,src/app/components/chat/QuickPrompts.tsx,❌ Pending,Review handlers
+Phase 10,4,Blog Canvas Editor,src/app/components/blog/BlogCanvasEditor.tsx,❌ Pending,Review handlers
+Phase 10,4,Enhanced Text Editor,src/app/components/ui/enhanced-text-editor.tsx,❌ Pending,Review handlers
+Phase 10,4,Large File Upload Handler,src/app/components/document-processing/LargeFileUploadHandler.tsx,❌ Pending,Review handlers
+Phase 10,4,Document Step,src/app/components/wizard/steps/DocumentStep.tsx,❌ Pending,Review handlers
+Phase 10,4,Analysis Step,src/app/components/wizard/steps/AnalysisStep.tsx,❌ Pending,Review handlers
+Phase 10,4,Profile Setup Page,src/app/profile-setup/page.tsx,❌ Pending,Review handlers
+Phase 10,4,Auth Page,src/app/auth/page.tsx,❌ Pending,Review handlers
+Phase 10,4,Login Page,src/app/login/page.tsx,❌ Pending,Review handlers
+Phase 10,4,Register Page,src/app/register/page.tsx,❌ Pending,Review handlers
+Phase 10,4,Apprentice Page,src/app/apprentice/page.tsx,❌ Pending,Review handlers
+Phase 10,4,Providers,src/app/providers.tsx,❌ Pending,Review if optimization needed
+Phase 10,4,Root Page,src/app/page.tsx,❌ Pending,Review handlers
+Phase 10,4,Root Layout,src/app/layout.tsx,❌ Pending,Review if optimization needed
+UI,4,Token Usage Indicator,src/app/components/ui/TokenUsageIndicator.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Avatar,src/app/components/ui/avatar.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Dialog,src/app/components/ui/dialog.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Button,src/app/components/ui/button.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Card,src/app/components/ui/card.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Badge,src/app/components/ui/badge.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Input,src/app/components/ui/input.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Textarea,src/app/components/ui/textarea.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Tabs,src/app/components/ui/tabs.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Checkbox,src/app/components/ui/checkbox.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Dropdown Menu,src/app/components/ui/dropdown-menu.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Alert,src/app/components/ui/alert.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Progress,src/app/components/ui/progress.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Pagination,src/app/components/ui/pagination.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Toast,src/app/components/ui/toast.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Toaster,src/app/components/ui/toaster.tsx,❌ Pending,Low priority - likely presentational
+UI,4,Use Toast,src/app/components/ui/use-toast.tsx,❌ Pending,Low priority - likely presentational
+

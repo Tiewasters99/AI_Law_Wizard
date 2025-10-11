@@ -8,12 +8,12 @@ export default withAuth(
 
     // Define protected routes and their required roles
     const protectedRoutes = {
-      '/wizard': ['LAWYER', 'CUSTOMER'],
-      '/tokens': ['LAWYER'],
-      '/admin': ['LAWYER'],
-      '/grand-wizard': ['LAWYER', 'CUSTOMER'],
-      '/profile': ['LAWYER', 'CUSTOMER'],
-      '/query-history': ['LAWYER', 'CUSTOMER'],
+      '/wizard': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
+      '/tokens': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
+      '/admin': ['ATTORNEY', 'LAWYER'],
+      '/grand-wizard': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
+      '/profile': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
+      '/query-history': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
     };
 
     // Check if the current path requires authentication
@@ -26,9 +26,9 @@ export default withAuth(
       }
 
       // Check if user has required role
-      if (!requiredRoles.includes(token.role as 'LAWYER' | 'CUSTOMER')) {
+      if (!requiredRoles.includes(token.role as 'ATTORNEY' | 'LAWYER' | 'CUSTOMER')) {
         // Redirect based on user's actual role
-        if (token.role === 'LAWYER') {
+        if (token.role === 'ATTORNEY' || token.role === 'LAWYER') {
           return NextResponse.redirect(new URL('/wizard', req.url));
         } else {
           return NextResponse.redirect(new URL('/', req.url));

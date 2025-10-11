@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Card } from "@/app/components/ui/card";
@@ -16,21 +16,21 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (issue.trim() && !isLoading) {
       onSubmit(issue.trim());
     }
-  };
+  }, [issue, isLoading, onSubmit]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as React.FormEvent);
     }
-  };
+  }, [handleSubmit]);
 
-  const handleFileUpload = async (files: FileList | null) => {
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     
     setUploadingFiles(true);
@@ -65,9 +65,9 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
     } finally {
       setUploadingFiles(false);
     }
-  };
+  }, []);
 
-  const triggerFileInput = (type: 'document' | 'image' | 'video') => {
+  const triggerFileInput = useCallback((type: 'document' | 'image' | 'video') => {
     if (fileInputRef.current) {
       fileInputRef.current.accept = type === 'document' 
         ? '.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.json'
@@ -76,17 +76,18 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
         : '.mp4,.avi,.mov,.wmv,.flv,.webm';
       fileInputRef.current.click();
     }
-  };
+  }, []);
 
   return (
-    <div className="min-h-[60vh] sm:min-h-screen bg-white flex flex-col items-center justify-center px-4">
+    <div className="bg-white flex flex-col items-center px-4 pt-40">
       <div className="w-full max-w-3xl mx-auto">
         {/* Main Heading */}
         <div
-          className="text-center mb-8 sm:mb-12"
+          className="text-center mb-4 sm:mb-6"
         >
-          <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold text-gray-900 mb-4 leading-tight">
-            What <span className="text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text">problem</span> can I help you <span className="text-transparent bg-gradient-to-r from-amber-500 to-yellow-500 bg-clip-text">solve</span> today?
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-gray-900 mb-2 leading-tight">
+            What <span className="text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text">problem</span> can I help<br />
+            you <span className="text-transparent bg-gradient-to-r from-amber-500 to-yellow-500 bg-clip-text">solve</span> today?
           </h1>
         </div>
 
@@ -98,19 +99,19 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
         >
           <Card className="border border-gray-200 shadow-lg bg-white">
             <form onSubmit={handleSubmit} className="relative">
-              <div className="p-3 sm:p-4">
+              <div className="p-2.5 sm:p-3">
                 <Textarea
                   value={issue}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setIssue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Describe your issue, tell me your concerns, outline your questions."
-                  className="min-h-[100px] sm:min-h-[120px] border-none resize-none text-sm sm:text-base placeholder:italic placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
+                  className="min-h-[80px] sm:min-h-[100px] border-none resize-none text-sm sm:text-base placeholder:italic placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
                   disabled={isLoading}
                 />
               </div>
               
               {/* Bottom toolbar */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border-t border-gray-100 gap-3 sm:gap-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 sm:p-3 border-t border-gray-100 gap-2 sm:gap-0">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
                   <span className="text-xs sm:text-sm text-gray-500">
                     {uploadingFiles ? 'Uploading files...' : 'Upload files:'}
@@ -176,7 +177,7 @@ export default function StreamlinedConsultation({ onSubmit, isLoading }: Streaml
 
         {/* Disclaimer */}
         <div
-          className="text-center mt-6 sm:mt-8"
+          className="text-center mt-4 sm:mt-6"
         >
           <p className="text-xs sm:text-sm text-gray-500 max-w-2xl mx-auto px-4">
             This AI provides general legal information only and does not constitute legal advice. 

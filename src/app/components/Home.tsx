@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Consultation } from "@/app/lib/api"
 import StreamlinedConsultation from "./consultation/StreamlinedConsultation"
@@ -22,9 +22,9 @@ export default function Home() {
     const used = TokenTracker.getTokenUsage(userId)
     const limit = TokenTracker.getLimit(userId)
     setTokenUsage({ used, limit })
-  }, [session])
+  }, [session?.user?.id])
 
-  const handleSubmitIssue = async (userIssue: string) => {
+  const handleSubmitIssue = useCallback(async (userIssue: string) => {
     // Check token limit before proceeding
     const userId = session?.user?.id
     const hasExceeded = TokenTracker.hasExceededLimit(userId)
@@ -181,17 +181,17 @@ export default function Home() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [session?.user?.id, router])
 
   // Consultation view
   return (
     <>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+        <div className="mb-4">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">
             The Future Awaits
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 mb-4">
+          <p className="text-xs sm:text-sm text-gray-600 mb-3">
             Get instant legal guidance, manage and manipulate your documents with AI agents, generate and read custom blogs, create your own legal Miniverse™ — tomorrow today!
           </p>
         </div>

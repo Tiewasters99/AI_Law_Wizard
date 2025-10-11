@@ -16,6 +16,7 @@ import { DocumentAnalysisInterface } from '@/app/components/document-processing/
 import { TokenGuard } from '@/app/components/auth/TokenGuard'
 import { TOKEN_REQUIREMENTS } from '@/app/hooks/useTokenAccess'
 import { colors } from '@/app/lib/designSystem'
+import Link from 'next/link'
 
 export default function WizardPage() {
   const { data: session } = useSession()
@@ -198,11 +199,9 @@ export default function WizardPage() {
         featureIcon={<Brain className="w-10 h-10" style={{ color: colors.primary[700] }} />}
         featureDescription="Professional AI-powered legal analysis platform with comprehensive document processing, case law research, and intelligent legal insights for attorneys."
       >
-        <Layout>
-          <div className="max-w-7xl mx-auto">
-            <DocumentAnalysisInterface />
-          </div>
-        </Layout>
+        <div className="bg-white h-full overflow-hidden">
+          <DocumentAnalysisInterface />
+        </div>
       </TokenGuard>
     )
   }
@@ -331,9 +330,25 @@ export default function WizardPage() {
                       <Brain className="w-8 h-8 text-white" />
                     </div>
                     <h2 className="text-2xl font-semibold mb-2" style={{ color: colors.text }}>Advanced Legal Analysis System</h2>
-                    <p className="mb-6" style={{ color: colors.secondary[600] }}>
+                    <p className="mb-4" style={{ color: colors.secondary[600] }}>
                       Professional AI-powered legal consultation platform. Receive comprehensive legal analysis, case law research, and expert-level guidance from our advanced legal AI system.
                     </p>
+                    <div className="mb-6 p-3 rounded-lg border" style={{ 
+                      backgroundColor: colors.primary[50],
+                      borderColor: colors.primary[200]
+                    }}>
+                      <p className="text-xs" style={{ color: colors.primary[900] }}>
+                        💡 Need personalized legal advice? {' '}
+                        <Link 
+                          href="/directory" 
+                          className="font-semibold underline hover:no-underline transition-all"
+                          style={{ color: colors.primary[700] }}
+                        >
+                          Find an attorney
+                        </Link>
+                        {' '} for one-on-one consultation.
+                      </p>
+                    </div>
                     <div className="grid grid-cols-3 gap-3 mb-8 max-w-lg mx-auto">
                       {[
                         { icon: Scale, label: 'Case Analysis' },

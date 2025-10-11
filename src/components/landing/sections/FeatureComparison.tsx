@@ -89,16 +89,12 @@ export const FeatureComparison: React.FC = () => {
   return (
     <motion.section 
       data-section="feature-comparison"
-      className="py-20 bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50 relative overflow-hidden"
+      className="py-20 relative overflow-hidden bg-white"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
       viewport={{ once: true }}
     >
-      {/* Decorative Background Elements */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-blue-400/10 rounded-full -translate-x-48 -translate-y-48"></div>
-      <div className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-tl from-blue-400/10 to-cyan-400/10 rounded-full translate-x-40 translate-y-40"></div>
-      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div 
@@ -113,11 +109,11 @@ export const FeatureComparison: React.FC = () => {
             Choose Your AI Legal Assistant
           </div>
           
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+          <h2 className="text-4xl sm:text-5xl font-bold mb-6" style={{ color: '#1e293b' }}>
             Feature Comparison
           </h2>
           
-          <p className="text-xl text-gray-700 max-w-3xl mx-auto drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}>
+          <p className="text-xl max-w-3xl mx-auto" style={{ color: '#475569' }}>
             Unlock the power of AI-driven legal assistance with the perfect plan for your needs
           </p>
         </motion.div>
@@ -136,36 +132,47 @@ export const FeatureComparison: React.FC = () => {
                 className="group relative"
               >
                 {/* Background Card */}
-                <div className={`relative bg-gradient-to-br ${role.bgGradient} border border-${role.color}-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden`}>
-                  {/* Glassmorphic overlay */}
-                  <div className="absolute inset-0 bg-white/20 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  
+                <div 
+                  className="backdrop-blur-md rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid rgba(226, 232, 240, 0.5)',
+                  }}
+                >
                   <div className="relative z-10">
                     {/* Header */}
                     <div className="flex items-center space-x-3 mb-4">
-                      <div className={`w-10 h-10 bg-gradient-to-r ${role.gradient} rounded-lg flex items-center justify-center`}>
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{
+                          background: role.role === 'lawyer' 
+                            ? 'linear-gradient(to right, #b45309, #92400e)'
+                            : 'linear-gradient(to right, #2563eb, #1e40af)',
+                        }}
+                      >
                         <Icon className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h3 className={`text-xl font-bold text-${role.color}-800`}>{role.title}</h3>
-                        <p className={`text-sm text-${role.color}-600`}>{role.subtitle}</p>
+                        <h3 className="text-xl font-bold" style={{ color: '#1e293b' }}>{role.title}</h3>
+                        <p className="text-sm" style={{ color: '#475569' }}>{role.subtitle}</p>
                       </div>
                     </div>
                     
                     {/* Features List */}
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-800 mb-3 text-base">Included Features:</h4>
+                      <h4 className="font-semibold mb-3 text-base" style={{ color: '#1e293b' }}>Included Features:</h4>
                       <ul className="space-y-2">
                         {role.features.map((feature, featureIndex) => (
                           <motion.li 
                             key={featureIndex} 
-                            className="flex items-center space-x-2 text-sm text-gray-600"
+                            className="flex items-center space-x-2 text-sm"
                             initial={{ opacity: 0, x: -10 }}
                             whileInView={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.4, delay: featureIndex * 0.05 }}
                             viewport={{ once: true }}
+                            style={{ color: '#64748b' }}
                           >
-                            <Check className={`w-3 h-3 text-${role.color}-500 flex-shrink-0`} />
+                            <Check className="w-3 h-3 flex-shrink-0" style={{ color: '#10b981' }} />
                             <span>{feature}</span>
                           </motion.li>
                         ))}
@@ -180,13 +187,17 @@ export const FeatureComparison: React.FC = () => {
 
         {/* Comparison Table */}
         <motion.div 
-          className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 lg:p-8 shadow-lg"
+          className="backdrop-blur-md rounded-2xl p-6 lg:p-8 shadow-lg"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            border: '1px solid rgba(226, 232, 240, 0.5)',
+          }}
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
           viewport={{ once: true }}
         >
-          <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Quick Feature Comparison</h3>
+          <h3 className="text-2xl font-bold mb-6 text-center" style={{ color: '#1e293b' }}>Quick Feature Comparison</h3>
           
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
