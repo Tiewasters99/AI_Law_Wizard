@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import Layout from '../../components/Layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -251,42 +250,37 @@ export default function BlogViewPage() {
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="max-w-4xl mx-auto py-8">
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin" />
-          </div>
+      <div className="max-w-4xl mx-auto py-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin" />
         </div>
-      </Layout>
+      </div>
     )
   }
 
   if (!blog) {
     return (
-      <Layout>
-        <div className="max-w-4xl mx-auto py-8">
-          <Card>
-            <CardContent className="text-center py-12">
-              <h2 className="text-xl font-semibold mb-2">Blog Not Found</h2>
-              <p className="text-gray-600 mb-4">
-                The blog post you&apos;re looking for doesn&apos;t exist or is not published.
-              </p>
-              <Link href="/blog">
-                <Button>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Blogs
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      </Layout>
+      <div className="max-w-4xl mx-auto py-8">
+        <Card>
+          <CardContent className="text-center py-12">
+            <h2 className="text-xl font-semibold mb-2">Blog Not Found</h2>
+            <p className="text-gray-600 mb-4">
+              The blog post you&apos;re looking for doesn&apos;t exist or is not published.
+            </p>
+            <Link href="/blog">
+              <Button>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Blogs
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   return (
-    <Layout>
-      <div className="max-w-4xl mx-auto py-8 space-y-8">
+    <div className="max-w-4xl mx-auto py-8 space-y-8">
         {/* Back Button */}
         <Link href="/blog">
           <Button variant="outline" size="sm">
@@ -384,6 +378,6 @@ export default function BlogViewPage() {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </div>
   )
 }

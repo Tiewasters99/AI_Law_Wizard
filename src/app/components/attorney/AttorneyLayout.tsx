@@ -133,7 +133,7 @@ export function AttorneyLayout({ children, unreadCount = 0 }: AttorneyLayoutProp
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

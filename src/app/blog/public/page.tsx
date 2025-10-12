@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Layout from '../../components/Layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -88,19 +87,16 @@ export default function PublicBlogListPage() {
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="max-w-6xl mx-auto py-8">
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin" />
-          </div>
+      <div className="max-w-6xl mx-auto py-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin" />
         </div>
-      </Layout>
+      </div>
     )
   }
 
   return (
-    <Layout>
-      <div className="max-w-6xl mx-auto py-8 space-y-8">
+    <div className="max-w-6xl mx-auto py-8 space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2 mb-4">
@@ -207,6 +203,6 @@ export default function PublicBlogListPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   )
 }

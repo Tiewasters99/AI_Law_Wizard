@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import Layout from '../components/Layout'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Textarea } from '@/app/components/ui/textarea'
@@ -1139,18 +1138,15 @@ export default function BlogPage() {
   // If user is not a lawyer, show client blog exploration interface
   if (!isLawyer) {
     return (
-      <Layout>
-        <div className="max-w-7xl mx-auto">
-          <ClientBlogInterface blogs={blogs} isLoading={isLoading} />
-        </div>
-      </Layout>
+      <div className="max-w-7xl mx-auto">
+        <ClientBlogInterface blogs={blogs} isLoading={isLoading} />
+      </div>
     )
   }
 
   // Lawyer interface - full blog management
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto h-full">
+    <div className="max-w-7xl mx-auto h-full">
         {/* View Mode Toggle */}
         <div className="mb-6">
           <Card>
@@ -1193,6 +1189,5 @@ export default function BlogPage() {
           </div>
         </div>
       </div>
-    </Layout>
   )
 }

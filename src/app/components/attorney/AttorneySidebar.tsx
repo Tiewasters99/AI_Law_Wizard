@@ -21,6 +21,8 @@ import {
   Coins,
   ChevronLeft,
   ChevronRight,
+  FileSearch,
+  Gavel,
 } from 'lucide-react'
 
 interface NavigationItem {
@@ -59,6 +61,13 @@ const attorneyNavigation: Record<string, NavigationSection> = {
       { label: 'Document Analysis', href: '/wizard', icon: Brain },
       { label: 'Advanced Analysis', href: '/grand-wizard', icon: Crown },
       { label: 'Query History', href: '/query-history', icon: History },
+    ]
+  },
+  courtIntegration: {
+    label: 'Court Integration',
+    icon: Gavel,
+    items: [
+      { label: 'Docket Genie', href: '/docket-genie', icon: FileSearch },
     ]
   },
   resources: {
