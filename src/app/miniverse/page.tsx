@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useRef, useState, useEffect, Suspense } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import dynamic from 'next/dynamic';
+
+// Dynamically import ReactPlayer to avoid SSR issues
+const ReactPlayer = dynamic(() => import('react-player'), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-slate-800/40 animate-pulse rounded-lg" />
+}) as any;
 
 // Type definitions
 interface UserData {
@@ -11,29 +18,12 @@ interface UserData {
   interactive: boolean;
 }
 
-interface ChairProps {
-  position: [number, number, number];
-  rotation: number;
-}
-
-interface ReceptionDeskProps {
-  onObjectClick: (e: any, userData: UserData) => void;
-  receptionTexture: THREE.Texture | null;
-}
-
-interface LampProps {
-  position: [number, number, number];
-  lampsOn: boolean;
-  lampShadesRef: React.MutableRefObject<any[]>;
-  index: number;
-  onObjectClick: (userData: UserData) => void;
-}
-
 interface OfficeSceneProps {
   onObjectClick: (userData: UserData) => void;
   lampsOn: boolean;
 }
 
+// Create text texture helper
 function createTextTexture(text: string, fontSize: number, color: string = '#1a1a2e') {
   const canvas = document.createElement('canvas');
   canvas.width = 2048;
@@ -48,548 +38,108 @@ function createTextTexture(text: string, fontSize: number, color: string = '#1a1
   return new THREE.CanvasTexture(canvas);
 }
 
-function OfficeScene({ onObjectClick, lampsOn }: OfficeSceneProps) {
-  const scene = useRef<THREE.Group>(null);
-  const lampLightsRef = useRef<(THREE.PointLight | null)[]>([]);
-  const lampShadesRef = useRef<(THREE.Mesh | null)[]>([]);
-  
+// Camera controls component
+function CameraRig() {
+  const { camera } = useThree();
+  const keysRef = useRef<{ [key: string]: boolean }>({});
+  const yawRef = useRef(0);
+  const pitchRef = useRef(0);
+  const moveSpeed = 0.12;
+
   useEffect(() => {
-    lampShadesRef.current.forEach(shade => {
-      if (shade && shade.material && 'emissiveIntensity' in shade.material) {
-        (shade.material as any).emissiveIntensity = lampsOn ? 0.5 : 0;
-        (shade.material as any).needsUpdate = true;
-      }
-    });
+    const onKeyDown = (e: KeyboardEvent) => {
+      keysRef.current[e.key.toLowerCase()] = true;
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      keysRef.current[e.key.toLowerCase()] = false;
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
+
+  useFrame(() => {
+    const keys = keysRef.current;
+    const yaw = yawRef.current;
+
+    const forward = new THREE.Vector3(0, 0, -1);
+    const right = new THREE.Vector3(1, 0, 0);
     
-    lampLightsRef.current.forEach(light => {
-      if (light) {
-        light.intensity = lampsOn ? 2.0 : 0;
-      }
-    });
-  }, [lampsOn]);
+    forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    right.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
 
-  const handleClick = (e: any, userData: UserData) => {
-    e.stopPropagation();
-    if (userData && userData.interactive) {
-      onObjectClick(userData);
-    }
-  };
+    if (keys['arrowup'] || keys['w']) camera.position.add(forward.clone().multiplyScalar(moveSpeed));
+    if (keys['arrowdown'] || keys['s']) camera.position.add(forward.clone().multiplyScalar(-moveSpeed));
+    if (keys['arrowleft'] || keys['a']) camera.position.add(right.clone().multiplyScalar(-moveSpeed));
+    if (keys['arrowright'] || keys['d']) camera.position.add(right.clone().multiplyScalar(moveSpeed));
+    if (keys['q']) yawRef.current += 0.02;
+    if (keys['e']) yawRef.current -= 0.02;
 
-  const brandTexture = createTextTexture('QUAINTON LAW', 120);
-  const miniverseTexture = createTextTexture('MINIVERSE™', 80);
-  const rightWallBrandTexture = createTextTexture('QUAINTON LAW MINIVERSE™', 80);
-  const backWallFarBrandTexture = createTextTexture('QUAINTON LAW MINIVERSE™', 80, '#ffffff');
-  const firmVideosTexture = createTextTexture('FIRM VIDEOS', 60, '#ffffff');
-  const ourWallTexture = createTextTexture('OUR WALL', 60, '#ffffff');
-  const artworkTexture = createTextTexture('FIRM ARTWORK', 70, '#ffffff');
-  const profilesTexture = createTextTexture('PROFILES', 40, '#ffffff');
-  const firmLibraryTexture = createTextTexture('FIRM LIBRARY', 50, '#ffffff');
-  const receptionTexture = createTextTexture('RECEPTION', 60, '#000000');
-  const legalMaterialsTexture = createTextTexture('LEGAL MATERIALS', 45, '#ffffff');
-  const ideaVaultTexture = createTextTexture('IDEA VAULT', 42, '#1a1a2e');
-  const rightArtworkTexture = createTextTexture('ARTWORK', 65, '#ffffff');
-  const personalImagesTexture = createTextTexture('PERSONAL IMAGES', 55, '#ffffff');
+    // Boundary constraints
+    camera.position.x = Math.max(-23, Math.min(23, camera.position.x));
+    camera.position.z = Math.max(-23, Math.min(23, camera.position.z));
+    camera.position.y = 1.6;
 
-  return (
-    <group ref={scene}>
-      {/* Enhanced Ambient Lighting */}
-      <ambientLight intensity={0.8} color="#f8fafc" />
-      
-      {/* Main Directional Lights with Shadows */}
-      <directionalLight 
-        position={[10, 15, 10]} 
-        intensity={2.2} 
-        castShadow 
-        color="#ffffff"
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
-      />
-      <directionalLight position={[-12, 8, -8]} intensity={1.2} color="#e2e8f0" />
-      <directionalLight position={[0, 20, 0]} intensity={1.8} color="#f1f5f9" />
-      
-      {/* Fill Lights for Better Illumination */}
-      <directionalLight position={[15, 5, 5]} intensity={0.6} color="#fef3c7" />
-      <directionalLight position={[-15, 5, 5]} intensity={0.6} color="#ddd6fe" />
-      
-      <pointLight 
-        ref={(ref) => { if (ref) lampLightsRef.current[0] = ref; }}
-        position={[-8, 2.5, 8]} 
-        intensity={lampsOn ? 3.5 : 0} 
-        color="#fbbf24" 
-        distance={18}
-        decay={2}
-        castShadow
-      />
-      <pointLight 
-        ref={(ref) => { if (ref) lampLightsRef.current[1] = ref; }}
-        position={[8, 2.5, 8]} 
-        intensity={lampsOn ? 3.5 : 0} 
-        color="#fbbf24" 
-        distance={18}
-        decay={2}
-        castShadow
-      />
-      
-      {/* Enhanced ceiling lights */}
-      <pointLight position={[0, 8, 0]} intensity={2.0} color="#ffffff" distance={20} decay={2} />
-      <pointLight position={[-7, 8, 0]} intensity={1.8} color="#fefefe" distance={18} decay={2} />
-      <pointLight position={[7, 8, 0]} intensity={1.8} color="#fefefe" distance={18} decay={2} />
-      <pointLight position={[0, 8, -7]} intensity={1.8} color="#fefefe" distance={18} decay={2} />
-      <pointLight position={[0, 8, 7]} intensity={1.8} color="#fefefe" distance={18} decay={2} />
-      
-      {/* Atmospheric fog */}
-      <fog attach="fog" args={['#2a2a40', 25, 45]} />
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = yawRef.current;
+    camera.rotation.x = pitchRef.current;
+  });
 
-      {/* Enhanced Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, 0, 0]}>
-        <planeGeometry args={[30, 30]} />
-        <meshStandardMaterial 
-          color="#2d3748" 
-          roughness={0.8} 
-          metalness={0.1}
-          normalScale={[2, 2]}
-        />
-      </mesh>
-
-      {/* Enhanced Walls */}
-      <mesh position={[0, 5, -15]} receiveShadow castShadow>
-        <boxGeometry args={[30, 10, 0.5]} />
-        <meshStandardMaterial 
-          color="#e2e8f0" 
-          roughness={0.6} 
-          metalness={0.05}
-          normalScale={[1.5, 1.5]}
-        />
-      </mesh>
-
-      <mesh position={[-15, 5, 0]} receiveShadow castShadow>
-        <boxGeometry args={[0.5, 10, 30]} />
-        <meshStandardMaterial 
-          color="#e2e8f0" 
-          roughness={0.6} 
-          metalness={0.05}
-          normalScale={[1.5, 1.5]}
-        />
-      </mesh>
-
-      <mesh position={[15, 5, 0]} receiveShadow castShadow>
-        <boxGeometry args={[0.5, 10, 30]} />
-        <meshStandardMaterial 
-          color="#e2e8f0" 
-          roughness={0.6} 
-          metalness={0.05}
-          normalScale={[1.5, 1.5]}
-        />
-      </mesh>
-
-      {/* Enhanced Ceiling */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 10, 0]} receiveShadow>
-        <planeGeometry args={[30, 30]} />
-        <meshStandardMaterial 
-          color="#f8fafc" 
-          roughness={0.3} 
-          metalness={0.02}
-          emissive="#f1f5f9"
-          emissiveIntensity={0.1}
-        />
-      </mesh>
-
-      {brandTexture && (
-        <mesh position={[0, 7.5, -14.7]}>
-          <planeGeometry args={[12, 3]} />
-          <meshBasicMaterial map={brandTexture} transparent />
-        </mesh>
-      )}
-
-      {miniverseTexture && (
-        <mesh position={[0, 5.8, -14.7]}>
-          <planeGeometry args={[10, 2.5]} />
-          <meshBasicMaterial map={miniverseTexture} transparent />
-        </mesh>
-      )}
-
-      {rightWallBrandTexture && (
-        <mesh position={[14.4, 6, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[6, 2]} />
-          <meshBasicMaterial map={rightWallBrandTexture} transparent />
-        </mesh>
-      )}
-
-      {backWallFarBrandTexture && (
-        <mesh position={[0, 6, 14.7]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[8, 2.5]} />
-          <meshBasicMaterial map={backWallFarBrandTexture} transparent />
-        </mesh>
-      )}
-
-      <mesh 
-        position={[-6, 3.5, -14.6]} 
-        castShadow
-        onClick={(e) => handleClick(e, { type: 'video', label: 'FIRM VIDEOS', interactive: true })}
-      >
-        <boxGeometry args={[6, 4, 0.3]} />
-        <meshStandardMaterial color="#8b0000" roughness={0.4} metalness={0.6} />
-      </mesh>
-
-      {firmVideosTexture && (
-        <mesh position={[-6, 3.5, -14.4]}>
-          <planeGeometry args={[5, 1.5]} />
-          <meshBasicMaterial map={firmVideosTexture} transparent />
-        </mesh>
-      )}
-
-      <mesh 
-        position={[6, 3.5, -14.6]} 
-        castShadow
-        onClick={(e) => handleClick(e, { type: 'ourwall', label: 'OUR WALL', interactive: true })}
-      >
-        <boxGeometry args={[6, 4, 0.3]} />
-        <meshStandardMaterial color="#1e4d8b" roughness={0.4} metalness={0.6} />
-      </mesh>
-
-      {ourWallTexture && (
-        <mesh position={[6, 3.5, -14.4]}>
-          <planeGeometry args={[5, 1.5]} />
-          <meshBasicMaterial map={ourWallTexture} transparent />
-        </mesh>
-      )}
-
-      <mesh 
-        position={[0, 3, -14.6]} 
-        castShadow
-        onClick={(e) => handleClick(e, { type: 'art', label: 'FIRM ARTWORK', interactive: true })}
-      >
-        <boxGeometry args={[5, 3, 0.3]} />
-        <meshStandardMaterial color="#2d5016" roughness={0.4} metalness={0.6} />
-      </mesh>
-
-      {artworkTexture && (
-        <mesh position={[0, 3, -14.4]}>
-          <planeGeometry args={[4.5, 1.5]} />
-          <meshBasicMaterial map={artworkTexture} transparent />
-        </mesh>
-      )}
-
-      {[-9, -5, -1, 1, 5, 9].map((x, index) => (
-        <group key={`profile-${index}`}>
-          <mesh 
-            position={[x, 2.5, 14.6]} 
-            castShadow
-            onClick={(e) => handleClick(e, { type: 'profile', label: `PROFILE ${index + 1}`, interactive: true })}
-          >
-            <boxGeometry args={[3.5, 1.2, 0.3]} />
-            <meshStandardMaterial color="#5a4a6a" roughness={0.4} metalness={0.6} />
-          </mesh>
-          {profilesTexture && (
-            <mesh position={[x, 2.5, 14.8]} rotation={[0, Math.PI, 0]}>
-              <planeGeometry args={[3, 0.8]} />
-              <meshBasicMaterial map={profilesTexture} transparent />
-            </mesh>
-          )}
-        </group>
-      ))}
-
-      {/* Enhanced Conference Table */}
-      <group position={[0, 0, 0]}>
-        {/* Table Top */}
-        <mesh position={[0, 0.8, 0]} castShadow receiveShadow>
-          <boxGeometry args={[10, 0.1, 5]} />
-          <meshStandardMaterial 
-            color="#1f2937" 
-            roughness={0.2} 
-            metalness={0.3}
-            normalScale={[1.5, 1.5]}
-          />
-        </mesh>
-        
-        {/* Table Edge/Trim */}
-        <mesh position={[0, 0.85, 0]} castShadow>
-          <boxGeometry args={[10.2, 0.05, 5.2]} />
-          <meshStandardMaterial 
-            color="#374151" 
-            roughness={0.1} 
-            metalness={0.6}
-            emissive="#4b5563"
-            emissiveIntensity={0.1}
-          />
-        </mesh>
-        
-        {/* Table Glass Surface */}
-        <mesh position={[0, 0.82, 0]} castShadow receiveShadow>
-          <boxGeometry args={[9.8, 0.02, 4.8]} />
-          <meshStandardMaterial 
-            color="#ffffff" 
-            roughness={0.05} 
-            metalness={0.9}
-            transparent={true}
-            opacity={0.1}
-          />
-        </mesh>
-        
-        {/* Enhanced Table Legs */}
-        <mesh position={[-4.5, 0.4, -2]} castShadow>
-          <boxGeometry args={[0.3, 0.8, 0.3]} />
-          <meshStandardMaterial 
-            color="#374151" 
-            roughness={0.1} 
-            metalness={0.7}
-            emissive="#4b5563"
-            emissiveIntensity={0.05}
-          />
-        </mesh>
-        <mesh position={[4.5, 0.4, -2]} castShadow>
-          <boxGeometry args={[0.3, 0.8, 0.3]} />
-          <meshStandardMaterial 
-            color="#374151" 
-            roughness={0.1} 
-            metalness={0.7}
-            emissive="#4b5563"
-            emissiveIntensity={0.05}
-          />
-        </mesh>
-        <mesh position={[-4.5, 0.4, 2]} castShadow>
-          <boxGeometry args={[0.3, 0.8, 0.3]} />
-          <meshStandardMaterial 
-            color="#374151" 
-            roughness={0.1} 
-            metalness={0.7}
-            emissive="#4b5563"
-            emissiveIntensity={0.05}
-          />
-        </mesh>
-        <mesh position={[4.5, 0.4, 2]} castShadow>
-          <boxGeometry args={[0.3, 0.8, 0.3]} />
-          <meshStandardMaterial 
-            color="#374151" 
-            roughness={0.1} 
-            metalness={0.7}
-            emissive="#4b5563"
-            emissiveIntensity={0.05}
-          />
-        </mesh>
-      </group>
-
-      {/* Chairs around the centered rectangular conference table (10x5 units) */}
-      {/* Long sides - 3 chairs each */}
-      <Chair position={[-4, 0, 3.5]} rotation={Math.PI} />
-      <Chair position={[0, 0, 3.5]} rotation={Math.PI} />
-      <Chair position={[4, 0, 3.5]} rotation={Math.PI} />
-      
-      <Chair position={[-4, 0, -3.5]} rotation={0} />
-      <Chair position={[0, 0, -3.5]} rotation={0} />
-      <Chair position={[4, 0, -3.5]} rotation={0} />
-      
-      {/* Short sides - 2 chairs each */}
-      <Chair position={[-6.2, 0, 1]} rotation={Math.PI / 2} />
-      <Chair position={[-6.2, 0, -1]} rotation={Math.PI / 2} />
-      
-      <Chair position={[6.2, 0, 1]} rotation={-Math.PI / 2} />
-      <Chair position={[6.2, 0, -1]} rotation={-Math.PI / 2} />
-      
-
-      <Lamp position={[-8, 0, 8]} lampsOn={lampsOn} lampShadesRef={lampShadesRef} index={0} onObjectClick={onObjectClick} />
-      <Lamp position={[8, 0, 8]} lampsOn={lampsOn} lampShadesRef={lampShadesRef} index={1} onObjectClick={onObjectClick} />
-
-      {[
-        { label: 'Leave Review', x: -3, z: 0 },
-        { label: 'Our Website', x: -1, z: 0 },
-        { label: 'Other Sites', x: 1, z: 0 },
-        { label: 'Pro Bono', x: 3, z: 0 }
-      ].map((item, idx) => {
-        const itemTexture = createTextTexture(item.label, 30);
-        return (
-          <group key={`table-${idx}`}>
-            <mesh 
-              position={[item.x, 1, item.z]}
-              onClick={(e) => handleClick(e, { type: 'tableItem', label: item.label, interactive: true })}
-            >
-              <boxGeometry args={[0.5, 0.05, 0.7]} />
-              <meshStandardMaterial color="#ffffff" />
-            </mesh>
-            {itemTexture && (
-              <mesh position={[item.x, 1.03, item.z]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[0.4, 0.1]} />
-                <meshBasicMaterial map={itemTexture} transparent />
-              </mesh>
-            )}
-          </group>
-        );
-      })}
-
-      <mesh position={[-14.5, 3, -6]} castShadow>
-        <boxGeometry args={[0.4, 6, 6]} />
-        <meshStandardMaterial color="#4a2c1a" />
-      </mesh>
-
-      {firmLibraryTexture && (
-        <mesh position={[-14.3, 5.5, -6]} rotation={[0, Math.PI / 2, 0]}>
-          <planeGeometry args={[5, 1.5]} />
-          <meshBasicMaterial map={firmLibraryTexture} transparent />
-        </mesh>
-      )}
-
-      {[...Array(25)].map((_, i) => {
-        const row = Math.floor(i / 5);
-        const col = i % 5;
-        const bookTitles = [
-          'Read Me', 'Explore Me', 'Check Me Out', 'Read Me', 'Explore Me', 
-          'Check Me Out', 'Read Me', 'Explore Me', 'Check Me Out', 'Read Me', 
-          'Explore Me', 'Check Me Out', 'Read Me', 'Explore Me', 'Check Me Out', 
-          'Read Me', 'Explore Me', 'Check Me Out', 'Read Me', 'Explore Me', 
-          'Check Me Out', 'Read Me', 'Explore Me', 'Check Me Out', 'Agentic Theory'
-        ];
-        return (
-          <mesh 
-            key={`book-${i}`}
-            position={[-14.3, 0.8 + row * 1, -8 + col * 1.2]}
-            rotation={[0, Math.PI / 2, 0]}
-            castShadow
-            onClick={(e) => handleClick(e, { type: 'book', label: bookTitles[i], interactive: true })}
-          >
-            <boxGeometry args={[0.15, 0.8, 0.2]} />
-            <meshStandardMaterial color={new THREE.Color().setHSL(Math.random(), 0.7, 0.5)} />
-          </mesh>
-        );
-      })}
-
-      <ReceptionDesk onObjectClick={handleClick} receptionTexture={receptionTexture} />
-
-      <mesh 
-        position={[-14.6, 3.5, 6]} 
-        castShadow
-        onClick={(e) => handleClick(e, { type: 'legal', label: 'LEGAL MATERIALS', interactive: true })}
-      >
-        <boxGeometry args={[0.3, 4, 5]} />
-        <meshStandardMaterial color="#4a4a4a" roughness={0.4} metalness={0.6} />
-      </mesh>
-
-      {legalMaterialsTexture && (
-        <mesh position={[-14.4, 3.5, 6]} rotation={[0, Math.PI / 2, 0]}>
-          <planeGeometry args={[4, 2]} />
-          <meshBasicMaterial map={legalMaterialsTexture} transparent />
-        </mesh>
-      )}
-
-      <mesh 
-        position={[14.6, 3.5, -8]} 
-        castShadow
-        onClick={(e) => handleClick(e, { type: 'ideaVault', label: 'IDEA VAULT', interactive: true })}
-      >
-        <boxGeometry args={[0.3, 2.5, 2.5]} />
-        <meshStandardMaterial color="#ffd700" roughness={0.4} metalness={0.6} />
-      </mesh>
-
-      {ideaVaultTexture && (
-        <mesh position={[14.4, 3.5, -8]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[2.5, 2]} />
-          <meshBasicMaterial map={ideaVaultTexture} transparent />
-        </mesh>
-      )}
-
-      <mesh 
-        position={[14.6, 3.8, -4]} 
-        castShadow
-        onClick={(e) => handleClick(e, { type: 'rightArt', label: 'ARTWORK', interactive: true })}
-      >
-        <boxGeometry args={[0.3, 3.5, 3]} />
-        <meshStandardMaterial color="#2d5016" roughness={0.4} metalness={0.6} />
-      </mesh>
-
-      {rightArtworkTexture && (
-        <mesh position={[14.4, 3.8, -4]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[2.5, 2]} />
-          <meshBasicMaterial map={rightArtworkTexture} transparent />
-        </mesh>
-      )}
-
-      <mesh 
-        position={[14.6, 3.5, 6]} 
-        castShadow
-        onClick={(e) => handleClick(e, { type: 'personalImages', label: 'PERSONAL IMAGES', interactive: true })}
-      >
-        <boxGeometry args={[0.3, 4, 3]} />
-        <meshStandardMaterial color="#4a2c5f" roughness={0.4} metalness={0.6} />
-      </mesh>
-
-      {personalImagesTexture && (
-        <mesh position={[14.4, 3.5, 6]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[2.5, 2]} />
-          <meshBasicMaterial map={personalImagesTexture} transparent />
-        </mesh>
-      )}
-
-      {[...Array(6)].map((_, i) => {
-        const row = Math.floor(i / 3);
-        const col = i % 3;
-        return (
-          <mesh 
-            key={`cert-${i}`}
-            position={[14.6, 2 + row * 2.5, -1 + col * 1.5]}
-            castShadow
-            onClick={(e) => handleClick(e, { type: 'certificate', label: `Certificate ${i + 1}`, interactive: true })}
-          >
-            <boxGeometry args={[0.3, 1.5, 1.2]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-        );
-      })}
-    </group>
-  );
+  return null;
 }
 
-function Chair({ position, rotation }: ChairProps) {
+// Enhanced Chair Component
+function Chair({ position, rotation }: { position: [number, number, number]; rotation: number }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       {/* Enhanced Chair Seat */}
-      <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+      <mesh position={[0, 0.5, 0]}>
         <boxGeometry args={[0.9, 0.17, 0.8]} />
         <meshStandardMaterial 
           color="#1f2937" 
           roughness={0.3} 
           metalness={0.2}
-          normalScale={[1, 1]}
         />
       </mesh>
       
       {/* Enhanced Seat Cushion */}
-      <mesh position={[0, 0.59, 0]} castShadow receiveShadow>
+      <mesh position={[0, 0.59, 0]}>
         <boxGeometry args={[0.83, 0.14, 0.77]} />
         <meshStandardMaterial 
           color="#374151" 
           roughness={0.7} 
           metalness={0.05}
-          normalScale={[2, 2]}
         />
       </mesh>
       
       {/* Enhanced Chair Back */}
-      <mesh position={[0, 1.1, -0.35]} castShadow>
+      <mesh position={[0, 1.1, -0.35]}>
         <boxGeometry args={[0.85, 1.2, 0.08]} />
         <meshStandardMaterial 
           color="#1f2937" 
           roughness={0.3} 
           metalness={0.2}
-          normalScale={[1, 1]}
         />
       </mesh>
       
       {/* Enhanced Back Cushion */}
-      <mesh position={[0, 1.1, -0.31]} castShadow>
+      <mesh position={[0, 1.1, -0.31]}>
         <boxGeometry args={[0.87, 1.1, 0.04]} />
         <meshStandardMaterial 
           color="#374151" 
           roughness={0.7} 
           metalness={0.05}
-          normalScale={[2, 2]}
         />
       </mesh>
       
       {/* Enhanced Chair Legs */}
-      <mesh position={[-0.35, 0.25, -0.35]} castShadow>
+      <mesh position={[-0.35, 0.25, -0.35]}>
         <boxGeometry args={[0.05, 0.5, 0.05]} />
         <meshStandardMaterial 
           color="#374151" 
@@ -599,7 +149,7 @@ function Chair({ position, rotation }: ChairProps) {
           emissiveIntensity={0.05}
         />
       </mesh>
-      <mesh position={[0.35, 0.25, -0.35]} castShadow>
+      <mesh position={[0.35, 0.25, -0.35]}>
         <boxGeometry args={[0.05, 0.5, 0.05]} />
         <meshStandardMaterial 
           color="#374151" 
@@ -609,7 +159,7 @@ function Chair({ position, rotation }: ChairProps) {
           emissiveIntensity={0.05}
         />
       </mesh>
-      <mesh position={[-0.35, 0.25, 0.35]} castShadow>
+      <mesh position={[-0.35, 0.25, 0.35]}>
         <boxGeometry args={[0.05, 0.5, 0.05]} />
         <meshStandardMaterial 
           color="#374151" 
@@ -619,7 +169,7 @@ function Chair({ position, rotation }: ChairProps) {
           emissiveIntensity={0.05}
         />
       </mesh>
-      <mesh position={[0.35, 0.25, 0.35]} castShadow>
+      <mesh position={[0.35, 0.25, 0.35]}>
         <boxGeometry args={[0.05, 0.5, 0.05]} />
         <meshStandardMaterial 
           color="#374151" 
@@ -631,48 +181,305 @@ function Chair({ position, rotation }: ChairProps) {
       </mesh>
       
       {/* Enhanced Armrests */}
-      <mesh position={[-0.45, 0.8, 0]} castShadow>
+      <mesh position={[-0.45, 0.8, 0]}>
         <boxGeometry args={[0.08, 0.4, 0.7]} />
         <meshStandardMaterial 
           color="#1f2937" 
           roughness={0.3} 
           metalness={0.2}
-          normalScale={[1, 1]}
         />
       </mesh>
-      <mesh position={[0.45, 0.8, 0]} castShadow>
+      <mesh position={[0.45, 0.8, 0]}>
         <boxGeometry args={[0.08, 0.4, 0.7]} />
         <meshStandardMaterial 
           color="#1f2937" 
           roughness={0.3} 
           metalness={0.2}
-          normalScale={[1, 1]}
         />
       </mesh>
     </group>
   );
 }
 
-function ReceptionDesk({ onObjectClick, receptionTexture }: ReceptionDeskProps) {
+// Office Scene Component
+function OfficeScene({ onObjectClick, lampsOn }: OfficeSceneProps) {
+  const lampLightsRef = useRef<THREE.PointLight[]>([]);
+  const lampShadesRef = useRef<THREE.Mesh[]>([]);
+
+  useEffect(() => {
+    lampShadesRef.current.forEach(shade => {
+      if (shade && shade.material) {
+        (shade.material as THREE.MeshStandardMaterial).emissiveIntensity = lampsOn ? 0.5 : 0;
+      }
+    });
+    
+    lampLightsRef.current.forEach(light => {
+      if (light) {
+        light.intensity = lampsOn ? 0.8 : 0;
+      }
+    });
+  }, [lampsOn]);
+
+  const handleClick = (e: any, userData: UserData) => {
+    e.stopPropagation();
+    if (userData.interactive) {
+      onObjectClick(userData);
+    }
+  };
+
+  // Text textures
+  const brandTexture = createTextTexture('QUAINTON LAW', 120);
+  const miniverseTexture = createTextTexture('MINIVERSE™', 80);
+  const rightWallBrandTexture = createTextTexture('QUAINTON LAW MINIVERSE™', 80);
+  const backWallFarBrandTexture = createTextTexture('QUAINTON LAW MINIVERSE™', 80, '#ffffff');
   const receptionBrandTexture = createTextTexture('QUAINTON LAW MINIVERSE™', 50);
+  const receptionTexture = createTextTexture('RECEPTION', 60, '#000000');
+  const firmDocsTexture = createTextTexture('Firm Documents Below', 60, '#000000');
+  const firmLibraryTexture = createTextTexture('FIRM LIBRARY', 50, '#ffffff');
 
   return (
     <group>
-      <mesh position={[-24, 0.5, 0]} castShadow>
+      {/* Maximum Lighting - No Shadows, Fully Bright */}
+      <ambientLight intensity={2.0} color="#ffffff" />
+      
+      {/* Main Directional Lights - High Intensity */}
+      <directionalLight position={[10, 15, 10]} intensity={3.5} color="#ffffff" />
+      <directionalLight position={[-12, 8, -8]} intensity={2.5} color="#ffffff" />
+      <directionalLight position={[0, 20, 0]} intensity={3.0} color="#ffffff" />
+      <directionalLight position={[15, 5, 5]} intensity={2.0} color="#ffffff" />
+      <directionalLight position={[-15, 5, 5]} intensity={2.0} color="#ffffff" />
+      
+      {/* Additional directional lights for even coverage */}
+      <directionalLight position={[0, 15, -15]} intensity={2.5} color="#ffffff" />
+      <directionalLight position={[0, 15, 15]} intensity={2.5} color="#ffffff" />
+      <directionalLight position={[-15, 10, 0]} intensity={2.0} color="#ffffff" />
+      <directionalLight position={[15, 10, 0]} intensity={2.0} color="#ffffff" />
+      
+      {/* Ceiling Point Lights - Evenly Distributed for Full Coverage */}
+      <pointLight position={[0, 9, 0]} intensity={4.0} color="#ffffff" distance={50} decay={1.5} />
+      <pointLight position={[-10, 9, -10]} intensity={3.5} color="#ffffff" distance={45} decay={1.5} />
+      <pointLight position={[10, 9, -10]} intensity={3.5} color="#ffffff" distance={45} decay={1.5} />
+      <pointLight position={[-10, 9, 10]} intensity={3.5} color="#ffffff" distance={45} decay={1.5} />
+      <pointLight position={[10, 9, 10]} intensity={3.5} color="#ffffff" distance={45} decay={1.5} />
+      
+      {/* Corner Lights for Complete Coverage - Increased Range */}
+      <pointLight position={[-20, 6, -20]} intensity={3.0} color="#ffffff" distance={40} decay={1.5} />
+      <pointLight position={[20, 6, -20]} intensity={3.0} color="#ffffff" distance={40} decay={1.5} />
+      <pointLight position={[-20, 6, 20]} intensity={3.0} color="#ffffff" distance={40} decay={1.5} />
+      <pointLight position={[20, 6, 20]} intensity={3.0} color="#ffffff" distance={40} decay={1.5} />
+      
+      {/* Additional Mid-Wall Lights for Even Distribution */}
+      <pointLight position={[0, 7, -20]} intensity={3.0} color="#ffffff" distance={40} decay={1.5} />
+      <pointLight position={[0, 7, 20]} intensity={3.0} color="#ffffff" distance={40} decay={1.5} />
+      <pointLight position={[-20, 7, 0]} intensity={3.0} color="#ffffff" distance={40} decay={1.5} />
+      <pointLight position={[20, 7, 0]} intensity={3.0} color="#ffffff" distance={40} decay={1.5} />
+      
+      {/* Table Lamps (Decorative when on) */}
+      <pointLight 
+        ref={(ref) => { if (ref) lampLightsRef.current[0] = ref; }}
+        position={[-8, 2, 8]} 
+        intensity={lampsOn ? 2.0 : 0} 
+        color="#ffd700" 
+        distance={25}
+        decay={1.5}
+      />
+      <pointLight 
+        ref={(ref) => { if (ref) lampLightsRef.current[1] = ref; }}
+        position={[8, 2, 8]} 
+        intensity={lampsOn ? 2.0 : 0} 
+        color="#ffd700" 
+        distance={25}
+        decay={1.5}
+      />
+
+      {/* Floor - EXACT dimensions from temp.js with current colors */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[50, 50]} />
+        <meshStandardMaterial color="#2d3748" roughness={0.8} metalness={0.1} />
+      </mesh>
+
+      {/* Walls - EXACT dimensions from temp.js with current colors */}
+      <mesh position={[0, 5, -25]}>
+        <boxGeometry args={[50, 10, 0.5]} />
+        <meshStandardMaterial color="#e2e8f0" roughness={0.6} metalness={0.05} />
+      </mesh>
+
+      <mesh position={[-25, 5, 0]}>
+        <boxGeometry args={[0.5, 10, 50]} />
+        <meshStandardMaterial color="#e2e8f0" roughness={0.6} metalness={0.05} />
+      </mesh>
+
+      <mesh position={[25, 5, 0]}>
+        <boxGeometry args={[0.5, 10, 50]} />
+        <meshStandardMaterial color="#e2e8f0" roughness={0.6} metalness={0.05} />
+      </mesh>
+
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 10, 0]}>
+        <planeGeometry args={[50, 50]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+
+      {/* Brand Text on Back Wall */}
+      {brandTexture && (
+        <mesh position={[0, 7.5, -24.7]}>
+          <planeGeometry args={[16, 4]} />
+          <meshBasicMaterial map={brandTexture} transparent />
+        </mesh>
+      )}
+
+      {miniverseTexture && (
+        <mesh position={[0, 5.8, -24.7]}>
+          <planeGeometry args={[12, 3]} />
+          <meshBasicMaterial map={miniverseTexture} transparent />
+        </mesh>
+      )}
+
+      {/* Back Wall Interactive Panels */}
+      <mesh position={[-10, 3.5, -24.6]} onClick={(e) => handleClick(e, { type: 'video', label: 'FIRM VIDEOS', interactive: true })}>
+        <boxGeometry args={[8, 5, 0.3]} />
+        <meshStandardMaterial color={0x8b0000} roughness={0.4} metalness={0.6} />
+      </mesh>
+      <mesh position={[-10, 3.5, -24.4]}>
+        <planeGeometry args={[6, 1.5]} />
+        <meshBasicMaterial map={createTextTexture('FIRM VIDEOS', 60, '#ffffff')} transparent />
+      </mesh>
+
+      <mesh position={[0, 3, -24.6]} onClick={(e) => handleClick(e, { type: 'art', label: 'FIRM ARTWORK', interactive: true })}>
+        <boxGeometry args={[6, 4, 0.3]} />
+        <meshStandardMaterial color={0x2d5016} roughness={0.4} metalness={0.6} />
+      </mesh>
+      <mesh position={[0, 3, -24.4]}>
+        <planeGeometry args={[5.5, 1.5]} />
+        <meshBasicMaterial map={createTextTexture('FIRM ARTWORK', 70, '#ffffff')} transparent />
+      </mesh>
+
+      <mesh position={[10, 3.5, -24.6]} onClick={(e) => handleClick(e, { type: 'ourwall', label: 'OUR WALL', interactive: true })}>
+        <boxGeometry args={[8, 5, 0.3]} />
+        <meshStandardMaterial color={0x1e4d8b} roughness={0.4} metalness={0.6} />
+      </mesh>
+      <mesh position={[10, 3.5, -24.4]}>
+        <planeGeometry args={[6, 1.5]} />
+        <meshBasicMaterial map={createTextTexture('OUR WALL', 60, '#ffffff')} transparent />
+      </mesh>
+
+      {/* Far Wall Profile Panels */}
+      {[...Array(6)].map((_, index) => {
+        const positions = [-15, -9, -3, 3, 9, 15];
+        return (
+          <group key={`profile-${index}`}>
+            <mesh position={[positions[index], 2.5, 24.6]} onClick={(e) => handleClick(e, { type: 'profile', label: `PROFILE ${index + 1}`, interactive: true })}>
+              <boxGeometry args={[4.5, 1.5, 0.3]} />
+              <meshStandardMaterial color={0x5a4a6a} roughness={0.4} metalness={0.6} />
+            </mesh>
+            <mesh position={[positions[index], 2.5, 24.8]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[3.5, 1]} />
+              <meshBasicMaterial map={createTextTexture('PROFILES', 40, '#ffffff')} transparent />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {backWallFarBrandTexture && (
+        <mesh position={[0, 6, 24.7]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[10, 2.5]} />
+          <meshBasicMaterial map={backWallFarBrandTexture} transparent />
+        </mesh>
+      )}
+
+      {/* Conference Table - current colors, temp.js dimensions */}
+      <mesh position={[0, 0.8, 4]}>
+        <boxGeometry args={[10, 0.2, 5]} />
+        <meshStandardMaterial color="#1f2937" roughness={0.2} metalness={0.3} />
+      </mesh>
+
+      {/* Table Items */}
+      {[
+        { label: 'Leave Review', x: -3, z: 4 },
+        { label: 'Our Website', x: -1, z: 4 },
+        { label: 'Other Sites', x: 1, z: 4 },
+        { label: 'Pro Bono', x: 3, z: 4 }
+      ].map((item) => (
+        <group key={item.label}>
+          <mesh position={[item.x, 1, item.z]} onClick={(e) => handleClick(e, { type: 'tableItem', label: item.label, interactive: true })}>
+            <boxGeometry args={[0.5, 0.05, 0.7]} />
+            <meshStandardMaterial color="#ffffff" />
+          </mesh>
+          <mesh position={[item.x, 1.03, item.z]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[0.4, 0.1]} />
+            <meshBasicMaterial map={createTextTexture(item.label, 30)} transparent />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Enhanced Chairs - aligned with table spacing, all facing table */}
+      {/* Back side - 2 chairs */}
+      <Chair position={[-1, 0, 7.5]} rotation={Math.PI} />
+      <Chair position={[1, 0, 7.5]} rotation={Math.PI} />
+      
+      {/* Left side */}
+      <Chair position={[-6, 0, 4]} rotation={Math.PI / 2} />
+      
+      {/* Right side */}
+      <Chair position={[6, 0, 4]} rotation={-Math.PI / 2} />
+      
+      {/* Front side - 2 chairs */}
+      <Chair position={[-1, 0, 0.5]} rotation={0} />
+      <Chair position={[1, 0, 0.5]} rotation={0} />
+
+      {/* Bookshelf on Left Wall */}
+      <mesh position={[-24.5, 3, -8]}>
+        <boxGeometry args={[0.4, 6, 8]} />
+        <meshStandardMaterial color={0x4a2c1a} />
+      </mesh>
+
+      {firmLibraryTexture && (
+        <mesh position={[-24.3, 5.5, -8]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[6, 1.5]} />
+          <meshBasicMaterial map={firmLibraryTexture} transparent />
+        </mesh>
+      )}
+
+      {/* Books - 25 books with exact positions from temp.js */}
+      {[...Array(25)].map((_, i) => {
+        const bookTitles = [
+          'Agentic Theory', 'Agentic AI and Law', "Law's Empire", 'Russia Company', 'Superintelligence',
+          'Alignment Problem', 'Liberation Theologies', 'You Might be a Robot', 'Black Box Society',
+          'AI Legal Personhood', 'Unknowable Unknown', 'Logical Calculus', 'Augmenting LLMs',
+          'Read Me', 'Explore Me', 'Check Me Out', 'Read Me', 'Explore Me', 'Check Me Out',
+          'Read Me', 'Explore Me', 'Check Me Out', 'Read Me', 'Explore Me', 'Check Me Out'
+        ];
+        const row = Math.floor(i / 5);
+        const col = i % 5;
+        return (
+          <mesh
+            key={`book-${i}`}
+            position={[-24.3, 0.8 + row * 1, -11 + col * 1.5]}
+            rotation={[0, Math.PI / 2, 0]}
+            onClick={(e) => handleClick(e, { type: 'book', label: bookTitles[i], interactive: true })}
+          >
+            <boxGeometry args={[0.15, 0.8, 0.2]} />
+            <meshStandardMaterial color={new THREE.Color().setHSL(Math.random(), 0.7, 0.5)} />
+          </mesh>
+        );
+      })}
+
+      {/* Reception Desk */}
+      <mesh position={[-24, 0.5, 0]}>
         <boxGeometry args={[3, 1, 1.5]} />
-        <meshStandardMaterial color="#3d2817" />
+        <meshStandardMaterial color={0x3d2817} />
       </mesh>
 
-      <mesh position={[-24, 1.8, 0]} castShadow>
+      {/* Receptionist */}
+      <mesh position={[-24, 1.8, 0]}>
         <cylinderGeometry args={[0.4, 0.5, 1.5, 16]} />
-        <meshStandardMaterial color="#2c5f8d" />
+        <meshStandardMaterial color={0x2c5f8d} />
       </mesh>
-
-      <mesh position={[-24, 2.8, 0]} castShadow>
+      <mesh position={[-24, 2.8, 0]}>
         <sphereGeometry args={[0.35, 16, 16]} />
-        <meshStandardMaterial color="#ffdbac" />
+        <meshStandardMaterial color={0xffdbac} />
       </mesh>
 
+      {/* Reception Labels */}
       {receptionBrandTexture && (
         <mesh position={[-24, 6.5, 0]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[8, 2]} />
@@ -687,536 +494,662 @@ function ReceptionDesk({ onObjectClick, receptionTexture }: ReceptionDeskProps) 
         </mesh>
       )}
 
-      {['Engagement Letters', 'Firm Brochure', 'NDAs'].map((item, i) => (
-        <mesh 
-          key={`desk-${i}`}
-          position={[-24, 1.03, -0.6 + i * 0.5]}
-          rotation={[-Math.PI / 8, 0, 0]}
-          onClick={(e) => onObjectClick(e, { type: 'deskItem', label: item, interactive: true })}
-        >
-          <boxGeometry args={[0.4, 0.04, 0.5]} />
-          <meshStandardMaterial color="#ffffff" />
+      {firmDocsTexture && (
+        <mesh position={[-24, 4, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[6, 1.5]} />
+          <meshBasicMaterial map={firmDocsTexture} transparent />
         </mesh>
+      )}
+
+      {/* Desk Items */}
+      {[
+        { label: 'Engagement Letters', z: -0.6 },
+        { label: 'Firm Brochure', z: -0.1 },
+        { label: 'NDAs', z: 0.4 }
+      ].map((item) => (
+        <group key={item.label}>
+          <mesh position={[-24, 1.03, item.z]} rotation={[-Math.PI / 8, 0, 0]} onClick={(e) => handleClick(e, { type: 'deskItem', label: item.label, interactive: true })}>
+            <boxGeometry args={[0.4, 0.04, 0.5]} />
+            <meshStandardMaterial color="#ffffff" />
+          </mesh>
+          <mesh position={[-24, 1.05, item.z]} rotation={[-Math.PI / 2.3, 0, 0]}>
+            <planeGeometry args={[0.35, 0.08]} />
+            <meshBasicMaterial map={createTextTexture(item.label, 35)} transparent />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Legal Materials Panel on Left Wall */}
+      <mesh position={[-24.6, 3.5, 8]} onClick={(e) => handleClick(e, { type: 'legal', label: 'LEGAL MATERIALS', interactive: true })}>
+        <boxGeometry args={[0.3, 5, 6]} />
+        <meshStandardMaterial color={0x4a4a4a} roughness={0.4} metalness={0.6} />
+      </mesh>
+      <mesh position={[-24.4, 3.5, 8]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[4.5, 2.2]} />
+        <meshBasicMaterial map={createTextTexture('LEGAL MATERIALS\nSupreme Court, Podcasts\nand more', 45, '#ffffff')} transparent />
+      </mesh>
+
+      {/* Right Wall Elements */}
+      {/* Credits Panel */}
+      <mesh position={[24.6, 3.5, -16]}>
+        <boxGeometry args={[0.3, 3, 4]} />
+        <meshStandardMaterial color={0x1e3a5f} roughness={0.4} metalness={0.6} />
+      </mesh>
+      <mesh position={[24.4, 3.5, -16]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[3.5, 2.6]} />
+        <meshBasicMaterial map={createTextTexture('Brought to you by\nAI Law Wizard\n&\nClaude Sonnet 4.5', 45, '#ffffff')} transparent />
+      </mesh>
+
+      {/* Idea Vault Panel */}
+      <mesh position={[24.6, 3.5, -11]} onClick={(e) => handleClick(e, { type: 'ideaVault', label: 'IDEA VAULT', interactive: true })}>
+        <boxGeometry args={[0.3, 2.5, 3]} />
+        <meshStandardMaterial color={0xffd700} roughness={0.4} metalness={0.6} />
+      </mesh>
+      <mesh position={[24.4, 3.5, -11]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[2.8, 2.1]} />
+        <meshBasicMaterial map={createTextTexture('💡\nIDEA\nVAULT', 42, '#1a1a2e')} transparent />
+      </mesh>
+
+      {/* Artwork Panel on Right Wall */}
+      <mesh position={[24.6, 3.8, -6]} onClick={(e) => handleClick(e, { type: 'rightArt', label: 'ARTWORK', interactive: true })}>
+        <boxGeometry args={[0.3, 4.5, 3.5]} />
+        <meshStandardMaterial color={0x2d5016} roughness={0.4} metalness={0.6} />
+      </mesh>
+      <mesh position={[24.4, 3.8, -6]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[3, 2.2]} />
+        <meshBasicMaterial map={createTextTexture('ARTWORK', 65, '#ffffff')} transparent />
+      </mesh>
+
+      {/* Certificates on Right Wall */}
+      {[...Array(6)].map((_, i) => {
+        const row = Math.floor(i / 3);
+        const col = i % 3;
+        return (
+          <mesh
+            key={`cert-${i}`}
+            position={[24.6, 2 + row * 2.5, -1 + col * 2]}
+            onClick={(e) => handleClick(e, { type: 'certificate', label: `Certificate ${i + 1}`, interactive: true })}
+          >
+            <boxGeometry args={[0.3, 1.5, 1.2]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.3} />
+          </mesh>
+        );
+      })}
+
+      {/* Personal Images Panel on Right Wall */}
+      <mesh position={[24.6, 3.5, 8]} onClick={(e) => handleClick(e, { type: 'personalImages', label: 'PERSONAL IMAGES', interactive: true })}>
+        <boxGeometry args={[0.3, 5, 4]} />
+        <meshStandardMaterial color={0x4a2c5f} roughness={0.4} metalness={0.6} />
+      </mesh>
+      <mesh position={[24.4, 3.5, 8]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[3.5, 2.6]} />
+        <meshBasicMaterial map={createTextTexture('PERSONAL\nIMAGES', 55, '#ffffff')} transparent />
+      </mesh>
+
+      {/* Right Wall Brand Text */}
+      {rightWallBrandTexture && (
+        <mesh position={[24.4, 6, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[8, 2]} />
+          <meshBasicMaterial map={rightWallBrandTexture} transparent />
+        </mesh>
+      )}
+
+      {/* Lamps */}
+      {[
+        { pos: [-8, 0, 8] as [number, number, number], index: 0 },
+        { pos: [8, 0, 8] as [number, number, number], index: 1 }
+      ].map((lamp) => (
+        <group key={`lamp-${lamp.index}`} position={lamp.pos}>
+          <mesh position={[0, 0.05, 0]}>
+            <cylinderGeometry args={[0.2, 0.3, 0.1, 16]} />
+            <meshStandardMaterial color={0x8b7355} />
+          </mesh>
+          <mesh position={[0, 0.8, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 1.5, 8]} />
+            <meshStandardMaterial color={0x8b7355} />
+          </mesh>
+          <mesh 
+            ref={(ref) => { if (ref) lampShadesRef.current[lamp.index] = ref; }}
+            position={[0, 1.6, 0]}
+            onClick={(e) => handleClick(e, { type: 'lamp', label: 'Lamp', interactive: true })}
+          >
+            <cylinderGeometry args={[0.3, 0.4, 0.4, 16]} />
+            <meshStandardMaterial 
+              color={0xffd700} 
+              emissive={0xffd700} 
+              emissiveIntensity={lampsOn ? 0.5 : 0} 
+            />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Plants */}
+      {[
+        { pos: [-10, 0, -5] as [number, number, number] },
+        { pos: [10, 0, -5] as [number, number, number] }
+      ].map((plant, i) => (
+        <group key={`plant-${i}`}>
+          <mesh position={[plant.pos[0], 0.2, plant.pos[2]]}>
+            <cylinderGeometry args={[0.3, 0.25, 0.4, 16]} />
+            <meshStandardMaterial color={0x8b4513} />
+          </mesh>
+          <mesh position={[plant.pos[0], 0.6, plant.pos[2]]}>
+            <sphereGeometry args={[0.4, 8, 8]} />
+            <meshStandardMaterial color={0x228b22} />
+          </mesh>
+        </group>
       ))}
     </group>
   );
 }
 
-function Lamp({ position, lampsOn, lampShadesRef, index, onObjectClick }: LampProps) {
-  return (
-    <group position={position}>
-      <mesh position={[0, 0.05, 0]}>
-        <cylinderGeometry args={[0.2, 0.3, 0.1, 16]} />
-        <meshStandardMaterial color="#8b7355" />
-      </mesh>
-      <mesh position={[0, 0.6, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 1, 8]} />
-        <meshStandardMaterial color="#8b7355" />
-      </mesh>
-      <mesh 
-        ref={(ref) => { if (ref) lampShadesRef.current[index] = ref; }}
-        position={[0, 1.4, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onObjectClick({ type: 'lamp', label: `Lamp ${index + 1}`, interactive: true });
-        }}
-      >
-        <coneGeometry args={[0.4, 0.6, 16]} />
-        <meshStandardMaterial 
-          color="#ffd700" 
-          emissive="#ffd700" 
-          emissiveIntensity={lampsOn ? 0.5 : 0} 
-        />
-      </mesh>
-    </group>
-  );
+// Track interface
+interface Track {
+  url: string;
+  title: string;
+  icon: string;
 }
 
-function CameraRig() {
-  const { camera, gl } = useThree();
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastTouch, setLastTouch] = useState({ x: 0, y: 0 });
-  const keysRef = useRef({ 
-    w: false, a: false, s: false, d: false, q: false, e: false,
-    ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false 
-  });
-
-  // Initialize camera position
-  useEffect(() => {
-    camera.position.set(0, 1.6, 12);
-    camera.lookAt(0, 0, 0);
-  }, [camera]);
-
-  // Mouse/touch controls for camera rotation
-  useEffect(() => {
-    const canvas = gl.domElement;
-
-    const handleStart = (clientX: number, clientY: number) => {
-      setIsDragging(true);
-      setLastTouch({ x: clientX, y: clientY });
-    };
-
-    const handleMove = (clientX: number, clientY: number) => {
-      if (isDragging) {
-        const deltaX = clientX - lastTouch.x;
-        const deltaY = clientY - lastTouch.y;
-        
-        // Rotate camera around the center point
-        const currentPos = camera.position.clone();
-        const center = new THREE.Vector3(0, 0, 0);
-        
-        // Calculate current angle from center
-        const currentAngle = Math.atan2(currentPos.x, currentPos.z);
-        const radius = Math.sqrt(currentPos.x * currentPos.x + currentPos.z * currentPos.z);
-        
-        // Apply rotation
-        const newAngle = currentAngle + deltaX * 0.005;
-        const newX = Math.sin(newAngle) * radius;
-        const newZ = Math.cos(newAngle) * radius;
-        
-        // Update camera position
-        camera.position.set(newX, currentPos.y, newZ);
-        camera.lookAt(center);
-        
-        setLastTouch({ x: clientX, y: clientY });
-      }
-    };
-
-    const handleEnd = () => {
-      setIsDragging(false);
-    };
-
-    const handleMouseDown = (e: MouseEvent) => handleStart(e.clientX, e.clientY);
-    const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY);
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        handleStart(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        handleMove(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-
-    canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseup', handleEnd);
-    canvas.addEventListener('mouseleave', handleEnd);
-    canvas.addEventListener('touchstart', handleTouchStart);
-    canvas.addEventListener('touchmove', handleTouchMove);
-    canvas.addEventListener('touchend', handleEnd);
-
-    return () => {
-      canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseup', handleEnd);
-      canvas.removeEventListener('mouseleave', handleEnd);
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchmove', handleTouchMove);
-      canvas.removeEventListener('touchend', handleEnd);
-    };
-  }, [isDragging, lastTouch, camera, gl]);
-
-  // Keyboard controls
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      
-      if (key === 'w') keysRef.current.w = true;
-      else if (key === 'a') keysRef.current.a = true;
-      else if (key === 's') keysRef.current.s = true;
-      else if (key === 'd') keysRef.current.d = true;
-      else if (key === 'q') keysRef.current.q = true;
-      else if (key === 'e') keysRef.current.e = true;
-      else if (e.key === 'ArrowUp') keysRef.current.ArrowUp = true;
-      else if (e.key === 'ArrowLeft') keysRef.current.ArrowLeft = true;
-      else if (e.key === 'ArrowDown') keysRef.current.ArrowDown = true;
-      else if (e.key === 'ArrowRight') keysRef.current.ArrowRight = true;
-      
-      if (['w', 'a', 's', 'd', 'q', 'e'].includes(key) || ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      
-      if (key === 'w') keysRef.current.w = false;
-      else if (key === 'a') keysRef.current.a = false;
-      else if (key === 's') keysRef.current.s = false;
-      else if (key === 'd') keysRef.current.d = false;
-      else if (key === 'q') keysRef.current.q = false;
-      else if (key === 'e') keysRef.current.e = false;
-      else if (e.key === 'ArrowUp') keysRef.current.ArrowUp = false;
-      else if (e.key === 'ArrowLeft') keysRef.current.ArrowLeft = false;
-      else if (e.key === 'ArrowDown') keysRef.current.ArrowDown = false;
-      else if (e.key === 'ArrowRight') keysRef.current.ArrowRight = false;
-      
-      if (['w', 'a', 's', 'd', 'q', 'e'].includes(key) || ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
-  // Movement animation loop
-  useFrame(() => {
-    const moveSpeed = 0.1;
-    const { w, a, s, d, q, e, ArrowUp, ArrowLeft, ArrowDown, ArrowRight } = keysRef.current;
-    
-    // Calculate movement direction
-    let moveForward = 0;
-    let moveRight = 0;
-    
-    // WASD, QE and Arrow keys
-    if (w || ArrowUp) moveForward += moveSpeed;
-    if (s || ArrowDown) moveForward -= moveSpeed;
-    if (a || q || ArrowLeft) moveRight -= moveSpeed;
-    if (d || e || ArrowRight) moveRight += moveSpeed;
-    
-    // Apply movement relative to camera direction
-    if (moveForward !== 0 || moveRight !== 0) {
-      const currentPos = camera.position.clone();
-      
-      // Get camera's current direction vectors
-      const forward = new THREE.Vector3();
-      const right = new THREE.Vector3();
-      
-      camera.getWorldDirection(forward);
-      forward.y = 0; // Keep movement on horizontal plane
-      forward.normalize();
-      
-      right.crossVectors(forward, new THREE.Vector3(0, 1, 0));
-      right.normalize();
-      
-      // Calculate new position
-      const newPos = currentPos.clone();
-      newPos.add(forward.multiplyScalar(moveForward));
-      newPos.add(right.multiplyScalar(moveRight));
-      
-      // Keep camera at eye level
-      newPos.y = 1.6;
-      
-        // Boundary constraints (room is now 30x30 units)
-        newPos.x = Math.max(-13, Math.min(13, newPos.x));
-        newPos.z = Math.max(-13, Math.min(13, newPos.z));
-      
-      camera.position.copy(newPos);
-    }
-  });
-
-  return null;
-}
-
+// Main component
 export default function MiniversePage() {
   const [showHelp, setShowHelp] = useState(true);
   const [selectedContent, setSelectedContent] = useState<UserData | null>(null);
   const [lampsOn, setLampsOn] = useState(true);
   const [showMusicPanel, setShowMusicPanel] = useState(false);
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  
+  // Music player state
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Audio control functions
-  const playAudio = (trackName: string) => {
-    // Stop current audio if playing
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
+  const [volume, setVolume] = useState(0.5);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [playerReady, setPlayerReady] = useState(false);
+  const [playerError, setPlayerError] = useState<string | null>(null);
+  
+  // Track list - memoized to prevent recreation
+  const tracks = useMemo<Track[]>(() => [
+    { 
+      url: 'https://www.youtube.com/watch?v=4iZOLt63ZFk', 
+      title: 'Classical', 
+      icon: '🎻' 
+    },
+    { 
+      url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', 
+      title: 'Lofi Jazz', 
+      icon: '🎷' 
+    },
+    { 
+      url: 'https://www.youtube.com/watch?v=DWcJFNfaw9c', 
+      title: 'Ambient', 
+      icon: '🎸' 
     }
+  ], []);
 
-    setIsLoading(true);
-    setCurrentTrack(trackName);
-
-    // Create new audio element with proper error handling
-    const audio = new Audio(`/images/${trackName}`);
-    audio.loop = true;
-    audio.volume = 0.5;
-    audio.preload = 'auto';
-    audio.crossOrigin = 'anonymous';
-
-    // Enhanced error handling and loading
-    const handleAudioReady = () => {
-      console.log('Audio ready to play:', trackName);
-      audio.play().then(() => {
-        setIsPlaying(true);
-        setIsLoading(false);
-        setCurrentTrack(trackName);
-        setCurrentAudio(audio);
-      }).catch((error) => {
-        console.error('Error playing audio:', error);
-        setIsPlaying(false);
-        setIsLoading(false);
-        setCurrentTrack(null);
-      });
-    };
-
-    const handleAudioError = (e: any) => {
-      console.error('Error loading audio:', trackName, e);
-      console.error('Audio src:', audio.src);
-      setIsPlaying(false);
-      setIsLoading(false);
-      setCurrentTrack(null);
-      
-      // Try alternative paths
-      console.log('Trying alternative audio paths...');
-      const alternativePaths = [
-        `./images/${trackName}`,
-        `/public/images/${trackName}`,
-        `images/${trackName}`
-      ];
-      
-      let pathIndex = 0;
-      const tryNextPath = () => {
-        if (pathIndex < alternativePaths.length) {
-          const altAudio = new Audio(alternativePaths[pathIndex]);
-          altAudio.loop = true;
-          altAudio.volume = 0.5;
-          altAudio.crossOrigin = 'anonymous';
-          
-          altAudio.addEventListener('canplaythrough', () => {
-            altAudio.play().then(() => {
-              setIsPlaying(true);
-              setIsLoading(false);
-              setCurrentTrack(trackName);
-              setCurrentAudio(altAudio);
-            }).catch((altError) => {
-              console.error(`Alternative path ${pathIndex + 1} failed:`, altError);
-              pathIndex++;
-              tryNextPath();
-            });
-          });
-          
-          altAudio.addEventListener('error', () => {
-            console.error(`Alternative path ${pathIndex + 1} failed to load`);
-            pathIndex++;
-            tryNextPath();
-          });
-        } else {
-          console.error('All audio paths failed');
-          setIsPlaying(false);
-          setIsLoading(false);
-          setCurrentTrack(null);
-        }
-      };
-      
-      tryNextPath();
-    };
-
-    audio.addEventListener('canplaythrough', handleAudioReady);
-    audio.addEventListener('error', handleAudioError);
-    audio.addEventListener('loadstart', () => {
-      console.log('Starting to load audio:', trackName);
-    });
-
-    setCurrentAudio(audio);
-  };
-
-  const stopAudio = () => {
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      setIsPlaying(false);
-      setCurrentTrack(null);
-    }
-  };
-
-  const toggleAudio = () => {
-    if (isPlaying && currentAudio) {
-      // Pause the audio without stopping it completely
-      currentAudio.pause();
-      setIsPlaying(false);
-    } else if (currentTrack && currentAudio) {
-      // Resume current track
-      currentAudio.play().then(() => {
-        setIsPlaying(true);
-      }).catch((error) => {
-        console.error('Error resuming audio:', error);
-        setIsPlaying(false);
-        // If resume fails, try to restart the track
-        if (currentTrack) {
-          playAudio(currentTrack);
-        }
-      });
-    } else if (currentTrack && !currentAudio) {
-      // If we have a track but no audio element, restart it
-      playAudio(currentTrack);
-    }
-  };
-
-  // Cleanup audio on unmount
   useEffect(() => {
-    return () => {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-        currentAudio.src = '';
-        currentAudio.load(); // Reset the audio element
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'h') {
+        setShowHelp(prev => !prev);
       }
     };
-  }, [currentAudio]);
 
-  // Additional cleanup when component unmounts
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
+  // Debug effect for tracking player state
   useEffect(() => {
-    return () => {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.src = '';
-      }
-      setCurrentAudio(null);
-      setIsPlaying(false);
-      setCurrentTrack(null);
-    };
-  }, [currentAudio]);
+    if (currentTrack) {
+      console.log('Current track changed:', currentTrack.title, currentTrack.url);
+      console.log('Player state - Open:', isPlayerOpen, 'Ready:', playerReady, 'Playing:', isPlaying);
+    }
+  }, [currentTrack, isPlayerOpen, playerReady, isPlaying]);
 
-  const handleObjectClick = (userData: UserData) => {
+  const handleObjectClick = useCallback((userData: UserData) => {
     if (userData.type === 'lamp') {
       setLampsOn(prev => !prev);
     } else {
       setSelectedContent(userData);
     }
-  };
+  }, []);
 
-  const renderContentModal = () => {
+  // Music player handlers
+  const handleTrackSelect = useCallback((track: Track) => {
+    // Reset error state
+    setPlayerError(null);
+    
+    // If switching tracks, pause first then switch
+    if (currentTrack && currentTrack.url !== track.url) {
+      setIsPlaying(false);
+      setPlayerReady(false);
+      setTimeout(() => {
+        setCurrentTrack(track);
+        setIsPlayerOpen(true);
+        setShowMusicPanel(false);
+        setIsMinimized(false);
+      }, 100);
+    } else {
+      // New track
+      setCurrentTrack(track);
+      setIsPlayerOpen(true);
+      setShowMusicPanel(false);
+      setIsMinimized(false);
+      setPlayerReady(false);
+    }
+  }, [currentTrack]);
+
+  const handlePlayPause = useCallback(() => {
+    if (playerReady) {
+      setIsPlaying(prev => !prev);
+    }
+  }, [playerReady]);
+
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    setVolume(newVolume);
+  }, []);
+
+  const handleClosePlayer = useCallback(() => {
+    setIsPlaying(false);
+    setPlayerReady(false);
+    setTimeout(() => {
+      setIsPlayerOpen(false);
+      setCurrentTrack(null);
+      setShowMusicPanel(false);
+    }, 100);
+  }, []);
+
+  const handleMinimizeToggle = useCallback(() => {
+    setIsMinimized(prev => !prev);
+  }, []);
+
+  // Player event handlers - memoized
+  const handlePlayerReady = useCallback(() => {
+    console.log('Player ready - callback fired!');
+    setPlayerReady(true);
+    // Don't auto-play - let user click play button
+    // YouTube may block autoplay without user interaction
+  }, []);
+
+  // Fallback: Set player ready after timeout if callback doesn't fire
+  useEffect(() => {
+    if (currentTrack && isPlayerOpen && !playerReady) {
+      const timeout = setTimeout(() => {
+        console.log('Fallback: Setting player ready after 2 seconds');
+        setPlayerReady(true);
+      }, 2000); // Reduced from 3000 to 2000ms
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [currentTrack, isPlayerOpen, playerReady]);
+
+  const handlePlayerPlay = useCallback(() => {
+    setIsPlaying(true);
+  }, []);
+
+  const handlePlayerPause = useCallback(() => {
+    setIsPlaying(false);
+  }, []);
+
+  const handlePlayerEnded = useCallback(() => {
+    setIsPlaying(false);
+  }, []);
+
+  const handlePlayerError = useCallback((e: any) => {
+    console.error('Player error:', e);
+    setPlayerError('Failed to load video. Video may have embedding restrictions.');
+    // Set ready anyway so user can try to interact
+    setPlayerReady(true);
+  }, []);
+
+  const renderContentModal = useCallback(() => {
     if (!selectedContent) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-6 w-11/12 max-w-2xl max-h-[85vh] overflow-hidden">
-          <div className="max-h-full overflow-y-auto">
-            <h2 className="text-2xl font-bold text-gray-800 mb-5">{selectedContent.label}</h2>
-            
-            {selectedContent.type === 'video' && (
-              <div>
-                <h3 className="text-lg font-bold text-red-800 mb-3">Featured Firm Videos</h3>
-                <button 
-                  className="w-full bg-red-800 text-white py-4 px-6 rounded-xl mb-3 font-bold"
-                  onClick={() => window.open('https://www.youtube.com/watch?v=FUnCvHnitPQ', '_blank')}
-                >
-                  Watch Our Featured Video
-                </button>
-                <p className="text-center text-gray-600 text-sm mb-4">Click to open video in new tab</p>
-              </div>
-            )}
-
-            {selectedContent.type === 'art' && (
-              <div>
-                <p className="text-gray-700 mb-4">Display your firm artwork gallery</p>
-                <button 
-                  className="w-full bg-green-800 text-white py-4 px-6 rounded-xl mb-3 font-bold"
-                  onClick={() => window.open('https://i.imgur.com/Gc59Q6K.png', '_blank')}
-                >
-                  Artwork #1
-                </button>
-                <button 
-                  className="w-full bg-green-800 text-white py-4 px-6 rounded-xl mb-3 font-bold"
-                  onClick={() => window.open('https://i.imgur.com/6YKVvhG.png', '_blank')}
-                >
-                  Artwork #2
-                </button>
-          </div>
-        )}
-
-            {selectedContent.type === 'book' && selectedContent.label === 'Read Me' && (
-              <div>
-                <h3 className="text-lg font-bold text-red-800 mb-3">Featured Article</h3>
-                <button 
-                  className="w-full bg-red-800 text-white py-4 px-6 rounded-xl mb-3 font-bold"
-                  onClick={() => window.open('https://drive.google.com/file/d/1iBAI7spq1vJiP7PNzal3d4yY-VaHOWHQ/view?usp=sharing', '_blank')}
-                >
-                  The Unknowable Unknown: The Case for AI Arms Control
-                </button>
-                <p className="text-gray-700">Why a Global Cap on AI Compute Is Essential for Human Survival</p>
-          </div>
-        )}
-
-            {selectedContent.type === 'book' && selectedContent.label === 'Explore Me' && (
-              <div>
-                <h3 className="text-lg font-bold text-red-800 mb-3">Featured Research Paper</h3>
-                <button 
-                  className="w-full bg-red-800 text-white py-4 px-6 rounded-xl mb-3 font-bold"
-                  onClick={() => window.open('https://arxiv.org/pdf/2306.07174', '_blank')}
-                >
-                  Augmenting Language Models with Long-Term Memory
-                </button>
-                <p className="text-gray-700">LONGMEM: Enabling LLMs to memorize long history</p>
-          </div>
-        )}
-        
-            {selectedContent.type === 'book' && selectedContent.label === 'Agentic Theory' && (
-              <div>
-                <button 
-                  className="w-full bg-red-800 text-white py-4 px-6 rounded-xl mb-3 font-bold"
-                  onClick={() => window.open('https://drive.google.com/file/d/1ebvUaV9y3LvxpmgItgSTkMmHa4Ls_ZIZ/view?usp=drivesdk', '_blank')}
-                >
-                  Read: Agentic Theory
-                </button>
-              </div>
-            )}
-
-            {selectedContent.type === 'ideaVault' && (
-              <div className="bg-yellow-400 p-8 rounded-2xl text-center mb-5">
-                <div className="text-6xl mb-4">💡</div>
-                <h3 className="text-3xl font-bold text-gray-800 mb-3">Coming Soon</h3>
-                <p className="text-gray-700">The Idea Vault will let you capture and save thoughts as you explore the Miniverse</p>
-              </div>
-            )}
-
-            {selectedContent.type === 'profile' && (
-              <div>
-                <p className="text-gray-700">Videos, articles, testimonials from team members, partners, clients and more.</p>
-              </div>
-            )}
-
-            {selectedContent.type === 'ourwall' && (
-              <div>
-                <h3 className="text-lg font-bold text-red-800 mb-3">Our Wall - Firm Updates & Information</h3>
-                <button className="w-full bg-purple-800 text-white py-4 px-6 rounded-xl mb-3 font-bold">
-                  Client Testimonials
-                </button>
-                <button className="w-full bg-red-800 text-white py-4 px-6 rounded-xl mb-3 font-bold">
-                  Featured Cases
-                </button>
-              </div>
-            )}
-
-            {(selectedContent.type === 'legal' || selectedContent.type === 'rightArt' || 
-              selectedContent.type === 'certificate' || selectedContent.type === 'tableItem' || 
-              selectedContent.type === 'deskItem' || selectedContent.type === 'personalImages') && (
-              <div>
-                <p className="text-gray-700">Add your content via URL embeds (Vimeo, SoundCloud, Imgur, Google Drive, PDFs, etc.)</p>
-        </div>
-            )}
-
-            {(selectedContent.type === 'book' && !['Read Me', 'Explore Me', 'Agentic Theory'].includes(selectedContent.label)) && (
-              <div>
-                <p className="text-gray-700">Legal resources and documents available via Google Drive or your website hosting</p>
-              </div>
-            )}
-            </div>
-
-        <button
-            className="absolute top-4 right-4 bg-red-800 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold"
+      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" onClick={() => setSelectedContent(null)}>
+        <div className="bg-white rounded-2xl p-6 w-11/12 max-w-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <button 
+            className="absolute top-4 right-4 bg-red-800 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold hover:bg-red-900"
             onClick={() => setSelectedContent(null)}
           >
             ×
-        </button>
+          </button>
+
+          <h2 className="text-2xl font-bold text-gray-800 mb-5">{selectedContent.label}</h2>
+          
+          {selectedContent.type === 'video' && (
+            <div>
+              <h3 className="text-lg font-bold text-red-800 mb-3">Featured Firm Videos</h3>
+              <a 
+                href="https://www.youtube.com/watch?v=FUnCvHnitPQ" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-red-800 text-white py-4 px-6 rounded-xl mb-3 font-bold text-center hover:bg-red-900"
+              >
+                Watch Our Featured Video
+              </a>
+              <p className="text-center text-gray-600 text-sm mb-4">Click to open video in new tab</p>
+            </div>
+          )}
+
+          {selectedContent.type === 'art' && (
+            <div>
+              <p className="text-gray-700 mb-4">Display your firm artwork gallery</p>
+              <a 
+                href="https://i.imgur.com/Gc59Q6K.png" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-green-800 text-white py-4 px-6 rounded-xl mb-3 font-bold text-center hover:bg-green-900"
+              >
+                Artwork #1
+              </a>
+              <a 
+                href="https://i.imgur.com/6YKVvhG.png" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-green-800 text-white py-4 px-6 rounded-xl mb-3 font-bold text-center hover:bg-green-900"
+              >
+                Artwork #2
+              </a>
+            </div>
+          )}
+
+          {/* Continue with all book types from temp.js */}
+          {selectedContent.type === 'book' && selectedContent.label === 'Agentic Theory' && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/1ebvUaV9y3LvxpmgItgSTkMmHa4Ls_ZIZ/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: Agentic Theory
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Agentic AI and Law' && (
+            <div>
+              <h3 className="text-lg font-bold text-yellow-800 mb-3">Agentic AI and the Practice of Law</h3>
+              <a 
+                href="https://docs.google.com/document/d/1kby4LMs0PVUCy8IA0qWD5LWh54jr5Vxb1hftmfPw4Uk/edit?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl mb-4 font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read Full Paper
+              </a>
+              <p className="text-gray-600 italic">Trust, Imagination, and the New Calculus of Liability</p>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === "Law's Empire" && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/18_1XREv0fHn_3exOWgMntjd-jWnE_SED/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: Law's Empire
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Russia Company' && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/1RcVU6tKOYtABxR4hlMUdXmRPjI8ZxHeP/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: The Origin and Early History of the Russia or Muscovy Company
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Superintelligence' && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/1YikBAleixDVc2fCMhPTCAhFEkNZYV04i/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: Superintelligence
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Alignment Problem' && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/1wNTyTDzbx_dsP7mlOo_7-6BLVjMJDVHU/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: The Alignment Problem
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Liberation Theologies' && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/1GjVSJ0q-7Y7IcEPxaUk8G88nXHX9I8k2/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: Decolonizing Liberation Theologies
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'You Might be a Robot' && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/1bjgLlKHPQCEGNykgBPN2CuORnalP4929/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: You Might be a Robot
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Black Box Society' && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/1ZgrAtpCpWWStD8mtx5bayV93w232Uard/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: The Black Box Society
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'AI Legal Personhood' && (
+            <div>
+              <a 
+                href="https://drive.google.com/file/d/1Cw9hBnjo9QR-blGMizc1CQp-MwG7Rjsp/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read: The Ethics and Challenges of Legal Personhood for AI
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Unknowable Unknown' && (
+            <div>
+              <h3 className="text-lg font-bold text-yellow-800 mb-3">The Unknowable Unknown</h3>
+              <a 
+                href="https://docs.google.com/document/d/1pB10z2YfGgHVYPf5kl9Pj62NMVvlPoGs/edit?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl mb-4 font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Read Full Paper
+              </a>
+              <p className="text-gray-600 italic">The Case for AI Arms Control</p>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Logical Calculus' && (
+            <div>
+              <h3 className="text-lg font-bold text-yellow-800 mb-3">Featured Paper</h3>
+              <a 
+                href="https://drive.google.com/file/d/1iBAI7spq1vJiP7PNzal3d4yY-VaHOWHQ/view?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl mb-4 font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                A Logical Calculus of Ideas Immanent in Nervous Activity
+              </a>
+              <p className="text-gray-600">McCulloch & Pitts (1943)</p>
+            </div>
+          )}
+
+          {selectedContent.type === 'book' && selectedContent.label === 'Augmenting LLMs' && (
+            <div>
+              <h3 className="text-lg font-bold text-yellow-800 mb-3">Featured Research Paper</h3>
+              <a 
+                href="https://arxiv.org/pdf/2306.07174" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full bg-gradient-to-r from-yellow-800 to-yellow-700 text-white py-6 px-6 rounded-xl mb-4 font-bold text-center text-lg hover:from-yellow-900 hover:to-yellow-800"
+              >
+                Augmenting Language Models with Long-Term Memory
+              </a>
+              <p className="text-gray-600">"LONGMEM: Enabling LLMs to memorize long history"</p>
+            </div>
+          )}
+
+          {selectedContent.type === 'ideaVault' && (
+            <div>
+              <div className="p-12 bg-gradient-to-br from-yellow-400 to-yellow-300 rounded-2xl text-center mb-6">
+                <div className="text-7xl mb-4">💡</div>
+                <h3 className="text-3xl font-bold text-gray-800 mb-3">Coming Soon</h3>
+                <p className="text-gray-700 text-lg">The Idea Vault will let you capture and save thoughts as you explore the Miniverse</p>
+              </div>
+            </div>
+          )}
+
+          {selectedContent.type === 'profile' && (
+            <div>
+              <div className="p-8 bg-gray-100 rounded-xl text-center">
+                <p className="text-gray-700 text-lg">Videos, articles, testimonials from team members, partners, clients and more.</p>
+              </div>
+            </div>
+          )}
+
+          {selectedContent.type === 'ourwall' && (
+            <div>
+              <h3 className="text-xl font-bold text-blue-800 mb-4">Our Wall - Firm Updates & Information</h3>
+              <a 
+                href="#testimonials"
+                className="block w-full bg-purple-700 text-white py-4 px-6 rounded-xl mb-3 font-bold text-center hover:bg-purple-800"
+              >
+                Client Testimonials
+              </a>
+              <a 
+                href="#cases"
+                className="block w-full bg-red-800 text-white py-4 px-6 rounded-xl mb-3 font-bold text-center hover:bg-red-900"
+              >
+                Featured Cases
+              </a>
+            </div>
+          )}
+
+          {selectedContent.type === 'legal' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Supreme Court Resources</h3>
+                <a href="https://www.oyez.org" target="_blank" rel="noopener noreferrer" className="block bg-blue-900 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-blue-950">
+                  Oyez Project - SCOTUS Arguments (1955-Present)
+                </a>
+                <a href="https://www.supremecourt.gov" target="_blank" rel="noopener noreferrer" className="block bg-blue-900 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-blue-950">
+                  Supreme Court Official Audio & Transcripts
+                </a>
+                <a href="https://podcasts.apple.com/us/podcast/the-supreme-court-oral-arguments/id1649139910" target="_blank" rel="noopener noreferrer" className="block bg-blue-900 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-blue-950">
+                  SCOTUS Oral Arguments Podcast
+                </a>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Federal Circuit Courts</h3>
+                <a href="https://www.courtlistener.com/audio/" target="_blank" rel="noopener noreferrer" className="block bg-gray-700 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-gray-800">
+                  CourtListener - All Federal Circuit Courts
+                </a>
+                <a href="https://www.ca9.uscourts.gov/media/" target="_blank" rel="noopener noreferrer" className="block bg-gray-700 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-gray-800">
+                  9th Circuit Oral Arguments
+                </a>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Law School Podcasts</h3>
+                <a href="https://law.stanford.edu/stanford-legal-podcast/" target="_blank" rel="noopener noreferrer" className="block bg-red-800 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-red-900">
+                  Stanford Legal Podcast
+                </a>
+                <a href="https://hls.harvard.edu/communications-office/podcast-conversations-from-harvard-law-school/" target="_blank" rel="noopener noreferrer" className="block bg-red-800 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-red-900">
+                  Conversations from Harvard Law School
+                </a>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Live Trials & Courtrooms</h3>
+                <a href="https://www.courttv.com/title/court-tv-live-stream-web/" target="_blank" rel="noopener noreferrer" className="block bg-green-800 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-green-900">
+                  Court TV - Live Trial Coverage
+                </a>
+                <a href="https://cvn.com/" target="_blank" rel="noopener noreferrer" className="block bg-green-800 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-green-900">
+                  Courtroom View Network (CVN)
+                </a>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Legal Skills Training</h3>
+                <a href="https://www.nita.org" target="_blank" rel="noopener noreferrer" className="block bg-yellow-800 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-yellow-900">
+                  NITA - National Institute for Trial Advocacy
+                </a>
+                <a href="https://www.nacdl.org" target="_blank" rel="noopener noreferrer" className="block bg-yellow-800 text-white py-3 px-4 rounded-lg mb-2 text-center hover:bg-yellow-900">
+                  NACDL - Criminal Defense Trial Skills
+                </a>
+              </div>
+            </div>
+          )}
+
+          {(selectedContent.type === 'rightArt' || selectedContent.type === 'certificate' || 
+            selectedContent.type === 'tableItem' || selectedContent.type === 'deskItem' || 
+            selectedContent.type === 'personalImages') && (
+            <div>
+              <div className="p-6 bg-gray-100 rounded-xl">
+                <p className="text-gray-700">Add your content via URL embeds (Vimeo, SoundCloud, Imgur, Google Drive, PDFs, etc.)</p>
+              </div>
+            </div>
+          )}
+
+          {(selectedContent.type === 'book' && !['Agentic Theory', 'Agentic AI and Law', "Law's Empire", 'Russia Company', 
+            'Superintelligence', 'Alignment Problem', 'Liberation Theologies', 'You Might be a Robot', 
+            'Black Box Society', 'AI Legal Personhood', 'Unknowable Unknown', 'Logical Calculus', 
+            'Augmenting LLMs'].includes(selectedContent.label)) && (
+            <div>
+              <div className="p-6 bg-gray-100 rounded-xl">
+                <p className="text-gray-700">Legal resources and documents available via Google Drive or your website hosting</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
-  };
+  }, [selectedContent]);
 
   return (
-    <div className="w-full h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 relative">
+    <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-slate-50 via-white to-blue-50 overflow-hidden">
       <Canvas 
         camera={{ position: [0, 1.6, 12], fov: 75 }}
         gl={{ 
@@ -1224,230 +1157,297 @@ export default function MiniversePage() {
           alpha: true,
           powerPreference: "high-performance"
         }}
-        shadows
         dpr={[1, 2]}
       >
-        <Suspense fallback={null}>
-          <color attach="background" args={['#2a2a40']} />
-          <CameraRig />
-          <OfficeScene onObjectClick={handleObjectClick} lampsOn={lampsOn} />
-        </Suspense>
+        <color attach="background" args={['#2a2a40']} />
+        <CameraRig />
+        <OfficeScene onObjectClick={handleObjectClick} lampsOn={lampsOn} />
       </Canvas>
 
       {showHelp && (
-        <div className="absolute top-4 left-4 backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl rounded-2xl p-5 max-w-sm">
-          <button 
-            className="absolute top-3 right-3 text-white/70 hover:text-white transition-colors duration-200 text-lg font-bold"
-            onClick={() => setShowHelp(false)}
-          >
-            ×
-          </button>
-          <h3 className="text-white text-base font-semibold mb-3 tracking-wide">Quainton Law Miniverse</h3>
-          <div className="space-y-2">
-            <h4 className="text-white/90 text-sm font-medium">Controls:</h4>
-            <div className="space-y-1 text-xs text-white/80">
-              <p className="flex items-center space-x-2">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
-                <span>WASD/Arrows: Move</span>
-              </p>
-              <p className="flex items-center space-x-2">
-                <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                <span>Mouse drag: Rotate</span>
-              </p>
-              <p className="flex items-center space-x-2">
-                <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
-                <span>Click: Interact</span>
-              </p>
-            </div>
-            <div className="mt-3 pt-3 border-t border-white/20">
-              <p className="text-white/70 text-xs leading-relaxed">
-                Explore: Bookshelf, Desk, Materials, Artwork, Table, Lamps
-              </p>
+        <div className="fixed top-4 left-4 max-w-xs z-50">
+          {/* Compact Glassmorphic Container */}
+          <div className="relative backdrop-blur-xl bg-gradient-to-br from-slate-800/60 via-slate-900/50 to-slate-950/60 border border-slate-400/40 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Dark gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-700/20 via-blue-900/20 to-slate-800/20"></div>
+            
+            {/* Content */}
+            <div className="relative p-5">
+              {/* Close button */}
+              <button 
+                className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-md bg-slate-700/30 border border-slate-400/30 hover:bg-slate-600/40 transition-all duration-300 group"
+                onClick={() => setShowHelp(false)}
+              >
+                <span className="text-white text-lg font-light group-hover:rotate-90 transition-transform duration-300">×</span>
+              </button>
+              
+              {/* Header */}
+              <div className="mb-4 pr-8">
+                <h3 className="text-base font-bold text-white mb-1">
+                  Quainton Law
+                </h3>
+                <p className="text-xs text-gray-300">Miniverse™ Controls</p>
+              </div>
+              
+              {/* Controls - Compact */}
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between text-white py-1">
+                  <span className="flex items-center space-x-1.5">
+                    <kbd className="px-2 py-1 bg-slate-700/60 rounded border border-slate-400/40 text-[10px] text-white">WASD</kbd>
+                    <span className="text-gray-400">/</span>
+                    <kbd className="px-2 py-1 bg-slate-700/60 rounded border border-slate-400/40 text-[10px] text-white">↑←↓→</kbd>
+                  </span>
+                  <span className="text-gray-200">Move</span>
+                </div>
+                <div className="flex items-center justify-between text-white py-1">
+                  <span className="flex items-center space-x-1.5">
+                    <kbd className="px-2 py-1 bg-slate-700/60 rounded border border-slate-400/40 text-[10px] text-white">Q</kbd>
+                    <span className="text-gray-400">/</span>
+                    <kbd className="px-2 py-1 bg-slate-700/60 rounded border border-slate-400/40 text-[10px] text-white">E</kbd>
+                  </span>
+                  <span className="text-gray-200">Rotate</span>
+                </div>
+                <div className="flex items-center justify-between text-white py-1">
+                  <kbd className="px-2.5 py-1 bg-slate-700/60 rounded border border-slate-400/40 text-[10px] text-white">Click</kbd>
+                  <span className="text-gray-200">Interact</span>
+                </div>
+                <div className="flex items-center justify-between text-white py-1">
+                  <kbd className="px-2.5 py-1 bg-slate-700/60 rounded border border-slate-400/40 text-[10px] text-white">H</kbd>
+                  <span className="text-gray-200">Show/Hide help</span>
+                </div>
+              </div>
+              
+              {/* Footer hint */}
+              <div className="mt-4 pt-3 border-t border-slate-500/40">
+                <p className="text-[10px] text-gray-300 text-center leading-relaxed">
+                  Click panels to explore
+                </p>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       <button 
-        className="absolute bottom-6 left-1/2 transform -translate-x-1/2 backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-white/20 transition-all duration-300"
+        className="fixed bottom-6 left-1/2 transform -translate-x-1/2 backdrop-blur-xl bg-slate-800/60 border border-slate-400/40 text-white px-4 py-2 rounded-full text-xs font-medium hover:bg-slate-700/70 shadow-xl transition-all duration-300 group"
         onClick={() => setShowHelp(true)}
       >
         <span className="flex items-center space-x-2">
-          <span>🎮</span>
-          <span>WASD/Arrows to move • Click panels to explore • Click here for help</span>
+          <span className="text-sm group-hover:scale-110 transition-transform">🎮</span>
+          <span className="hidden sm:inline">Help & Controls</span>
+          <span className="sm:hidden">Help</span>
         </span>
       </button>
 
       <button 
-        className="absolute top-5 right-5 backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl p-4 rounded-full hover:bg-white/20 transition-all duration-300 group"
+        className="fixed top-4 right-4 backdrop-blur-xl bg-slate-800/60 border border-slate-400/40 p-3 rounded-full hover:bg-slate-700/70 shadow-xl transition-all duration-300 group"
         onClick={() => setShowMusicPanel(prev => !prev)}
       >
-        <span className="text-xl text-white group-hover:scale-110 transition-transform duration-200">🎵</span>
-        {isPlaying && (
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
-        )}
+        <span className="text-lg group-hover:scale-110 transition-transform inline-block">🎵</span>
       </button>
 
-      {showMusicPanel && (
-        <div className="absolute top-20 right-5 backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl rounded-2xl p-6 max-w-sm">
-          {/* Header with close button */}
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-white text-lg font-semibold tracking-wide">Audio Player</h4>
-            <button
-              onClick={() => setShowMusicPanel(false)}
-              className="text-white/70 hover:text-white transition-colors duration-200 text-xl hover:scale-110 transform transition-transform"
-            >
-              ×
-            </button>
-          </div>
-          
-          {/* Track Selection */}
-          <div className="space-y-3 mb-4">
-            {/* Audio Track 1 */}
-            <button 
-              className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm ${
-                currentTrack === 'audio1.mp3' 
-                  ? 'bg-emerald-500/30 text-emerald-100 border border-emerald-400/50 shadow-lg shadow-emerald-500/20' 
-                  : 'bg-white/10 text-white/90 hover:bg-white/20 border border-white/20 hover:border-white/30'
-              }`}
-              onClick={() => {
-                if (currentTrack === 'audio1.mp3' && isPlaying) {
-                  toggleAudio();
-                } else {
-                  playAudio('audio1.mp3');
-                }
-              }}
-              disabled={isLoading && currentTrack !== 'audio1.mp3'}
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <span className="text-lg">🎵</span>
-                <span>
-                  {currentTrack === 'audio1.mp3' && isLoading 
-                    ? 'Loading...' 
-                    : currentTrack === 'audio1.mp3' && isPlaying 
-                    ? 'Track 1 • Playing' 
-                    : currentTrack === 'audio1.mp3' && !isPlaying
-                    ? 'Track 1 • Paused'
-                    : 'Track 1'
-                  }
-                </span>
-                {currentTrack === 'audio1.mp3' && isLoading && (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                )}
-                {currentTrack === 'audio1.mp3' && isPlaying && (
-                  <div className="flex space-x-1">
-                    <div className="w-1 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <div className="w-1 h-4 bg-emerald-400 rounded-full animate-pulse" style={{animationDelay: '0.1s'}}></div>
-                    <div className="w-1 h-2 bg-emerald-400 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                  </div>
-                )}
-              </div>
-            </button>
+      {/* Music Panel or Player */}
+      {showMusicPanel && !isPlayerOpen && (
+        <div className="fixed top-20 right-4 w-48 z-50">
+          {/* Compact Music Panel - Track Selection */}
+          <div className="relative backdrop-blur-xl bg-gradient-to-br from-slate-800/60 via-slate-900/50 to-slate-950/60 border border-slate-400/40 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Dark gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-700/20 via-blue-900/20 to-slate-800/20"></div>
             
-            {/* Audio Track 2 */}
-            <button 
-              className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm ${
-                currentTrack === 'audio2.mp3' 
-                  ? 'bg-emerald-500/30 text-emerald-100 border border-emerald-400/50 shadow-lg shadow-emerald-500/20' 
-                  : 'bg-white/10 text-white/90 hover:bg-white/20 border border-white/20 hover:border-white/30'
-              }`}
-              onClick={() => {
-                if (currentTrack === 'audio2.mp3' && isPlaying) {
-                  toggleAudio();
-                } else {
-                  playAudio('audio2.mp3');
-                }
-              }}
-              disabled={isLoading && currentTrack !== 'audio2.mp3'}
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <span className="text-lg">🎶</span>
-                <span>
-                  {currentTrack === 'audio2.mp3' && isLoading 
-                    ? 'Loading...' 
-                    : currentTrack === 'audio2.mp3' && isPlaying 
-                    ? 'Track 2 • Playing' 
-                    : currentTrack === 'audio2.mp3' && !isPlaying
-                    ? 'Track 2 • Paused'
-                    : 'Track 2'
-                  }
-                </span>
-                {currentTrack === 'audio2.mp3' && isLoading && (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                )}
-                {currentTrack === 'audio2.mp3' && isPlaying && (
-                  <div className="flex space-x-1">
-                    <div className="w-1 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <div className="w-1 h-4 bg-emerald-400 rounded-full animate-pulse" style={{animationDelay: '0.1s'}}></div>
-                    <div className="w-1 h-2 bg-emerald-400 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                  </div>
-                )}
+            {/* Content */}
+            <div className="relative p-3">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-white">Music</h4>
+                <button
+                  onClick={() => setShowMusicPanel(false)}
+                  className="w-6 h-6 flex items-center justify-center rounded-full backdrop-blur-md bg-slate-700/30 border border-slate-400/30 hover:bg-slate-600/40 transition-all duration-300 group"
+                >
+                  <span className="text-white text-sm font-light group-hover:rotate-90 transition-transform duration-300">×</span>
+                </button>
               </div>
-            </button>
-          </div>
-          
-          {/* Control Buttons */}
-          <div className="flex space-x-2 mb-4">
-            <button 
-              className={`flex-1 py-2.5 px-4 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm ${
-                isPlaying 
-                  ? 'bg-red-500/20 text-red-100 border border-red-400/50 hover:bg-red-500/30' 
-                  : 'bg-white/10 text-white/90 hover:bg-white/20 border border-white/20'
-              }`}
-              onClick={toggleAudio}
-              disabled={!currentTrack}
-            >
-              {isPlaying ? '⏸ Pause' : '▶ Play'}
-            </button>
-            <button 
-              className="py-2.5 px-4 rounded-xl font-medium transition-all duration-300 backdrop-blur-sm bg-white/10 text-white/90 hover:bg-white/20 border border-white/20"
-              onClick={stopAudio}
-              disabled={!currentTrack}
-            >
-              ⏹ Stop
-            </button>
-          </div>
-          
-          {/* Volume Control */}
-          {isPlaying && (
-            <div className="mb-4">
-              <label className="text-white/80 text-sm font-medium block mb-3">Volume</label>
-              <div className="relative">
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  defaultValue="0.5"
-                  className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
-                  style={{
-                    background: 'linear-gradient(to right, #10b981 0%, #10b981 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 100%)'
-                  }}
-                  onChange={(e) => {
-                    if (currentAudio) {
-                      currentAudio.volume = parseFloat(e.target.value);
-                    }
-                  }}
-                />
-                <div className="flex justify-between text-xs text-white/60 mt-1">
-                  <span>0</span>
-                  <span>100</span>
-                </div>
+              
+              {/* Music Tracks - Clickable */}
+              <div className="space-y-2">
+                {tracks.map((track) => (
+                  <button
+                    key={track.title}
+                    onClick={() => handleTrackSelect(track)}
+                    className="w-full backdrop-blur-md bg-gradient-to-r from-purple-900/40 to-purple-800/40 border border-purple-400/30 text-white py-2 px-3 rounded-xl text-xs font-medium hover:from-purple-800/50 hover:to-purple-700/50 transition-all duration-300"
+                  >
+                    <div className="flex items-center justify-center space-x-1.5">
+                      <span className="text-sm">{track.icon}</span>
+                      <span>{track.title}</span>
+                    </div>
+                  </button>
+                ))}
               </div>
+
+              {/* Footer hint */}
+              <p className="text-[10px] text-gray-300 text-center mt-2">
+                Click to play
+              </p>
             </div>
-          )}
-          
-          {/* Status Display */}
-          <div className="text-center">
-            <div className="text-white/70 text-sm font-medium">
-              {currentTrack ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                  <span>Now Playing</span>
+          </div>
+        </div>
+      )}
+
+      {/* Music Player */}
+      {isPlayerOpen && currentTrack && (
+        <div className={`fixed top-20 right-4 z-50 transition-all duration-300 ${isMinimized ? 'w-64' : 'w-80'}`}>
+          <div className="relative backdrop-blur-xl bg-gradient-to-br from-slate-800/60 via-slate-900/50 to-slate-950/60 border border-slate-400/40 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Dark gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-700/20 via-blue-900/20 to-slate-800/20"></div>
+            
+            {/* Content */}
+            <div className="relative">
+              {/* Header */}
+              <div className="flex items-center justify-between p-3 border-b border-slate-600/40">
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg">{currentTrack.icon}</span>
+                  <h4 className="text-sm font-semibold text-white">{currentTrack.title}</h4>
                 </div>
-              ) : (
-                'Select a track to begin'
-              )}
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={handleMinimizeToggle}
+                    className="w-6 h-6 flex items-center justify-center rounded-full backdrop-blur-md bg-slate-700/30 border border-slate-400/30 hover:bg-slate-600/40 transition-all duration-300"
+                    title={isMinimized ? "Maximize" : "Minimize"}
+                  >
+                    <span className="text-white text-xs">{isMinimized ? '▢' : '▬'}</span>
+                  </button>
+                  <button
+                    onClick={handleClosePlayer}
+                    className="w-6 h-6 flex items-center justify-center rounded-full backdrop-blur-md bg-slate-700/30 border border-slate-400/30 hover:bg-slate-600/40 transition-all duration-300 group"
+                  >
+                    <span className="text-white text-sm font-light group-hover:rotate-90 transition-transform duration-300">×</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Video Player Container */}
+              <div className={`relative ${isMinimized ? 'hidden' : 'block'}`}>
+                <div className="relative bg-black rounded-lg overflow-hidden" style={{ paddingTop: '56.25%' }}>
+                  {/* Loading indicator */}
+                  {!playerReady && !playerError && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-10">
+                      <div className="text-white text-sm flex items-center space-x-2 mb-2">
+                        <div className="animate-spin">⏳</div>
+                        <span>Loading player...</span>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {currentTrack.title} - {currentTrack.icon}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error indicator */}
+                  {playerError && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 z-10 p-4">
+                      <div className="text-red-400 text-sm mb-3 text-center">
+                        {playerError}
+                      </div>
+                      <div className="space-y-2">
+                        <a
+                          href={currentTrack.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block bg-blue-600 text-white px-4 py-2 rounded-lg text-xs hover:bg-blue-700 text-center"
+                        >
+                          Open in YouTube
+                        </a>
+                        <button
+                          onClick={() => {
+                            setPlayerError(null);
+                            setPlayerReady(false);
+                          }}
+                          className="block bg-gray-600 text-white px-4 py-2 rounded-lg text-xs hover:bg-gray-700"
+                        >
+                          Try Again
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="absolute top-0 left-0 w-full h-full">
+                    {typeof window !== 'undefined' && currentTrack && (
+                      <ReactPlayer
+                        key={currentTrack.url}
+                        url={currentTrack.url}
+                        width="100%"
+                        height="100%"
+                        controls={true}
+                        light={false}
+                        pip={false}
+                        config={{
+                          youtube: {
+                            playerVars: {
+                              autoplay: 0,
+                              controls: 1,
+                              modestbranding: 1,
+                              rel: 0,
+                              showinfo: 0,
+                              fs: 1,
+                              enablejsapi: 1,
+                              iv_load_policy: 3,
+                              cc_load_policy: 0
+                            }
+                          }
+                        }}
+                        onReady={() => {
+                          console.log('Player ready - YouTube controls active');
+                          setPlayerReady(true);
+                          setPlayerError(null);
+                        }}
+                        onStart={() => {
+                          console.log('Video started playing');
+                        }}
+                        onError={(e: any) => {
+                          console.error('Player error:', e);
+                          setPlayerError('Failed to load video. Try a different track or open in YouTube.');
+                        }}
+                        onLoad={() => {
+                          console.log('Video loaded successfully');
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="p-3 space-y-3">
+                {/* Info */}
+                <div className="text-xs text-gray-400 text-center bg-slate-800/30 rounded-lg p-2">
+                  Use YouTube controls to play/pause
+                </div>
+
+
+                {/* Track List */}
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-300 mb-2">Tracks</p>
+                  <div className="space-y-1">
+                    {tracks.map((track) => (
+                      <button
+                        key={track.title}
+                        onClick={() => handleTrackSelect(track)}
+                        className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-all duration-300 ${
+                          currentTrack.title === track.title
+                            ? 'bg-blue-500/40 border border-blue-400/40 text-white'
+                            : 'bg-slate-700/30 border border-slate-600/30 text-gray-300 hover:bg-slate-700/50'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span>{track.icon}</span>
+                          <span>{track.title}</span>
+                          {currentTrack.title === track.title && isPlaying && (
+                            <span className="ml-auto">♪</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
