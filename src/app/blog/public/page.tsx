@@ -203,6 +203,5 @@ export default function PublicBlogListPage() {
           </div>
         )}
       </div>
-    </div>
   )
 }

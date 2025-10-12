@@ -42,18 +42,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Download document
-    const downloadResponse = await pacerClient.downloadDocument(
-      documentId,
-      caseNumber,
-      court,
-      sessionToken
+    // TODO: Implement document download functionality
+    // Document downloading is not yet implemented in pacerClient
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Not implemented',
+        message: 'Document downloading functionality is coming soon',
+      },
+      { status: 501 }
     )
-
-    return NextResponse.json({
-      success: true,
-      ...downloadResponse,
-    })
 
   } catch (error) {
     console.error('PACER document download error:', error)

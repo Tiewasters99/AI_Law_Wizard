@@ -378,6 +378,5 @@ export default function BlogViewPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
   )
 }

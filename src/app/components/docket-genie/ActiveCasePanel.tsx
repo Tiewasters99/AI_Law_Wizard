@@ -93,13 +93,13 @@ export function ActiveCasePanel({
                   {caseDetails?.status || docket?.caseInfo.status}
                 </span>
               )}
-              {(caseDetails?.caseLink || docket?.caseInfo.caseLink) && (
+              {caseDetails?.caseLink && (
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() =>
                     window.open(
-                      caseDetails?.caseLink || docket?.caseInfo.caseLink,
+                      caseDetails.caseLink,
                       '_blank'
                     )
                   }
