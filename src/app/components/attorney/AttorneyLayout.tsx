@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AttorneySidebar } from './AttorneySidebar'
 import { AttorneyTopBar } from './AttorneyTopBar'
 import { colors } from '@/app/lib/designSystem'
@@ -39,7 +39,7 @@ export function AttorneyLayout({ children, unreadCount = 0 }: AttorneyLayoutProp
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const handleToggleSidebar = () => {
+  const handleToggleSidebar = useCallback(() => {
     if (isMobile) {
       setShowMobileSidebar(!showMobileSidebar)
     } else {
@@ -47,13 +47,13 @@ export function AttorneyLayout({ children, unreadCount = 0 }: AttorneyLayoutProp
       setIsCollapsed(newState)
       localStorage.setItem('attorney-sidebar-collapsed', String(newState))
     }
-  }
+  }, [isMobile, showMobileSidebar, isCollapsed])
 
-  const handleCloseMobileSidebar = () => {
+  const handleCloseMobileSidebar = useCallback(() => {
     if (isMobile) {
       setShowMobileSidebar(false)
     }
-  }
+  }, [isMobile])
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: colors.background }}>

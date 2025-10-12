@@ -53,13 +53,17 @@ export default function Home() {
       })
 
       // Call the legal analysis API endpoint
+      // Get existing sessionId from localStorage if available
+      const existingSessionId = localStorage.getItem('legalChatSessionId')
+      
       const response = await fetch('/api/legal-analysis', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userIssue: userIssue
+          userIssue: userIssue,
+          sessionId: existingSessionId // Include sessionId for context
         })
       })
 
@@ -114,7 +118,12 @@ export default function Home() {
                     // Trigger a custom event to update the chat page
                     window.dispatchEvent(new CustomEvent('chat-update'))
                   } else if (data.type === 'done') {
-                    // Streaming complete - track token usage
+                    // Streaming complete - track token usage and capture sessionId
+                    if (data.sessionId) {
+                      localStorage.setItem('legalChatSessionId', data.sessionId)
+                      console.log('Session ID captured in Home:', data.sessionId)
+                    }
+                    
                     if (data.tokensUsed) {
                       TokenTracker.addTokenUsage(data.tokensUsed, userId)
                       // Update local state

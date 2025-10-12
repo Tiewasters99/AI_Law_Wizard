@@ -40,6 +40,7 @@ export default function LegalChatPage() {
   const [showScrollDown, setShowScrollDown] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [tokenUsage, setTokenUsage] = useState({ used: 0, limit: 0 })
   const [selectedConsultationType, setSelectedConsultationType] = useState<string>('General Legal')
@@ -62,6 +63,13 @@ export default function LegalChatPage() {
     const used = TokenTracker.getTokenUsage(userId)
     const limit = TokenTracker.getLimit(userId)
     setTokenUsage({ used, limit })
+    
+    // Load sessionId from localStorage if available
+    const storedSessionId = localStorage.getItem('legalChatSessionId')
+    if (storedSessionId) {
+      setSessionId(storedSessionId)
+      console.log('Loaded sessionId from localStorage:', storedSessionId)
+    }
     
     // Load initial messages from localStorage
     const loadMessages = () => {
@@ -143,13 +151,16 @@ export default function LegalChatPage() {
     setIsLoading(true)
 
     try {
+      console.log('Sending message with sessionId:', sessionId || 'new session')
+      
       const response = await fetch('/api/legal-analysis', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userIssue: userMessage.content
+          userIssue: userMessage.content,
+          sessionId: sessionId // Include sessionId for context
         })
       })
 
@@ -206,8 +217,16 @@ export default function LegalChatPage() {
                         return updated
                       })
                     } else if (data.type === 'done') {
-                      // Streaming complete - track token usage
+                      // Streaming complete - track token usage and capture sessionId
                       console.log('Streaming complete')
+                      
+                      // Capture sessionId for conversation context
+                      if (data.sessionId) {
+                        setSessionId(data.sessionId)
+                        localStorage.setItem('legalChatSessionId', data.sessionId)
+                        console.log('Session ID captured and stored:', data.sessionId)
+                      }
+                      
                       if (data.tokensUsed) {
                         TokenTracker.addTokenUsage(data.tokensUsed, userId)
                         // Update local state
@@ -290,7 +309,11 @@ export default function LegalChatPage() {
   const handleNewChat = useCallback(() => {
     setMessages([])
     setCurrentChatId(null)
+    setSessionId(null) // Reset sessionId for new conversation
+    localStorage.removeItem('legalChatSessionId') // Clear from localStorage
+    localStorage.removeItem('legalChatMessages') // Clear messages too
     setInputMessage('')
+    console.log('Started new chat - cleared sessionId')
   }, [])
 
   const handleSelectChat = useCallback((chatId: string) => {
@@ -417,6 +440,11 @@ export default function LegalChatPage() {
                     </h1>
                     <p className="text-xs sm:text-sm" style={{ color: colors.secondary[500] }}>
                       {selectedConsultationType} • AI-Powered Legal Analysis
+                      {sessionId && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-green-600">
+                          • <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Context Active
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>

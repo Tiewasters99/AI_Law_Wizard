@@ -155,7 +155,7 @@ function OneDriveInterfaceContent({
 
 
   // Check sync status for files
-  const checkSyncStatus = async (fileList: OneDriveFileInfo[]) => {
+  const checkSyncStatus = useCallback(async (fileList: OneDriveFileInfo[]) => {
     try {
       const fileIds = fileList
         .filter(file => !file.isFolder)
@@ -172,7 +172,7 @@ function OneDriveInterfaceContent({
     } catch (error) {
       console.error('Error checking sync status:', error)
     }
-  }
+  }, [])
 
   // Load files when authenticated and dependencies change
   useEffect(() => {
@@ -182,7 +182,7 @@ function OneDriveInterfaceContent({
   }, [currentFolder, searchTerm, isAuthenticated, loadFiles])
 
   // Handle authentication
-  const handleSignIn = async () => {
+  const handleSignIn = useCallback(async () => {
     setAuthLoading(true)
     try {
       const authUrl = graphClient.generateAuthUrl()
@@ -195,9 +195,9 @@ function OneDriveInterfaceContent({
       })
       setAuthLoading(false)
     }
-  }
+  }, [toast])
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     graphClient.logout()
     setIsAuthenticated(false)
     setFiles([])
@@ -205,29 +205,30 @@ function OneDriveInterfaceContent({
       title: "Signed Out",
       description: "You have been signed out of OneDrive",
     })
-  }
+  }, [toast])
 
   // Navigate to folder
-  const navigateToFolder = (folderId: string, folderName: string) => {
+  const navigateToFolder = useCallback((folderId: string, folderName: string) => {
     setCurrentFolder(folderId)
-    setFolderPath([...folderPath, folderName])
+    setFolderPath(prev => [...prev, folderName])
     if (onFolderSelect) {
       onFolderSelect(folderId, folderName)
     }
-  }
+  }, [onFolderSelect])
 
   // Navigate back
-  const navigateBack = () => {
-    if (folderPath.length > 1) {
-      setFolderPath(folderPath.slice(0, -1))
-      // For simplicity, we'll reload the root folder
-      // In a real implementation, you'd want to track the parent folder ID
-      setCurrentFolder('root')
-    }
-  }
+  const navigateBack = useCallback(() => {
+    setFolderPath(prev => {
+      if (prev.length > 1) {
+        setCurrentFolder('root')
+        return prev.slice(0, -1)
+      }
+      return prev
+    })
+  }, [])
 
   // Handle file selection
-  const handleFileSelect = async (file: OneDriveFileInfo) => {
+  const handleFileSelect = useCallback(async (file: OneDriveFileInfo) => {
     if (file.isFolder) {
       navigateToFolder(file.id, file.name)
       return
@@ -266,10 +267,10 @@ function OneDriveInterfaceContent({
         setLoading(false)
       }
     }
-  }
+  }, [navigateToFolder, onFileSelect, toast])
 
   // Handle direct download from OneDrive
-  const handleDownloadFile = async (file: OneDriveFileInfo, e: React.MouseEvent) => {
+  const handleDownloadFile = useCallback(async (file: OneDriveFileInfo, e: React.MouseEvent) => {
     e.stopPropagation()
     
     try {
@@ -311,10 +312,10 @@ function OneDriveInterfaceContent({
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   // Handle open file in OneDrive
-  const handleOpenFile = async (file: OneDriveFileInfo, e: React.MouseEvent) => {
+  const handleOpenFile = useCallback(async (file: OneDriveFileInfo, e: React.MouseEvent) => {
     e.stopPropagation()
     
     try {
@@ -347,10 +348,10 @@ function OneDriveInterfaceContent({
         variant: "destructive"
       })
     }
-  }
+  }, [toast])
 
   // Handle file sync to embedding system
-  const handleFileSync = async (file: OneDriveFileInfo, e: React.MouseEvent) => {
+  const handleFileSync = useCallback(async (file: OneDriveFileInfo, e: React.MouseEvent) => {
     e.stopPropagation()
     
     if (file.isFolder) {
@@ -454,10 +455,10 @@ function OneDriveInterfaceContent({
         return newSet
       })
     }
-  }
+  }, [syncedFiles, syncingFiles, toast])
 
   // Handle bulk sync
-  const handleBulkSync = async () => {
+  const handleBulkSync = useCallback(async () => {
     const filesToSync = files.filter(file => 
       !file.isFolder && 
       selectedForSync.has(file.id) && 
@@ -641,10 +642,10 @@ function OneDriveInterfaceContent({
       setBatchProcessing(false)
       setBatchProgress({ processed: 0, total: 0, current: '' })
     }
-  }
+  }, [files, selectedForSync, syncedFiles, syncingFiles, onFileSync, toast])
 
   // Toggle file selection for sync
-  const toggleFileSelection = (fileId: string, e: React.MouseEvent) => {
+  const toggleFileSelection = useCallback((fileId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     
     // Find the file to check its size
@@ -677,10 +678,10 @@ function OneDriveInterfaceContent({
       }
       return newSet
     })
-  }
+  }, [files, toast])
 
   // Select all unsync files
-  const selectAllForSync = () => {
+  const selectAllForSync = useCallback(() => {
     const unsyncedFiles = files.filter(file => 
       !file.isFolder && 
       !syncedFiles.has(file.id) && 
@@ -716,15 +717,15 @@ function OneDriveInterfaceContent({
         variant: "destructive"
       })
     }
-  }
+  }, [files, syncedFiles, toast])
 
   // Clear all selections
-  const clearSelection = () => {
+  const clearSelection = useCallback(() => {
     setSelectedForSync(new Set())
-  }
+  }, [])
 
   // Handle file upload
-  const handleFileUpload = async () => {
+  const handleFileUpload = useCallback(async () => {
     if (!selectedFile) {
       toast({
         title: "Error",
@@ -761,15 +762,15 @@ function OneDriveInterfaceContent({
     } finally {
       setUploading(false)
     }
-  }
+  }, [selectedFile, currentFolder, loadFiles, toast])
 
   // Handle file input change
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       setSelectedFile(file)
     }
-  }
+  }, [])
 
   // Show authentication screen if not authenticated
   if (!isAuthenticated) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ClientSidebar } from './ClientSidebar'
 import { ClientTopBar } from './ClientTopBar'
 import { colors } from '@/app/lib/designSystem'
@@ -42,7 +42,7 @@ export function ClientLayout({ children, unreadCount = 0, pendingRequestsCount =
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const handleToggleSidebar = () => {
+  const handleToggleSidebar = useCallback(() => {
     if (isMobile) {
       setShowMobileSidebar(!showMobileSidebar)
     } else {
@@ -50,13 +50,13 @@ export function ClientLayout({ children, unreadCount = 0, pendingRequestsCount =
       setIsCollapsed(newState)
       localStorage.setItem('client-sidebar-collapsed', String(newState))
     }
-  }
+  }, [isMobile, showMobileSidebar, isCollapsed])
 
-  const handleCloseMobileSidebar = () => {
+  const handleCloseMobileSidebar = useCallback(() => {
     if (isMobile) {
       setShowMobileSidebar(false)
     }
-  }
+  }, [isMobile])
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: colors.background }}>

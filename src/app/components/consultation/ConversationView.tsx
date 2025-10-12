@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Send, Loader2, AlertCircle, User, FileText, ArrowLeft, X } from 'lucide-react'
+import { Send, Loader2, AlertCircle, User, FileText, ArrowLeft, X, Quote, Clock, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { colors } from '@/app/lib/designSystem'
 import { Badge } from '@/app/components/ui/badge'
@@ -42,8 +42,10 @@ interface Conversation {
   consultationRequest: {
     id: string
     caseType: string
+    description: string
     status: string
     urgency: string
+    createdAt: string
   }
   messages: Message[]
 }
@@ -54,12 +56,44 @@ interface ConversationViewProps {
   onClose?: () => void
 }
 
+// Urgency configuration for styling
+const getUrgencyConfig = (urgency: string) => {
+  const configs: Record<string, { color: string; bgColor: string; borderColor: string; icon: any }> = {
+    LOW: {
+      color: colors.success[700],
+      bgColor: colors.success[50],
+      borderColor: colors.success[200],
+      icon: Clock
+    },
+    MEDIUM: {
+      color: colors.accent[700],
+      bgColor: colors.accent[50],
+      borderColor: colors.accent[200],
+      icon: Clock
+    },
+    HIGH: {
+      color: colors.error[700],
+      bgColor: colors.error[50],
+      borderColor: colors.error[200],
+      icon: AlertTriangle
+    },
+    URGENT: {
+      color: colors.error[900],
+      bgColor: colors.error[100],
+      borderColor: colors.error[300],
+      icon: AlertTriangle
+    }
+  }
+  return configs[urgency] || configs.MEDIUM
+}
+
 export function ConversationView({ conversationId, currentUserId, onClose }: ConversationViewProps) {
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [showRequestDetails, setShowRequestDetails] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const fetchConversation = async () => {
@@ -245,6 +279,138 @@ export function ConversationView({ conversationId, currentUserId, onClose }: Con
           </Badge>
         </div>
       </div>
+
+      {/* Toggle button for request details (when hidden) */}
+      {!showRequestDetails && (
+        <div className="flex-shrink-0 border-b px-3 sm:px-4 lg:px-6 py-2" style={{ borderColor: colors.secondary[200] }}>
+          <button
+            onClick={() => setShowRequestDetails(true)}
+            className="w-full p-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2 text-sm"
+            style={{ color: colors.primary[700] }}
+          >
+            <Quote className="w-4 h-4" />
+            <span className="font-semibold">
+              {currentUserId === conversation.attorney.id 
+                ? "Show Client's Original Request" 
+                : "Show Your Original Request"}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Original Consultation Request */}
+      {showRequestDetails && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex-shrink-0 border-b px-3 sm:px-4 lg:px-6 py-3 sm:py-4"
+          style={{ 
+            backgroundColor: colors.primary[50],
+            borderColor: colors.secondary[200]
+          }}
+        >
+          <div className="max-w-3xl">
+            {/* Header with close button */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: colors.primary[100] }}>
+                  <Quote className="w-4 h-4" style={{ color: colors.primary[700] }} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm" style={{ color: colors.text }}>
+                    {currentUserId === conversation.attorney.id 
+                      ? "Client's Original Request" 
+                      : "Your Original Request"}
+                  </h4>
+                  <p className="text-xs" style={{ color: colors.secondary[600] }}>
+                    Submitted on {new Date(conversation.consultationRequest.createdAt).toLocaleDateString('en-US', { 
+                      month: 'long', 
+                      day: 'numeric', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRequestDetails(false)}
+                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                aria-label="Close request details"
+              >
+                <X className="w-4 h-4" style={{ color: colors.secondary[600] }} />
+              </button>
+            </div>
+
+            {/* Request Details */}
+            <div className="space-y-3">
+              {/* Badges Row */}
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant="outline"
+                  className="text-xs font-semibold"
+                  style={{
+                    backgroundColor: colors.primary[50],
+                    color: colors.primary[700],
+                    borderColor: colors.primary[200]
+                  }}
+                >
+                  {conversation.consultationRequest.caseType}
+                </Badge>
+                {(() => {
+                  const urgencyConfig = getUrgencyConfig(conversation.consultationRequest.urgency)
+                  const UrgencyIcon = urgencyConfig.icon
+                  return (
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-semibold flex items-center space-x-1"
+                      style={{
+                        backgroundColor: urgencyConfig.bgColor,
+                        color: urgencyConfig.color,
+                        borderColor: urgencyConfig.borderColor
+                      }}
+                    >
+                      <UrgencyIcon className="w-3 h-3" />
+                      <span>{conversation.consultationRequest.urgency}</span>
+                    </Badge>
+                  )
+                })()}
+                <Badge
+                  variant="outline"
+                  className="text-xs font-semibold"
+                  style={{
+                    backgroundColor: colors.secondary[50],
+                    color: colors.secondary[700],
+                    borderColor: colors.secondary[200]
+                  }}
+                >
+                  {conversation.consultationRequest.status.replace('_', ' ')}
+                </Badge>
+              </div>
+
+              {/* Description - The Request Quote */}
+              <div 
+                className="p-3 sm:p-4 rounded-lg border-l-4"
+                style={{
+                  backgroundColor: 'white',
+                  borderLeftColor: colors.primary[500],
+                  borderTop: `1px solid ${colors.secondary[200]}`,
+                  borderRight: `1px solid ${colors.secondary[200]}`,
+                  borderBottom: `1px solid ${colors.secondary[200]}`
+                }}
+              >
+                <p className="text-xs font-semibold mb-2 flex items-center space-x-1" style={{ color: colors.secondary[600] }}>
+                  <Quote className="w-3 h-3" />
+                  <span>CASE DESCRIPTION</span>
+                </p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: colors.text }}>
+                  {conversation.consultationRequest.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -25,7 +25,7 @@ export function GuestHeader() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const scrollToSection = (sectionId: string) => {
+  const scrollToSection = useCallback((sectionId: string) => {
     // If not on landing page, navigate there first
     if (pathname !== '/landing') {
       router.push(`/landing#${sectionId}`)
@@ -37,15 +37,22 @@ export function GuestHeader() {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' })
       setIsMobileMenuOpen(false)
     }
-  }
+  }, [pathname, router])
 
-  const navItems = [
-    { label: 'Home', action: () => router.push('/'), type: 'link' as const },
+  const handleNavigateHome = useCallback(() => router.push('/'), [router])
+  const handleNavigateAttorney = useCallback(() => router.push('/attorney-features'), [router])
+  const handleNavigateAuth = useCallback(() => router.push('/auth'), [router])
+  const handleOpenMiniverse = useCallback(() => router.push('/miniverse'), [router])
+  const handleToggleMobileMenu = useCallback(() => setIsMobileMenuOpen(prev => !prev), [])
+  const handleCloseMobileMenu = useCallback(() => setIsMobileMenuOpen(false), [])
+
+  const navItems = useMemo(() => [
+    { label: 'Home', action: handleNavigateHome, type: 'link' as const },
     { label: 'Features', action: () => scrollToSection('features'), type: 'scroll' as const },
-    { label: 'For Attorneys', action: () => router.push('/attorney-features'), type: 'link' as const },
-    { label: 'Miniverse™', action: () => window.open('https://my-miniverse.vercel.app/', '_blank'), type: 'link' as const },
+    { label: 'For Attorneys', action: handleNavigateAttorney, type: 'link' as const },
+    { label: 'Miniverse™', action: handleOpenMiniverse, type: 'link' as const },
     { label: 'Pricing', action: () => scrollToSection('pricing'), type: 'scroll' as const },
-  ]
+  ], [handleNavigateHome, handleNavigateAttorney, handleOpenMiniverse, scrollToSection])
 
   return (
     <>
@@ -94,7 +101,7 @@ export function GuestHeader() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push('/auth')}
+                onClick={handleNavigateAuth}
                 style={{ borderColor: colors.secondary[300] }}
               >
                 <LogIn className="w-4 h-4 mr-2" />
@@ -102,7 +109,7 @@ export function GuestHeader() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => router.push('/auth')}
+                onClick={handleNavigateAuth}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
@@ -112,7 +119,7 @@ export function GuestHeader() {
 
             {/* Mobile Menu Button */}
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={handleToggleMobileMenu}
               className="md:hidden p-2 rounded-lg transition-colors"
               style={{ color: colors.text }}
               aria-label="Toggle menu"
@@ -138,7 +145,7 @@ export function GuestHeader() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 bg-black/40 z-40 md:hidden"
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={handleCloseMobileMenu}
             />
 
             {/* Menu */}
@@ -158,7 +165,7 @@ export function GuestHeader() {
               <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: colors.secondary[200] }}>
                 <span className="text-lg font-semibold" style={{ color: colors.text }}>Menu</span>
                 <button
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={handleCloseMobileMenu}
                   className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <X className="w-5 h-5" style={{ color: colors.text }} />
@@ -185,8 +192,8 @@ export function GuestHeader() {
                   variant="outline"
                   className="w-full justify-center"
                   onClick={() => {
-                    router.push('/auth')
-                    setIsMobileMenuOpen(false)
+                    handleNavigateAuth()
+                    handleCloseMobileMenu()
                   }}
                   style={{ borderColor: colors.secondary[300] }}
                 >
@@ -196,8 +203,8 @@ export function GuestHeader() {
                 <Button
                   className="w-full justify-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md"
                   onClick={() => {
-                    router.push('/auth')
-                    setIsMobileMenuOpen(false)
+                    handleNavigateAuth()
+                    handleCloseMobileMenu()
                   }}
                 >
                   <Sparkles className="w-4 h-4 mr-2" />

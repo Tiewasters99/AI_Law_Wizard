@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { DocumentQuery, useQueryHistoryStore } from '../../stores/queryHistoryStore'
 import { format } from '../../utils/dateUtils'
 import { 
@@ -18,6 +18,18 @@ import {
 interface QueryHistoryProps {
   onSelectQuery?: (query: DocumentQuery) => void
   showStats?: boolean
+}
+
+// Move helper functions outside component to prevent re-creation
+const formatProcessingTime = (time?: number) => {
+  if (!time) return 'N/A'
+  if (time < 1000) return `${time}ms`
+  return `${(time / 1000).toFixed(2)}s`
+}
+
+const truncateText = (text: string, maxLength: number = 100) => {
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
 }
 
 export const QueryHistoryList: React.FC<QueryHistoryProps> = ({ 
@@ -50,12 +62,12 @@ export const QueryHistoryList: React.FC<QueryHistoryProps> = ({
     }
   }, [currentPage, searchTerm, showSuccessOnly, showStats, fetchQueries, fetchRecentQueries])
 
-  const handleSearch = (term: string) => {
+  const handleSearch = useCallback((term: string) => {
     setSearchTerm(term)
     setCurrentPage(1) // Reset to first page when searching
-  }
+  }, [])
 
-  const handleDelete = async (queryId: string) => {
+  const handleDelete = useCallback(async (queryId: string) => {
     if (window.confirm('Are you sure you want to delete this query?')) {
       const success = await deleteQuery(queryId)
       if (success) {
@@ -67,23 +79,12 @@ export const QueryHistoryList: React.FC<QueryHistoryProps> = ({
         }
       }
     }
-  }
+  }, [deleteQuery, showStats, fetchRecentQueries, fetchQueries, currentPage, searchTerm, showSuccessOnly])
 
-  const handleQuerySelect = (query: DocumentQuery) => {
+  const handleQuerySelect = useCallback((query: DocumentQuery) => {
     setSelectedQuery(query)
     onSelectQuery?.(query)
-  }
-
-  const formatProcessingTime = (time?: number) => {
-    if (!time) return 'N/A'
-    if (time < 1000) return `${time}ms`
-    return `${(time / 1000).toFixed(2)}s`
-  }
-
-  const truncateText = (text: string, maxLength: number = 100) => {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + '...'
-  }
+  }, [onSelectQuery])
 
   if (loading) {
     return (

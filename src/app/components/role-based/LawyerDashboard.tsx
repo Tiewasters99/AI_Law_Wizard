@@ -1,253 +1,222 @@
 'use client';
 
-import React from 'react';
-import { useAuth } from '@/app/stores/authStore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
-import { 
-  FileText, 
-  Zap, 
-  DollarSign, 
-  Users, 
-  BarChart3, 
-  Settings,
-  Plus,
-  TrendingUp,
-  Clock,
-  CheckCircle
-} from 'lucide-react';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { Consultation } from "@/app/lib/api";
+import StreamlinedConsultation from "@/app/components/consultation/StreamlinedConsultation";
+import { Message } from '@/app/components/chat/types';
+import { useRouter } from 'next/navigation';
+import { TokenTracker } from '@/app/lib/tokenTracker';
+import { UpgradeModal } from '@/app/components/auth/UpgradeModal';
 
-export const LawyerDashboard: React.FC = () => {
-  const { user } = useAuth();
+export const AttorneyDashboard: React.FC = () => {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [tokenUsage, setTokenUsage] = useState({ used: 0, limit: 0 });
 
-  const quickActions = [
-    {
-      title: 'Document Analysis',
-      description: 'Analyze legal documents with AI',
-      icon: FileText,
-      href: '/wizard',
-      color: 'bg-blue-500',
-      badge: 'Popular'
-    },
-    {
-      title: 'Token Management',
-      description: 'View and manage your tokens',
-      icon: DollarSign,
-      href: '/tokens',
-      color: 'bg-green-500'
-    },
-    {
-      title: 'Client Consultation',
-      description: 'Start a consultation session',
-      icon: Users,
-      href: '/consultation',
-      color: 'bg-purple-500'
-    },
-    {
-      title: 'Analytics',
-      description: 'View usage analytics',
-      icon: BarChart3,
-      href: '/analytics',
-      color: 'bg-orange-500'
+  useEffect(() => {
+    // Load current token usage
+    const userId = session?.user?.id;
+    const used = TokenTracker.getTokenUsage(userId);
+    const limit = TokenTracker.getLimit(userId);
+    setTokenUsage({ used, limit });
+  }, [session?.user?.id]);
+
+  const handleSubmitIssue = useCallback(async (userIssue: string) => {
+    // Check token limit before proceeding
+    const userId = session?.user?.id;
+    const hasExceeded = TokenTracker.hasExceededLimit(userId);
+    
+    if (hasExceeded) {
+      const usage = TokenTracker.getUsageSummary(userId);
+      setTokenUsage({ used: usage.used, limit: usage.limit });
+      setShowUpgradeModal(true);
+      return;
     }
-  ];
 
-  const stats = [
-    {
-      title: 'Total Tokens',
-      value: '1,250',
-      change: '+12%',
-      icon: Zap,
-      color: 'text-yellow-500'
-    },
-    {
-      title: 'Documents Processed',
-      value: '48',
-      change: '+8',
-      icon: FileText,
-      color: 'text-blue-500'
-    },
-    {
-      title: 'Active Sessions',
-      value: '3',
-      change: '+1',
-      icon: Clock,
-      color: 'text-green-500'
-    },
-    {
-      title: 'Success Rate',
-      value: '94%',
-      change: '+2%',
-      icon: CheckCircle,
-      color: 'text-purple-500'
-    }
-  ];
+    setIsLoading(true);
 
-  const recentActivity = [
-    {
-      id: 1,
-      action: 'Document Analysis',
-      description: 'Contract review completed',
-      time: '2 hours ago',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      action: 'Token Purchase',
-      description: '500 tokens added to account',
-      time: '1 day ago',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      action: 'Client Consultation',
-      description: 'New consultation started',
-      time: '2 days ago',
-      status: 'active'
+    // Create user message immediately
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: userIssue.trim(),
+      role: 'user',
+      timestamp: new Date()
+    };
+
+    try {
+      const consultation = await Consultation.create({
+        user_issue: userIssue,
+        status: "processing"
+      });
+
+      // Call the legal analysis API endpoint
+      // Get existing sessionId from localStorage if available
+      const existingSessionId = localStorage.getItem('legalChatSessionId');
+      
+      const response = await fetch('/api/legal-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userIssue: userIssue,
+          sessionId: existingSessionId // Include sessionId for context
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`API Error: ${response.status} - ${errorData}`);
+      }
+
+      // Check if response is streaming
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('text/event-stream')) {
+        // Handle streaming response
+        let markdownContent = '';
+        let responseStructure: string[] = [];
+
+        // Create initial assistant message with empty content
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: '',
+          role: 'assistant',
+          timestamp: new Date()
+        };
+
+        // Store initial messages and navigate to chat page immediately
+        localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, assistantMessage]));
+        router.push('/legal-chat');
+
+        // Process the stream
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n');
+
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = JSON.parse(line.slice(6));
+
+                  if (data.type === 'metadata') {
+                    responseStructure = data.responseStructure;
+                  } else if (data.type === 'content') {
+                    markdownContent += data.content;
+                    // Update localStorage with accumulated content
+                    const updatedAssistantMessage = { ...assistantMessage, content: markdownContent };
+                    localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, updatedAssistantMessage]));
+                    // Trigger a custom event to update the chat page
+                    window.dispatchEvent(new CustomEvent('chat-update'));
+                  } else if (data.type === 'done') {
+                    // Streaming complete - track token usage and capture sessionId
+                    if (data.sessionId) {
+                      localStorage.setItem('legalChatSessionId', data.sessionId);
+                      console.log('Session ID captured in AttorneyDashboard:', data.sessionId);
+                    }
+                    
+                    if (data.tokensUsed) {
+                      TokenTracker.addTokenUsage(data.tokensUsed, userId);
+                      // Update local state
+                      const updatedUsage = TokenTracker.getUsageSummary(userId);
+                      setTokenUsage({ used: updatedUsage.used, limit: updatedUsage.limit });
+                    }
+                    
+                    await Consultation.update(consultation.id, {
+                      analysis: { markdown: markdownContent } as any,
+                      status: "completed"
+                    });
+                  } else if (data.type === 'error') {
+                    throw new Error(data.error);
+                  }
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        }
+      } else {
+        // Fallback to JSON response for non-streaming responses
+        const responseData = await response.json();
+
+        if (responseData.error) {
+          throw new Error(responseData.error || "The backend function call failed.");
+        }
+
+        if (!responseData.success || !responseData.content) {
+          throw new Error("No content received from the AI.");
+        }
+
+        const markdownContent = responseData.content;
+
+        await Consultation.update(consultation.id, {
+          analysis: { markdown: markdownContent } as any,
+          status: "completed"
+        });
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: markdownContent,
+          role: 'assistant',
+          timestamp: new Date()
+        };
+
+        localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, assistantMessage]));
+        router.push('/legal-chat');
+      }
+    } catch (error) {
+      console.error("Error processing consultation:", error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Error: ${(error as Error).message}\n\nPlease check your API configuration or try again later.`,
+        role: 'assistant',
+        timestamp: new Date()
+      };
+
+      // Store error messages and navigate
+      localStorage.setItem('legalChatMessages', JSON.stringify([userMessage, errorMessage]));
+      router.push('/legal-chat');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  }, [session?.user?.id, router]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-        {/* Dashboard Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Welcome back, {user?.name || 'Attorney'}!
-                </h1>
-                <p className="text-gray-600 mt-1">
-                  Ready to tackle your legal tasks with AI assistance
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                  Professional Account
-                </Badge>
-                <Button asChild>
-                  <Link href="/wizard">
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Analysis
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
+    <>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-4">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">
+            The Future Awaits
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-600 mb-3">
+            Get instant legal guidance, manage and manipulate your documents with AI agents, generate and read custom blogs, create your own legal Miniverse™ — tomorrow today!
+          </p>
         </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                      <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                      <p className="text-sm text-green-600 flex items-center">
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        {stat.change}
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-full bg-gray-100`}>
-                      <Icon className={`w-6 h-6 ${stat.color}`} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Quick Actions */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Zap className="w-5 h-5 mr-2" />
-                  Quick Actions
-                </CardTitle>
-                <CardDescription>
-                  Start working on your legal tasks
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {quickActions.map((action, index) => {
-                    const Icon = action.icon;
-                    return (
-                      <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
-                        <CardContent className="p-6">
-                          <div className="flex items-start space-x-4">
-                            <div className={`p-3 rounded-lg ${action.color} text-white`}>
-                              <Icon className="w-6 h-6" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <h3 className="font-semibold text-gray-900">{action.title}</h3>
-                                {action.badge && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {action.badge}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 mb-4">{action.description}</p>
-                              <Button asChild variant="outline" size="sm">
-                                <Link href={action.href}>Get Started</Link>
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activity */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Clock className="w-5 h-5 mr-2" />
-                  Recent Activity
-                </CardTitle>
-                <CardDescription>
-                  Your latest actions and updates
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start space-x-3">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${
-                        activity.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'
-                      }`} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                        <p className="text-sm text-gray-600">{activity.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <Button asChild variant="outline" className="w-full mt-4">
-                  <Link href="/query-history">View All Activity</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <StreamlinedConsultation
+          onSubmit={handleSubmitIssue}
+          isLoading={isLoading}
+        />
       </div>
-    </div>
+
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentUsage={tokenUsage.used}
+        limit={tokenUsage.limit}
+        feature="home"
+      />
+    </>
   );
 };

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -45,6 +45,7 @@ interface ClientSidebarProps {
   pendingRequestsCount?: number
 }
 
+// Move navigation config outside component to prevent re-creation
 const clientNavigation: Record<string, NavigationSection> = {
   findLegalHelp: {
     label: 'Find Legal Help',
@@ -93,6 +94,14 @@ export function ClientSidebar({ isCollapsed, onToggle, unreadCount = 0, pendingR
   const pathname = usePathname()
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const { currentTokens, loading: tokenLoading } = useTokenAccess()
+
+  const handleMouseEnter = useCallback((href: string) => {
+    setHoveredItem(href)
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredItem(null)
+  }, [])
 
   return (
     <motion.div
@@ -154,8 +163,8 @@ export function ClientSidebar({ isCollapsed, onToggle, unreadCount = 0, pendingR
                     <Link
                       key={item.href}
                       href={item.href}
-                      onMouseEnter={() => setHoveredItem(item.href)}
-                      onMouseLeave={() => setHoveredItem(null)}
+                      onMouseEnter={() => handleMouseEnter(item.href)}
+                      onMouseLeave={handleMouseLeave}
                       className="relative flex items-center rounded-lg transition-all group"
                       style={{
                         backgroundColor: isActive ? 'rgba(239, 246, 255, 0.8)' : 'transparent',

@@ -311,31 +311,63 @@ function AuthPageContent() {
 
                 {/* Tab Switcher */}
                 <div 
-                  className="flex gap-2 p-1 rounded-lg mt-6 mx-auto max-w-md"
+                  className="flex gap-2 p-1 rounded-lg mt-6 mx-auto max-w-sm"
                   style={{
-                    backgroundColor: 'rgba(241, 245, 249, 0.6)',
+                    backgroundColor: 'rgba(241, 245, 249, 0.4)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(226, 232, 240, 0.5)',
                   }}
                 >
                   <button
                     onClick={() => setActiveTab('signin')}
-                    className="flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all duration-200"
+                    className="flex-1 py-1.5 px-4 rounded-md text-sm font-medium transition-all duration-200 relative overflow-hidden whitespace-nowrap"
                     style={{
-                      backgroundColor: activeTab === 'signin' ? 'rgba(239, 246, 255, 0.8)' : 'transparent',
-                      backdropFilter: activeTab === 'signin' ? 'blur(8px)' : 'none',
-                      color: activeTab === 'signin' ? '#2563eb' : '#64748b',
-                      boxShadow: activeTab === 'signin' ? '0 1px 3px 0 rgba(0, 0, 0, 0.1)' : 'none',
+                      background: activeTab === 'signin' 
+                        ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%)'
+                        : 'transparent',
+                      backdropFilter: activeTab === 'signin' ? 'blur(12px)' : 'none',
+                      color: activeTab === 'signin' ? '#ffffff' : '#64748b',
+                      boxShadow: activeTab === 'signin' 
+                        ? '0 4px 12px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
+                        : 'none',
+                      border: activeTab === 'signin' ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeTab !== 'signin') {
+                        e.currentTarget.style.backgroundColor = 'rgba(226, 232, 240, 0.3)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeTab !== 'signin') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
                     }}
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => setActiveTab('signup')}
-                    className="flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all duration-200"
+                    className="flex-1 py-1.5 px-4 rounded-md text-sm font-medium transition-all duration-200 relative overflow-hidden whitespace-nowrap"
                     style={{
-                      backgroundColor: activeTab === 'signup' ? 'rgba(239, 246, 255, 0.8)' : 'transparent',
-                      backdropFilter: activeTab === 'signup' ? 'blur(8px)' : 'none',
-                      color: activeTab === 'signup' ? '#2563eb' : '#64748b',
-                      boxShadow: activeTab === 'signup' ? '0 1px 3px 0 rgba(0, 0, 0, 0.1)' : 'none',
+                      background: activeTab === 'signup' 
+                        ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%)'
+                        : 'transparent',
+                      backdropFilter: activeTab === 'signup' ? 'blur(12px)' : 'none',
+                      color: activeTab === 'signup' ? '#ffffff' : '#64748b',
+                      boxShadow: activeTab === 'signup' 
+                        ? '0 4px 12px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
+                        : 'none',
+                      border: activeTab === 'signup' ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeTab !== 'signup') {
+                        e.currentTarget.style.backgroundColor = 'rgba(226, 232, 240, 0.3)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeTab !== 'signup') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
                     }}
                   >
                     Sign Up
@@ -449,8 +481,28 @@ function AuthPageContent() {
                       {/* Sign In Button */}
                       <Button 
                         type="submit" 
-                        className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
+                        className="w-full h-10 text-white font-medium rounded-md transition-all duration-200 relative overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%)',
+                          backdropFilter: 'blur(16px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                        }}
                         disabled={isLoading}
+                        onMouseEnter={(e) => {
+                          if (!isLoading) {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(126, 34, 206, 0.95) 100%)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isLoading) {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                          }
+                        }}
                       >
                         {isLoading ? (
                           <>
@@ -740,8 +792,28 @@ function AuthPageContent() {
                       {/* Sign Up Button */}
                       <Button 
                         type="submit" 
-                        className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
+                        className="w-full h-10 text-white font-medium rounded-md transition-all duration-200 relative overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%)',
+                          backdropFilter: 'blur(16px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                        }}
                         disabled={isLoading}
+                        onMouseEnter={(e) => {
+                          if (!isLoading) {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(126, 34, 206, 0.95) 100%)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isLoading) {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                          }
+                        }}
                       >
                         {isLoading ? (
                           <>
@@ -756,18 +828,18 @@ function AuthPageContent() {
                   )}
                 </AnimatePresence>
 
-                {/* Divider */}
-                <div className="relative">
+                {/* Divider - Temporarily Removed */}
+                {/* <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-gray-200" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-white px-2 text-gray-500">Or continue with</span>
                   </div>
-                </div>
+                </div> */}
 
-                {/* Google Sign In */}
-                <GoogleSignIn />
+                {/* Google Sign In - Temporarily Removed */}
+                {/* <GoogleSignIn /> */}
               </CardContent>
             </Card>
           </motion.div>

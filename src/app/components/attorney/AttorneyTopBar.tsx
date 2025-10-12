@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -23,6 +24,10 @@ import {
 
 export function AttorneyTopBar() {
   const { data: session } = useSession()
+
+  const handleSignOut = useCallback(() => {
+    signOut({ callbackUrl: '/' })
+  }, [])
 
   return (
     <div
@@ -68,7 +73,7 @@ export function AttorneyTopBar() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => signOut({ callbackUrl: '/' })}
+          onClick={handleSignOut}
           className="hidden sm:flex items-center space-x-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
         >
           <LogOut className="w-4 h-4" />

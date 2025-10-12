@@ -133,7 +133,7 @@ export function DocumentAnalysisInterface({
   }, [error, toast])
 
   // Start analysis
-  const handleStartAnalysis = async () => {
+  const handleStartAnalysis = useCallback(async () => {
     if (isProcessing) return
 
     if (!userPrompt.trim()) {
@@ -170,22 +170,22 @@ export function DocumentAnalysisInterface({
 
     // Start processing
     await startProcessing({ userPrompt: userPrompt.trim() })
-  }
+  }, [isProcessing, userPrompt, onBeforeStart, clearState, toast, startProcessing])
 
   // Handle new analysis
-  const handleNewAnalysis = () => {
+  const handleNewAnalysis = useCallback(() => {
     setUserPrompt('')
     clearState()
     setSessionIds(null, null)
-  }
+  }, [clearState, setSessionIds])
 
   // Handle continue chat
-  const handleContinueChat = async () => {
+  const handleContinueChat = useCallback(async () => {
     if (!chatSessionId) {
       await handleCreateSession()
     }
     toggleChatMode()
-  }
+  }, [chatSessionId, handleCreateSession, toggleChatMode])
 
   // Render content based on active tab
   const renderTabContent = () => {

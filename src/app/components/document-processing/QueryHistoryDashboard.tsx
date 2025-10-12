@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { QueryHistoryList } from './QueryHistoryList'
 import { QueryAnalyticsDashboard } from './QueryAnalyticsDashboard'
 import { QueryDetailsModal } from './QueryDetailsModal'
@@ -16,31 +16,32 @@ import {
   HomeIcon
 } from '@heroicons/react/24/outline'
 
+// Move tabs outside component to prevent re-creation
+const tabs = [
+  {
+    id: 'dashboard' as const,
+    name: 'Dashboard',
+    icon: Squares2X2Icon,
+    description: 'Recent queries and statistics'
+  },
+  {
+    id: 'history' as const,
+    name: 'Full History',
+    icon: ListBulletIcon,
+    description: 'Complete query history with search and filters'
+  }
+]
+
 export const QueryHistoryDashboard: React.FC = () => {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'dashboard' | 'history'>('dashboard')
   const [selectedQuery, setSelectedQuery] = useState<DocumentQuery | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const handleQuerySelect = (query: DocumentQuery) => {
+  const handleQuerySelect = useCallback((query: DocumentQuery) => {
     setSelectedQuery(query)
     setIsModalOpen(true)
-  }
-
-  const tabs = [
-    {
-      id: 'dashboard' as const,
-      name: 'Dashboard',
-      icon: Squares2X2Icon,
-      description: 'Recent queries and statistics'
-    },
-    {
-      id: 'history' as const,
-      name: 'Full History',
-      icon: ListBulletIcon,
-      description: 'Complete query history with search and filters'
-    }
-  ]
+  }, [])
 
   return (
     <Layout>
