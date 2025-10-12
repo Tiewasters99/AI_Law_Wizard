@@ -405,7 +405,7 @@ export default function LegalChatPage() {
                   </Button>
                   <div className="hidden lg:block p-2 rounded-lg" style={{ backgroundColor: colors.primary[50] }}>
                     <Image 
-                      src="/logo_icon.png" 
+                      src="/images/logo_icon.png" 
                       alt="AI Wizard Logo" 
                       width={20} 
                       height={20}
@@ -443,29 +443,6 @@ export default function LegalChatPage() {
             </div>
           </div>
 
-          {/* Legal Disclaimer Banner */}
-          <div className="flex-shrink-0 px-4 py-2 border-b" style={{ backgroundColor: colors.accent[50], borderColor: colors.accent[200] }}>
-            <div className="flex items-start space-x-2">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: colors.accent[700] }} />
-              <div className="text-xs" style={{ color: colors.accent[900] }}>
-                <p className="mb-1">
-                  <strong>Professional Disclaimer:</strong> {disclaimers.general}
-                </p>
-                <p>
-                  Need personalized legal advice? {' '}
-                  <Link 
-                    href="/directory" 
-                    className="font-semibold underline hover:no-underline transition-all"
-                    style={{ color: colors.primary[700] }}
-                  >
-                    Find an attorney
-                  </Link>
-                  {' '} to discuss your specific situation.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Messages */}
           <div className="flex-1 overflow-hidden">
             <ChatMessages
@@ -494,14 +471,30 @@ export default function LegalChatPage() {
               isLimitReached={false}
               onUpgrade={() => {}}
             />
+            
+            {/* Modern Legal Disclaimer */}
             <div className="mt-3 px-4 max-w-5xl mx-auto">
-              <div className="flex items-start space-x-2 p-2 rounded-lg" style={{ backgroundColor: colors.secondary[50] }}>
-                <Shield className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: colors.secondary[500] }} />
-                <p className="text-xs" style={{ color: colors.secondary[600] }}>
-                  <strong>Confidentiality Notice:</strong> AI-generated legal information for informational purposes only. 
-                  {!session && ' Sign in for secure attorney-client privileged communication.'}
-                  {session && ' Always consult with a qualified attorney for specific legal advice.'}
+              <div className="text-center text-xs text-gray-500 space-y-1.5">
+                <p className="flex items-center justify-center gap-1.5 flex-wrap">
+                  <span className="inline-flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    AI-generated legal information
+                  </span>
+                  <span className="text-gray-400">•</span>
+                  <span>Not legal advice</span>
+                  <span className="text-gray-400">•</span>
+                  <Link 
+                    href="/directory" 
+                    className="text-blue-600 hover:text-blue-700 hover:underline font-medium transition-colors"
+                  >
+                    Consult an attorney
+                  </Link>
                 </p>
+                {!session && (
+                  <p className="text-gray-400 text-[11px]">
+                    Sign in for secure communication with attorneys
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -526,7 +519,7 @@ export default function LegalChatPage() {
                       <div className="p-2 rounded" style={{ backgroundColor: colors.primary[50] }}>
                         {feature.icon === 'logo' ? (
                           <Image 
-                            src="/logo_icon.png" 
+                            src="/images/logo_icon.png" 
                             alt="AI Wizard Logo" 
                             width={16} 
                             height={16}

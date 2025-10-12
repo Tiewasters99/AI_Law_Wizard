@@ -235,7 +235,7 @@ export default function AttorneyFeaturesPage() {
             }}
           >
             <Image 
-              src="/logo_icon.png" 
+              src="/images/logo_icon.png" 
               alt="AI Wizard Logo" 
               width={24} 
               height={24}
@@ -271,7 +271,7 @@ export default function AttorneyFeaturesPage() {
                   }}
                 >
                   <Image 
-                    src="/logo_icon.png" 
+                    src="/images/logo_icon.png" 
                     alt="AI Wizard Logo" 
                     width={20} 
                     height={20}
@@ -421,7 +421,7 @@ export default function AttorneyFeaturesPage() {
                           style={{ background: 'linear-gradient(to right, #2563eb, #1e40af)' }}
                         >
                           <Image 
-                            src="/logo_icon.png" 
+                            src="/images/logo_icon.png" 
                             alt="AI Wizard Logo" 
                             width={20} 
                             height={20}
@@ -688,7 +688,7 @@ export default function AttorneyFeaturesPage() {
                       }}
                     >
                       <Image 
-                        src="/logo_icon.png" 
+                        src="/images/logo_icon.png" 
                         alt="AI Wizard Logo" 
                         width={48} 
                         height={48}

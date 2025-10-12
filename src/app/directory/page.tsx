@@ -425,7 +425,7 @@ export default function DirectoryPage() {
                 {/* Professional header */}
                 <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-6 shadow-sm" style={{ backgroundColor: colors.primary[700] }}>
                   <Image 
-                    src="/logo_icon.png" 
+                    src="/images/logo_icon.png" 
                     alt="AI Wizard Logo" 
                     width={32} 
                     height={32}

@@ -74,7 +74,7 @@ export function FinalCTA() {
               onClick={() => router.push('/auth?role=attorney')}
             >
               <Image 
-                src="/logo_icon.png" 
+                src="/images/logo_icon.png" 
                 alt="AI Wizard Logo" 
                 width={40} 
                 height={40}

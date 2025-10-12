@@ -758,7 +758,7 @@ export default function ProfilePage() {
       return (
         <div className="text-center py-12">
           <Image 
-            src="/logo_icon.png" 
+            src="/images/logo_icon.png" 
             alt="AI Wizard Logo" 
             width={64} 
             height={64}

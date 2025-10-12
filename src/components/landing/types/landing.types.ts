@@ -24,11 +24,6 @@ export interface HeaderProps {
 export interface HeroProps {
   headline: string;
   subtext: string;
-  stats?: Array<{
-    label: string;
-    value: string;
-    icon: any;
-  }>;
 }
 
 export interface RoleCardsProps {

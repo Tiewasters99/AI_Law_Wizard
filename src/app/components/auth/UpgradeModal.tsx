@@ -166,7 +166,7 @@ export function UpgradeModal({
                   <CardContent className="pt-6 text-center">
                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Image 
-                        src="/logo_icon.png" 
+                        src="/images/logo_icon.png" 
                         alt="AI Wizard Logo" 
                         width={32} 
                         height={32}

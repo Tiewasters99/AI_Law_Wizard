@@ -12,23 +12,15 @@ import { TrustSection } from './sections/TrustSection';
 import { PricingSection } from './sections/PricingSection';
 import { FinalCTA } from './sections/FinalCTA';
 import { Footer } from './sections/Footer';
-import { LandingPageProps } from './types/landing.types';
 import { 
   FileText, 
   MessageSquare, 
-  Search, 
   Brain, 
-  Database, 
   Shield, 
-  Zap, 
   Globe,
   Users,
-  BarChart3,
-  Lock,
   Sparkles,
-  ArrowRight,
-  Star,
-  Award
+  Star
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
@@ -122,13 +114,6 @@ export const LandingPage: React.FC = () => {
     }
   ];
 
-  const stats = [
-    { label: "Documents Processed", value: "10K+", icon: FileText },
-    { label: "Legal Questions Answered", value: "50K+", icon: MessageSquare },
-    { label: "Happy Clients", value: "5K+", icon: Users },
-    { label: "Success Rate", value: "98%", icon: Award }
-  ];
-
   return (
     <div className="relative overflow-hidden">
       
@@ -145,7 +130,6 @@ export const LandingPage: React.FC = () => {
           <Hero 
             headline="The Future Awaits"
             subtext="Get instant legal guidance, manage and manipulate your documents with AI agents, generate and read custom blogs, create your own legal Miniverse™ — tomorrow today!"
-            stats={stats}
           />
           
           {/* Role Selection Section - 2nd */}
@@ -179,38 +163,89 @@ export const LandingPage: React.FC = () => {
                   return (
                     <motion.div
                       key={step.step}
-                      initial={{ opacity: 0, y: 30 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: index * 0.2 }}
-                      viewport={{ once: true }}
-                      className="relative group"
+                      initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ 
+                        duration: 0.6, 
+                        delay: index * 0.15,
+                        type: "spring",
+                        stiffness: 100
+                      }}
+                      viewport={{ once: true, amount: 0.3 }}
+                      whileHover={{ 
+                        y: -10,
+                        transition: { duration: 0.3 }
+                      }}
+                      className="relative group flex"
                     >
                       {/* Card */}
-                      <div 
-                        className="backdrop-blur-md rounded-2xl p-6 lg:p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full relative overflow-hidden"
+                      <motion.div 
+                        className="backdrop-blur-md rounded-2xl p-6 lg:p-8 w-full relative overflow-hidden flex flex-col"
                         style={{
                           backgroundColor: 'rgba(255, 255, 255, 0.9)',
                           border: '1px solid rgba(226, 232, 240, 0.5)',
                           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                          minHeight: '320px'
+                        }}
+                        whileHover={{ 
+                          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                          transition: { duration: 0.3 }
                         }}
                       >
+                        {/* Background Gradient on Hover */}
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 opacity-0 group-hover:opacity-50 transition-opacity duration-300"
+                          style={{ zIndex: 0 }}
+                        />
+                        
                         {/* Icon */}
                         <div className="relative z-10 text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                          <motion.div 
+                            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl mb-4"
+                            whileHover={{ 
+                              scale: 1.15,
+                              rotate: [0, -5, 5, 0],
+                              transition: { duration: 0.4 }
+                            }}
+                          >
                             <Icon className="w-8 h-8 text-white" />
-                          </div>
+                          </motion.div>
                         </div>
                         
                         {/* Content */}
-                        <div className="relative z-10">
-                          <h3 className="text-lg lg:text-xl font-bold mb-3 text-center" style={{ color: '#1e293b' }}>{step.title}</h3>
-                          <p className="text-sm lg:text-base leading-relaxed" style={{ color: '#475569' }}>{step.description}</p>
+                        <div className="relative z-10 flex-1 flex flex-col">
+                          <motion.h3 
+                            className="text-lg lg:text-xl font-bold mb-3 text-center" 
+                            style={{ color: '#1e293b' }}
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            transition={{ delay: index * 0.15 + 0.3, duration: 0.5 }}
+                            viewport={{ once: true }}
+                          >
+                            {step.title}
+                          </motion.h3>
+                          <motion.p 
+                            className="text-sm lg:text-base leading-relaxed text-center" 
+                            style={{ color: '#475569' }}
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            transition={{ delay: index * 0.15 + 0.4, duration: 0.5 }}
+                            viewport={{ once: true }}
+                          >
+                            {step.description}
+                          </motion.p>
                         </div>
-                      </div>
+                      </motion.div>
                       
-                      {/* Connector Line */}
+                      {/* Animated Connector Line */}
                       {index < journeySteps.length - 1 && (
-                        <div className="hidden lg:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-blue-400 to-blue-500 transform -translate-y-1/2 z-20" />
+                        <motion.div 
+                          className="hidden lg:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-blue-400 to-blue-500 transform -translate-y-1/2 z-20"
+                          initial={{ scaleX: 0, opacity: 0 }}
+                          whileInView={{ scaleX: 1, opacity: 1 }}
+                          transition={{ delay: index * 0.15 + 0.5, duration: 0.5 }}
+                          viewport={{ once: true }}
+                        />
                       )}
                     </motion.div>
                   );
@@ -256,47 +291,103 @@ export const LandingPage: React.FC = () => {
                   return (
                     <motion.div
                       key={feature.title}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: index * 0.1 }}
-                      viewport={{ once: true }}
-                      className="backdrop-blur-md rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
+                      initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ 
+                        duration: 0.7, 
+                        delay: index * 0.1,
+                        ease: [0.22, 1, 0.36, 1]
+                      }}
+                      viewport={{ once: true, amount: 0.2 }}
+                      whileHover={{ 
+                        y: -12,
+                        scale: 1.02,
+                        transition: { duration: 0.3, ease: "easeOut" }
+                      }}
+                      className="backdrop-blur-md rounded-2xl p-8 group flex flex-col cursor-pointer"
                       style={{
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
                         border: '1px solid rgba(226, 232, 240, 0.5)',
+                        minHeight: '420px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
                       }}
                     >
-                      <div 
-                        className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-6 group-hover:scale-110 transition-transform duration-300"
+                      {/* Animated Icon Container */}
+                      <motion.div 
+                        className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-6 flex-shrink-0 relative overflow-hidden"
                         style={{
                           background: 'linear-gradient(to right, #2563eb, #1e40af)',
                         }}
+                        whileHover={{ 
+                          scale: 1.1,
+                          rotate: [0, -10, 10, -10, 0],
+                          transition: { duration: 0.5 }
+                        }}
                       >
-                        <Icon className="w-8 h-8 text-white" />
-                      </div>
+                        {/* Shine Effect */}
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                          initial={{ x: '-100%' }}
+                          whileHover={{ x: '200%' }}
+                          transition={{ duration: 0.8, ease: "easeInOut" }}
+                        />
+                        <Icon className="w-8 h-8 text-white relative z-10" />
+                      </motion.div>
                       
-                      <h3 className="text-xl font-bold mb-4 transition-colors" style={{ color: '#1e293b' }}>{feature.title}</h3>
-                      <p className="mb-6" style={{ color: '#475569' }}>{feature.description}</p>
+                      {/* Title with Gradient on Hover */}
+                      <motion.h3 
+                        className="text-xl font-bold mb-4" 
+                        style={{ color: '#1e293b' }}
+                        whileHover={{ 
+                          color: '#2563eb',
+                          transition: { duration: 0.3 }
+                        }}
+                      >
+                        {feature.title}
+                      </motion.h3>
                       
+                      <p className="mb-6 flex-grow" style={{ color: '#475569' }}>
+                        {feature.description}
+                      </p>
+                      
+                      {/* Capabilities List with Stagger Animation */}
                       <div className="space-y-2">
                         {feature.capabilities.map((capability, capIndex) => (
                           <motion.div 
                             key={capIndex} 
-                            className="flex items-center text-sm"
-                            initial={{ opacity: 0, x: -10 }}
+                            className="flex items-center text-sm group/item"
+                            initial={{ opacity: 0, x: -20 }}
                             whileInView={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.4, delay: capIndex * 0.1 }}
+                            transition={{ 
+                              duration: 0.5, 
+                              delay: index * 0.1 + capIndex * 0.05 
+                            }}
                             viewport={{ once: true }}
+                            whileHover={{ 
+                              x: 5,
+                              transition: { duration: 0.2 }
+                            }}
                             style={{ color: '#64748b' }}
                           >
-                            <div 
+                            <motion.div 
                               className="w-2 h-2 rounded-full mr-3 flex-shrink-0"
                               style={{ backgroundColor: '#10b981' }}
+                              whileHover={{ 
+                                scale: 1.5,
+                                backgroundColor: '#059669',
+                                transition: { duration: 0.2 }
+                              }}
                             />
                             {capability}
                           </motion.div>
                         ))}
                       </div>
+
+                      {/* Hover Border Effect */}
+                      <motion.div
+                        className="absolute inset-0 rounded-2xl border-2 border-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ pointerEvents: 'none' }}
+                      />
                     </motion.div>
                   );
                 })}

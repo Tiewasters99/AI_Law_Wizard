@@ -230,7 +230,7 @@ export default function TokensPage() {
               </div>
               <div className="flex items-start space-x-2">
                 <Image 
-                  src="/logo_icon.png" 
+                  src="/images/logo_icon.png" 
                   alt="AI Wizard Logo" 
                   width={16} 
                   height={16}

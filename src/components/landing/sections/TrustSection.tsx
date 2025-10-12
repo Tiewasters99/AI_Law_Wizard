@@ -1,46 +1,62 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Shield, Award, Users, Star, CheckCircle, Lock } from 'lucide-react'
+import { Shield, CheckCircle, Lock, FileCheck, Users, Clock, Sparkles, Award } from 'lucide-react'
 import { colors } from '@/app/lib/designSystem'
 
 export function TrustSection() {
-  const testimonials = [
-    {
-      name: 'Sarah Johnson',
-      role: 'Small Business Owner',
-      content: 'AI Law Wizard helped me navigate complex contract negotiations with confidence. The AI analysis was spot-on, and connecting with an attorney was seamless.',
-      rating: 5,
-      avatar: '👩‍💼',
+  const securityFeatures = [
+    { 
+      icon: Shield, 
+      label: 'Data Protection', 
+      description: 'Bank-level AES-256 encryption for all your legal documents and communications'
     },
-    {
-      name: 'Michael Chen',
-      role: 'Corporate Attorney',
-      content: 'As a practicing attorney, this platform has revolutionized my document review process. The AI-powered analysis saves me hours every week.',
-      rating: 5,
-      avatar: '👨‍⚖️',
+    { 
+      icon: Lock, 
+      label: 'Privacy First', 
+      description: 'GDPR compliant with strict privacy controls and data ownership guarantees'
     },
-    {
-      name: 'Emily Rodriguez',
-      role: 'Startup Founder',
-      content: 'From basic legal questions to complex compliance issues, AI Law Wizard has been my go-to resource. The 24/7 AI assistant is invaluable.',
-      rating: 5,
-      avatar: '👩‍💻',
+    { 
+      icon: CheckCircle, 
+      label: 'Secure Infrastructure', 
+      description: 'SOC 2 Type II certified infrastructure with regular security audits'
     },
+    { 
+      icon: FileCheck, 
+      label: 'Document Security', 
+      description: 'End-to-end encryption for document storage and processing'
+    },
+    { 
+      icon: Users, 
+      label: 'Access Control', 
+      description: 'Role-based permissions and multi-factor authentication support'
+    },
+    { 
+      icon: Clock, 
+      label: 'Audit Trails', 
+      description: 'Complete activity logs and compliance reporting for all operations'
+    }
   ]
 
-  const securityBadges = [
-    { icon: Shield, label: 'Bank-Level Encryption', description: 'AES-256 encryption' },
-    { icon: Lock, label: 'GDPR Compliant', description: 'Privacy protected' },
-    { icon: CheckCircle, label: 'SOC 2 Certified', description: 'Security audited' },
-    { icon: Award, label: 'Bar Certified', description: 'Legal standards' },
-  ]
-
-  const statistics = [
-    { value: '10,000+', label: 'Documents Analyzed', icon: '📄' },
-    { value: '50,000+', label: 'Legal Questions Answered', icon: '💬' },
-    { value: '5,000+', label: 'Satisfied Clients', icon: '👥' },
-    { value: '98%', label: 'Success Rate', icon: '⭐' },
+  const platformHighlights = [
+    {
+      icon: Sparkles,
+      title: 'AI-Powered Intelligence',
+      description: 'Advanced AI models trained on legal knowledge for accurate analysis and insights',
+      color: 'from-blue-500 to-blue-600'
+    },
+    {
+      icon: Users,
+      title: 'Attorney Network',
+      description: 'Connect with qualified legal professionals through our integrated directory',
+      color: 'from-purple-500 to-purple-600'
+    },
+    {
+      icon: Award,
+      title: 'Professional Grade',
+      description: 'Built for both attorneys and clients with enterprise-level features',
+      color: 'from-green-500 to-green-600'
+    }
   ]
 
   return (
@@ -59,120 +75,82 @@ export function TrustSection() {
           viewport={{ once: true }}
         >
           <h2 className="text-4xl sm:text-5xl font-bold mb-6" style={{ color: colors.text }}>
-            Trusted by Thousands of Legal Professionals
+            Built for Security & Trust
           </h2>
           <p className="text-xl max-w-3xl mx-auto" style={{ color: colors.secondary[600] }}>
-            Join the community of attorneys and clients who trust AI Law Wizard for their legal needs.
+            Enterprise-grade security and compliance features designed specifically for legal professionals and their clients.
           </p>
         </motion.div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-          {statistics.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              viewport={{ once: true }}
-              className="text-center p-6 rounded-2xl backdrop-blur-sm"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                border: `1px solid ${colors.secondary[200]}`,
-              }}
-            >
-              <div className="text-4xl mb-2">{stat.icon}</div>
-              <div className="text-3xl font-bold mb-2" style={{ color: colors.primary[700] }}>
-                {stat.value}
-              </div>
-              <div className="text-sm" style={{ color: colors.secondary[600] }}>
-                {stat.label}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Testimonials */}
+        {/* Platform Highlights */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={testimonial.name}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.2 }}
-              viewport={{ once: true }}
-              className="p-8 rounded-2xl backdrop-blur-md hover:shadow-xl transition-all"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                border: `1px solid ${colors.secondary[200]}`,
-              }}
-            >
-              {/* Rating */}
-              <div className="flex items-center mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-
-              {/* Content */}
-              <p className="text-gray-700 mb-6 leading-relaxed">
-                "{testimonial.content}"
-              </p>
-
-              {/* Author */}
-              <div className="flex items-center">
-                <div className="text-3xl mr-3">{testimonial.avatar}</div>
-                <div>
-                  <div className="font-semibold" style={{ color: colors.text }}>
-                    {testimonial.name}
-                  </div>
-                  <div className="text-sm" style={{ color: colors.secondary[600] }}>
-                    {testimonial.role}
-                  </div>
+          {platformHighlights.map((highlight, index) => {
+            const Icon = highlight.icon
+            return (
+              <motion.div
+                key={highlight.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+                viewport={{ once: true }}
+                className="p-8 rounded-2xl backdrop-blur-md hover:shadow-xl transition-all group"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: `1px solid ${colors.secondary[200]}`,
+                }}
+              >
+                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-xl mb-6 bg-gradient-to-r ${highlight.color} group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon className="w-8 h-8 text-white" />
                 </div>
-              </div>
-            </motion.div>
-          ))}
+                <h3 className="text-xl font-bold mb-3" style={{ color: colors.text }}>
+                  {highlight.title}
+                </h3>
+                <p className="leading-relaxed" style={{ color: colors.secondary[600] }}>
+                  {highlight.description}
+                </p>
+              </motion.div>
+            )
+          })}
         </div>
 
-        {/* Security Badges */}
+        {/* Security Features Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="p-8 rounded-2xl backdrop-blur-lg"
+          className="p-8 lg:p-12 rounded-2xl backdrop-blur-lg"
           style={{
             backgroundColor: 'rgba(239, 246, 255, 0.7)',
             border: `1px solid ${colors.primary[200]}`,
           }}
         >
-          <h3 className="text-2xl font-bold text-center mb-8" style={{ color: colors.text }}>
+          <h3 className="text-3xl font-bold text-center mb-12" style={{ color: colors.text }}>
             Enterprise-Grade Security & Compliance
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {securityBadges.map((badge, index) => {
-              const Icon = badge.icon
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {securityFeatures.map((feature, index) => {
+              const Icon = feature.icon
               return (
                 <motion.div
-                  key={badge.label}
+                  key={feature.label}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                  className="text-center"
+                  className="flex flex-col items-center text-center"
                 >
                   <div 
-                    className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-3"
+                    className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-4"
                     style={{ backgroundColor: colors.primary[100] }}
                   >
                     <Icon className="w-8 h-8" style={{ color: colors.primary[700] }} />
                   </div>
-                  <div className="font-semibold text-sm mb-1" style={{ color: colors.text }}>
-                    {badge.label}
+                  <div className="font-bold text-lg mb-2" style={{ color: colors.text }}>
+                    {feature.label}
                   </div>
-                  <div className="text-xs" style={{ color: colors.secondary[600] }}>
-                    {badge.description}
+                  <div className="text-sm leading-relaxed" style={{ color: colors.secondary[600] }}>
+                    {feature.description}
                   </div>
                 </motion.div>
               )
