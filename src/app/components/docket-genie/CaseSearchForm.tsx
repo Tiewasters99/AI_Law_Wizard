@@ -181,7 +181,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
                 setSearchParams({ ...searchParams, caseNumber: e.target.value })
                 if (validationError) setValidationError('')
               }}
-              placeholder="1:23-cv-12345"
+              placeholder="e.g., 1:23-cv-12345"
               disabled={loading}
               className="h-9 text-sm"
             />

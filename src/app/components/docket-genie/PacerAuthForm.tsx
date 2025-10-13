@@ -5,7 +5,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Alert, AlertDescription } from '@/app/components/ui/alert'
-import { Lock, Unlock, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react'
+import { Lock, Unlock, AlertCircle, Info, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import type { PacerCredentials } from '@/types/pacer'
@@ -13,6 +13,7 @@ import type { PacerCredentials } from '@/types/pacer'
 interface PacerAuthFormProps {
   onAuthenticate: (credentials: PacerCredentials) => Promise<boolean>
   onLogout: () => Promise<void>
+  onClose?: () => void
   isAuthenticated: boolean
   username: string | null
   loading: boolean
@@ -22,6 +23,7 @@ interface PacerAuthFormProps {
 export function PacerAuthForm({
   onAuthenticate,
   onLogout,
+  onClose,
   isAuthenticated,
   username,
   loading,
@@ -66,14 +68,25 @@ export function PacerAuthForm({
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-xl max-w-2xl mx-auto">
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 rounded-t-xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-              <Unlock className="w-7 h-7 text-green-600" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
+                <Unlock className="w-7 h-7 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-green-900 mb-1">Connected to PACER</h3>
+                <p className="text-sm text-green-700">Logged in as: <strong>{username}</strong></p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-green-900 mb-1">Connected to PACER</h3>
-              <p className="text-sm text-green-700">Logged in as: <strong>{username}</strong></p>
-            </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                disabled={loading}
+              >
+                <X className="w-5 h-5 text-green-600" />
+              </button>
+            )}
           </div>
         </div>
         <div className="p-6">
@@ -94,14 +107,25 @@ export function PacerAuthForm({
     <div className="bg-white rounded-xl border border-gray-200 shadow-xl max-w-2xl mx-auto">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-800 rounded-t-xl p-6 text-white">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
-            <Lock className="w-7 h-7 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
+              <Lock className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Connect to PACER</h2>
+              <p className="text-sm text-blue-100">Enter your credentials to access court records</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold mb-1">Connect to PACER</h2>
-            <p className="text-sm text-blue-100">Enter your credentials to access court records</p>
-          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              disabled={loading}
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          )}
         </div>
       </div>
 

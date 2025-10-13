@@ -54,6 +54,8 @@ export function DocketDashboard({
 }: DocketDashboardProps) {
   const [quickSearchType, setQuickSearchType] = useState<'caseNumber' | 'party' | 'attorney'>('caseNumber')
   const [quickSearchValue, setQuickSearchValue] = useState('')
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
 
   // Calculate time remaining
   const getTimeRemaining = () => {
@@ -89,7 +91,30 @@ export function DocketDashboard({
         break
     }
 
+    // Add to search history
+    setSearchHistory(prev => [quickSearchValue, ...prev.slice(0, 4)])
+    
     onQuickSearch(query)
+    setQuickSearchValue('') // Clear input after search
+  }
+
+  const handleMultiSearch = (searches: string[]) => {
+    searches.forEach(searchTerm => {
+      if (searchTerm.trim()) {
+        const query: PacerSearchQuery = {}
+        
+        // Auto-detect search type based on format
+        if (searchTerm.match(/^\d+:\d+-[a-z]+-\d+/i)) {
+          query.caseNumber = searchTerm
+        } else if (searchTerm.includes('@') || searchTerm.includes('law') || searchTerm.includes('attorney')) {
+          query.attorneyName = searchTerm
+        } else {
+          query.partyName = searchTerm
+        }
+        
+        onQuickSearch(query)
+      }
+    })
   }
 
   // Not authenticated view
@@ -215,70 +240,107 @@ export function DocketDashboard({
         />
       </div>
 
-      {/* Quick Search Card */}
+      {/* Enhanced Quick Search Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className="bg-white border border-gray-200 rounded-xl p-6"
       >
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Search</h3>
-        <form onSubmit={handleQuickSearch} className="space-y-4">
-          {/* Search Type Selector */}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={quickSearchType === 'caseNumber' ? 'default' : 'outline'}
-              onClick={() => setQuickSearchType('caseNumber')}
-              className="flex-1"
-            >
-              <Hash className="w-4 h-4 mr-2" />
-              Case Number
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickSearchType === 'party' ? 'default' : 'outline'}
-              onClick={() => setQuickSearchType('party')}
-              className="flex-1"
-            >
-              <User className="w-4 h-4 mr-2" />
-              Party Name
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickSearchType === 'attorney' ? 'default' : 'outline'}
-              onClick={() => setQuickSearchType('attorney')}
-              className="flex-1"
-            >
-              <User className="w-4 h-4 mr-2" />
-              Attorney
-            </Button>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Quick Search</h3>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+            className="text-blue-700 hover:text-blue-800"
+          >
+            {showAdvancedSearch ? 'Simple' : 'Advanced'}
+          </Button>
+        </div>
 
-          {/* Search Input */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={quickSearchValue}
-              onChange={(e) => setQuickSearchValue(e.target.value)}
-              placeholder={
-                quickSearchType === 'caseNumber'
-                  ? 'e.g., 1:23-cv-12345'
-                  : quickSearchType === 'party'
-                  ? 'Enter party name'
-                  : 'Enter attorney name'
-              }
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <Button type="submit" disabled={!quickSearchValue.trim()}>
-              <Search className="w-4 h-4 mr-2" />
-              Search
-            </Button>
-          </div>
-        </form>
+        {!showAdvancedSearch ? (
+          /* Simple Search */
+          <form onSubmit={handleQuickSearch} className="space-y-4">
+            {/* Search Type Selector */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={quickSearchType === 'caseNumber' ? 'default' : 'outline'}
+                onClick={() => setQuickSearchType('caseNumber')}
+                className="flex-1"
+              >
+                <Hash className="w-4 h-4 mr-2" />
+                Case Number
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={quickSearchType === 'party' ? 'default' : 'outline'}
+                onClick={() => setQuickSearchType('party')}
+                className="flex-1"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Party Name
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={quickSearchType === 'attorney' ? 'default' : 'outline'}
+                onClick={() => setQuickSearchType('attorney')}
+                className="flex-1"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Attorney
+              </Button>
+            </div>
+
+            {/* Search Input with History */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={quickSearchValue}
+                  onChange={(e) => setQuickSearchValue(e.target.value)}
+                  placeholder={
+                    quickSearchType === 'caseNumber'
+                      ? 'Enter case number'
+                      : quickSearchType === 'party'
+                      ? 'Enter party name'
+                      : 'Enter attorney name'
+                  }
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <Button type="submit" disabled={!quickSearchValue.trim()}>
+                  <Search className="w-4 h-4 mr-2" />
+                  Search
+                </Button>
+              </div>
+              
+              {/* Search History */}
+              {searchHistory.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs text-gray-500 font-medium">Recent:</span>
+                  {searchHistory.slice(0, 3).map((term, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setQuickSearchValue(term)}
+                      className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </form>
+        ) : (
+          /* Advanced Multi-Search */
+          <AdvancedSearchForm onMultiSearch={handleMultiSearch} />
+        )}
       </motion.div>
 
       {/* Recent Searches */}
@@ -409,6 +471,132 @@ function StatsCard({
         </div>
       </div>
     </motion.div>
+  )
+}
+
+function AdvancedSearchForm({ onMultiSearch }: { onMultiSearch: (searches: string[]) => void }) {
+  const [searchTerms, setSearchTerms] = useState<string[]>([''])
+  const [searchType, setSearchType] = useState<'caseNumber' | 'party' | 'attorney'>('caseNumber')
+
+  const addSearchTerm = () => {
+    setSearchTerms(prev => [...prev, ''])
+  }
+
+  const removeSearchTerm = (index: number) => {
+    setSearchTerms(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updateSearchTerm = (index: number, value: string) => {
+    setSearchTerms(prev => prev.map((term, i) => i === index ? value : term))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const validTerms = searchTerms.filter(term => term.trim())
+    if (validTerms.length > 0) {
+      onMultiSearch(validTerms)
+      setSearchTerms(['']) // Reset form
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Search Type Selector */}
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={searchType === 'caseNumber' ? 'default' : 'outline'}
+          onClick={() => setSearchType('caseNumber')}
+          className="flex-1"
+        >
+          <Hash className="w-4 h-4 mr-2" />
+          Case Numbers
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={searchType === 'party' ? 'default' : 'outline'}
+          onClick={() => setSearchType('party')}
+          className="flex-1"
+        >
+          <User className="w-4 h-4 mr-2" />
+          Party Names
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={searchType === 'attorney' ? 'default' : 'outline'}
+          onClick={() => setSearchType('attorney')}
+          className="flex-1"
+        >
+          <User className="w-4 h-4 mr-2" />
+          Attorneys
+        </Button>
+      </div>
+
+      {/* Multiple Search Inputs */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-gray-700">
+            Search Terms ({searchTerms.filter(t => t.trim()).length} entered)
+          </label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addSearchTerm}
+            className="text-blue-700 border-blue-200 hover:bg-blue-50"
+          >
+            + Add Term
+          </Button>
+        </div>
+        
+        {searchTerms.map((term, index) => (
+          <div key={index} className="flex gap-2">
+            <input
+              type="text"
+              value={term}
+              onChange={(e) => updateSearchTerm(index, e.target.value)}
+              placeholder={
+                searchType === 'caseNumber'
+                  ? `Case number ${index + 1}`
+                  : searchType === 'party'
+                  ? `Party name ${index + 1}`
+                  : `Attorney name ${index + 1}`
+              }
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {searchTerms.length > 1 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => removeSearchTerm(index)}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                ×
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Submit Button */}
+      <Button
+        type="submit"
+        disabled={searchTerms.filter(t => t.trim()).length === 0}
+        className="w-full bg-blue-700 hover:bg-blue-800"
+      >
+        <Search className="w-4 h-4 mr-2" />
+        Search All Terms ({searchTerms.filter(t => t.trim()).length})
+      </Button>
+
+      {/* Help Text */}
+      <p className="text-xs text-gray-500">
+        Each term will be searched separately. You can search multiple case numbers, party names, or attorney names at once.
+      </p>
+    </form>
   )
 }
 

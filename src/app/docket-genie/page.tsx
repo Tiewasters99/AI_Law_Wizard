@@ -344,6 +344,7 @@ export default function DocketGeniePage() {
               <PacerAuthForm
                 onAuthenticate={pacerAuth.login}
                 onLogout={pacerAuth.logout}
+                onClose={() => setShowAuthModal(false)}
                 isAuthenticated={pacerAuth.isAuthenticated}
                 username={pacerAuth.userInfo?.username || null}
                 loading={pacerAuth.loading}
