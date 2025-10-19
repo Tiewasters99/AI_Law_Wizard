@@ -7,8 +7,9 @@
 
 import * as cheerio from 'cheerio'
 import type { DocketReportResponse, DocketEntry, PacerDocument } from '@/types/pacer'
-import { getCourtConfig, validateCaseNumber } from './courtConfig'
+import { getCourtConfig, validateCaseNumber, isCourtSupported, getSupportedCourts } from './courtConfig'
 import {
+  PacerError,
   PacerAuthenticationError,
   PacerNetworkError,
   PacerParsingError,
@@ -26,10 +27,29 @@ export class PacerDocketFetcher {
   }
 
   /**
+   * Get list of supported court codes
+   */
+  getSupportedCourts(): string[] {
+    return getSupportedCourts()
+  }
+
+  /**
+   * Check if a court is supported
+   */
+  isCourtSupported(courtCode: string): boolean {
+    return isCourtSupported(courtCode)
+  }
+
+  /**
    * Fetch docket report for any supported court
    */
   async fetchDocketReport(caseNumber: string, court: string): Promise<DocketReportResponse> {
     try {
+      // Validate court support
+      if (!isCourtSupported(court)) {
+        throw new Error(`Court ${court} is not supported. Supported courts: ${getSupportedCourts().join(', ')}`)
+      }
+
       // Validate case number format
       if (!validateCaseNumber(caseNumber, court)) {
         throw new Error(`Invalid case number format for ${court}: ${caseNumber}`)
@@ -67,7 +87,8 @@ export class PacerDocketFetcher {
       return Math.max(config.feeCalculation.minimumFee, estimatedPages * config.feeCalculation.docketPageRate)
     } catch (error) {
       console.error('[PACER Docket] Fee estimation error:', error)
-      throw new PacerFeeError(`Failed to estimate fees: ${error.message}`, court, caseNumber)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new PacerFeeError(`Failed to estimate fees: ${errorMessage}`, court, caseNumber)
     }
   }
 
@@ -85,7 +106,7 @@ export class PacerDocketFetcher {
       const queryResponse = await this.makeRequest(queryUrl, {
         method: 'GET',
         headers: this.getHeaders()
-      })
+      }, 'nysd')
 
       // Step 2: Submit case number search
       const searchParams = new URLSearchParams({
@@ -101,7 +122,7 @@ export class PacerDocketFetcher {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: searchParams.toString()
-      })
+      }, 'nysd')
 
       // Step 3: Parse the docket report HTML
       return this.parseNYSDDocket(searchResponse, caseNumber)
@@ -113,7 +134,8 @@ export class PacerDocketFetcher {
         throw error
       }
       
-      throw new PacerNetworkError(`Failed to fetch NYSD docket: ${error.message}`, 'nysd', caseNumber)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new PacerNetworkError(`Failed to fetch NYSD docket: ${errorMessage}`, 'nysd', caseNumber)
     }
   }
 
@@ -157,14 +179,15 @@ export class PacerDocketFetcher {
       if (error instanceof PacerError) {
         throw error
       }
-      throw new PacerParsingError(`Failed to parse NYSD docket: ${error.message}`, 'nysd', caseNumber)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new PacerParsingError(`Failed to parse NYSD docket: ${errorMessage}`, 'nysd', caseNumber)
     }
   }
 
   /**
    * Extract case information from NYSD HTML
    */
-  private extractNYSDCaseInfo($: cheerio.CheerioAPI): any {
+  private extractNYSDCaseInfo($: cheerio.Root): any {
     const config = getCourtConfig('nysd')
     
     return {
@@ -178,17 +201,17 @@ export class PacerDocketFetcher {
   /**
    * Extract docket entries from NYSD HTML
    */
-  private extractNYSDDocketEntries($: cheerio.CheerioAPI): DocketEntry[] {
+  private extractNYSDDocketEntries($: cheerio.Root): DocketEntry[] {
     const config = getCourtConfig('nysd')
     const entries: DocketEntry[] = []
     
     $(config.selectors.docketEntries.container).each((index, element) => {
       const $row = $(element)
       
-      const entryNumber = this.extractNumber($row, config.selectors.docketEntries.entryNumber)
-      const date = this.extractText($row, config.selectors.docketEntries.date)
-      const description = this.extractText($row, config.selectors.docketEntries.description)
-      const filedBy = this.extractText($row, config.selectors.docketEntries.filedBy)
+      const entryNumber = this.extractNumberFromElement($row, config.selectors.docketEntries.entryNumber)
+      const date = this.extractTextFromElement($row, config.selectors.docketEntries.date)
+      const description = this.extractTextFromElement($row, config.selectors.docketEntries.description)
+      const filedBy = this.extractTextFromElement($row, config.selectors.docketEntries.filedBy)
       
       if (entryNumber && date && description) {
         // Extract documents from the row
@@ -212,14 +235,14 @@ export class PacerDocketFetcher {
   /**
    * Extract documents from NYSD docket entry
    */
-  private extractNYSDDocuments($row: cheerio.CheerioAPI): PacerDocument[] {
+  private extractNYSDDocuments($row: cheerio.Cheerio): PacerDocument[] {
     const config = getCourtConfig('nysd')
     const documents: PacerDocument[] = []
     
-    $row.find(config.selectors.documents.container).each((index, link) => {
-      const $link = $(link)
-      const href = $link.attr('href')
-      const text = $link.text().trim()
+    $row.find(config.selectors.documents.container).each((index: number, link: cheerio.Element) => {
+      const $link = cheerio.load(link)
+      const href = $link('a').attr('href')
+      const text = $link('a').text().trim()
       
       if (href && text) {
         // Extract document ID from href
@@ -252,7 +275,7 @@ export class PacerDocketFetcher {
   /**
    * Calculate NYSD fees based on pages accessed
    */
-  private calculateNYSDFees($: cheerio.CheerioAPI): number {
+  private calculateNYSDFees($: cheerio.Root): number {
     const config = getCourtConfig('nysd')
     let totalFee = config.feeCalculation.minimumFee
     
@@ -280,7 +303,7 @@ export class PacerDocketFetcher {
   /**
    * Check if HTML contains error page
    */
-  private hasErrorPage($: cheerio.CheerioAPI): boolean {
+  private hasErrorPage($: cheerio.Root): boolean {
     // Look for common error indicators
     const errorTexts = [
       'case not found',
@@ -296,7 +319,7 @@ export class PacerDocketFetcher {
   /**
    * Extract text from element using selector
    */
-  private extractText($: cheerio.CheerioAPI, selector: string): string | null {
+  private extractText($: cheerio.Root, selector: string): string | null {
     const element = $(selector).first()
     return element.length > 0 ? element.text().trim() : null
   }
@@ -304,8 +327,27 @@ export class PacerDocketFetcher {
   /**
    * Extract number from element using selector
    */
-  private extractNumber($: cheerio.CheerioAPI, selector: string): number | null {
+  private extractNumber($: cheerio.Root, selector: string): number | null {
     const text = this.extractText($, selector)
+    if (!text) return null
+    
+    const number = parseInt(text.replace(/\D/g, ''))
+    return isNaN(number) ? null : number
+  }
+
+  /**
+   * Extract text from element using selector
+   */
+  private extractTextFromElement($element: cheerio.Cheerio, selector: string): string | null {
+    const element = $element.find(selector).first()
+    return element.length > 0 ? element.text().trim() : null
+  }
+
+  /**
+   * Extract number from element using selector
+   */
+  private extractNumberFromElement($element: cheerio.Cheerio, selector: string): number | null {
+    const text = this.extractTextFromElement($element, selector)
     if (!text) return null
     
     const number = parseInt(text.replace(/\D/g, ''))
@@ -327,8 +369,8 @@ export class PacerDocketFetcher {
   /**
    * Make authenticated request to court system
    */
-  private async makeRequest(url: string, options: RequestInit): Promise<string> {
-    const config = getCourtConfig('nysd')
+  private async makeRequest(url: string, options: RequestInit, courtCode: string = 'nysd'): Promise<string> {
+    const config = getCourtConfig(courtCode)
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), config.timeout)
     
@@ -366,11 +408,12 @@ export class PacerDocketFetcher {
         throw error
       }
       
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new PacerTimeoutError('Request timed out - court system may be slow')
       }
       
-      throw new PacerNetworkError(`Request failed: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new PacerNetworkError(`Request failed: ${errorMessage}`)
     }
   }
 

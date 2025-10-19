@@ -41,61 +41,110 @@ export interface CourtConfig {
 }
 
 /**
- * NYSD (Southern District of New York) Configuration
+ * Supported court configurations with dynamic URL generation
  */
-export const NYSD_CONFIG: CourtConfig = {
-  code: 'nysd',
-  name: 'Southern District of New York',
-  baseUrl: process.env.PACER_NYSD_URL || 'https://ecf.nysd.uscourts.gov',
-  docketEndpoint: '/cgi-bin/DktRpt.pl',
-  timeout: parseInt(process.env.PACER_DOCKET_TIMEOUT_MS || '45000', 10),
-  
-  selectors: {
-    caseInfo: {
-      title: 'td:contains("Case Title:") + td, .caseTitle',
-      judge: 'td:contains("Assigned Judge:") + td, .assignedJudge',
-      filingDate: 'td:contains("Date Filed:") + td, .filingDate',
-      status: 'td:contains("Case Status:") + td, .caseStatus'
+const SUPPORTED_COURTS = {
+  nysd: {
+    code: 'nysd',
+    name: 'Southern District of New York',
+    subdomain: 'nysd',
+    docketEndpoint: '/cgi-bin/DktRpt.pl',
+    timeout: 45000,
+    selectors: {
+      caseInfo: {
+        title: 'td:contains("Case Title:") + td, .caseTitle',
+        judge: 'td:contains("Assigned Judge:") + td, .assignedJudge',
+        filingDate: 'td:contains("Date Filed:") + td, .filingDate',
+        status: 'td:contains("Case Status:") + td, .caseStatus'
+      },
+      docketEntries: {
+        container: 'tr.docketEntry, tr[class*="docket"], .docketTable tr',
+        entryNumber: 'td:first-child, .entryNumber',
+        date: 'td:nth-child(2), .entryDate',
+        description: 'td:nth-child(3), .entryDescription',
+        filedBy: 'td:nth-child(4), .filedBy'
+      },
+      documents: {
+        container: 'a[href*="doc1"], .documentLink',
+        link: 'a[href*="doc1"]',
+        description: 'a[href*="doc1"]',
+        cost: 'text()',
+        pages: 'text()'
+      }
     },
-    docketEntries: {
-      container: 'tr.docketEntry, tr[class*="docket"], .docketTable tr',
-      entryNumber: 'td:first-child, .entryNumber',
-      date: 'td:nth-child(2), .entryDate',
-      description: 'td:nth-child(3), .entryDescription',
-      filedBy: 'td:nth-child(4), .filedBy'
-    },
-    documents: {
-      container: 'a[href*="doc1"], .documentLink',
-      link: 'a[href*="doc1"]',
-      description: 'a[href*="doc1"]',
-      cost: 'text()',
-      pages: 'text()'
+    feeCalculation: {
+      docketPageRate: 0.10,  // $0.10 per page for docket reports
+      documentPageRate: 0.10, // $0.10 per page for documents
+      minimumFee: 0.00
     }
   },
+  // Add more courts here as needed
+  // nyed: {
+  //   code: 'nyed',
+  //   name: 'Eastern District of New York',
+  //   subdomain: 'nyed',
+  //   docketEndpoint: '/cgi-bin/DktRpt.pl',
+  //   timeout: 45000,
+  //   // ... other configurations
+  // }
+} as const
+
+/**
+ * Generate court configuration dynamically
+ */
+function generateCourtConfig(courtCode: string): CourtConfig {
+  const court = SUPPORTED_COURTS[courtCode.toLowerCase() as keyof typeof SUPPORTED_COURTS]
   
-  feeCalculation: {
-    docketPageRate: 0.10,  // $0.10 per page for docket reports
-    documentPageRate: 0.10, // $0.10 per page for documents
-    minimumFee: 0.00
+  if (!court) {
+    throw new Error(`Court configuration not found for: ${courtCode}`)
+  }
+
+  return {
+    code: court.code,
+    name: court.name,
+    baseUrl: `https://ecf.${court.subdomain}.uscourts.gov`,
+    docketEndpoint: court.docketEndpoint,
+    timeout: court.timeout,
+    selectors: court.selectors,
+    feeCalculation: court.feeCalculation
   }
 }
+
+/**
+ * NYSD (Southern District of New York) Configuration
+ * @deprecated Use generateCourtConfig('nysd') instead
+ */
+export const NYSD_CONFIG: CourtConfig = generateCourtConfig('nysd')
 
 /**
  * Get court configuration by code
  */
 export function getCourtConfig(courtCode: string): CourtConfig {
-  switch (courtCode.toLowerCase()) {
-    case 'nysd':
-      return NYSD_CONFIG
-    default:
-      throw new Error(`Court configuration not found for: ${courtCode}`)
-  }
+  return generateCourtConfig(courtCode)
+}
+
+/**
+ * Get list of all supported court codes
+ */
+export function getSupportedCourts(): string[] {
+  return Object.keys(SUPPORTED_COURTS)
+}
+
+/**
+ * Check if a court code is supported
+ */
+export function isCourtSupported(courtCode: string): boolean {
+  return courtCode.toLowerCase() in SUPPORTED_COURTS
 }
 
 /**
  * Validate case number format for specific court
  */
 export function validateCaseNumber(caseNumber: string, courtCode: string): boolean {
+  if (!isCourtSupported(courtCode)) {
+    return false
+  }
+
   switch (courtCode.toLowerCase()) {
     case 'nysd':
       // NYSD case numbers: 1:24-cv-12345, 1:24-bk-12345, etc.
