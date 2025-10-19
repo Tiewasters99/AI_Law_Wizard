@@ -12,7 +12,10 @@ import type {
   PacerAuthResponse,
   PacerSearchQuery,
   PacerSearchResults,
+  DocketReportResponse,
+  DocketFeeEstimate,
 } from '@/types/pacer'
+import { PacerDocketFetcher } from './pacerDocketFetcher'
 
 /**
  * PACER API Client - Production Implementation
@@ -662,6 +665,135 @@ export class PacerApiClient {
     }
 
     return courtMap[courtCode.toLowerCase()] || courtCode.toUpperCase()
+  }
+
+  /**
+   * Fetch docket report for a case
+   */
+  async getDocketReport(sessionToken: string, caseNumber: string, court: string): Promise<DocketReportResponse> {
+    try {
+      console.log('[PACER] Fetching docket report for case:', caseNumber, 'in court:', court)
+      
+      this.validateSession(sessionToken)
+      
+      // MOCK MODE: Return simulated docket data
+      if (this.mockMode) {
+        console.log('[PACER] 🧪 Mock docket report for case:', caseNumber)
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate network delay
+        
+        return {
+          caseInfo: {
+            caseNumber,
+            caseTitle: 'Mock Case Title - Contract Dispute',
+            court,
+            courtName: this.getCourtName(court),
+            judge: 'Hon. John Doe',
+            filingDate: '2024-01-15',
+            status: 'Active'
+          },
+          docketEntries: [
+            {
+              entryNumber: 1,
+              date: '2024-01-15',
+              filed: '2024-01-15',
+              description: 'Complaint filed',
+              docketText: 'Plaintiff filed complaint against defendant for breach of contract.',
+              filedBy: 'John Smith, Esq.',
+              documents: [
+                {
+                  documentId: 'doc-1',
+                  documentNumber: '1',
+                  description: 'Complaint',
+                  pages: 5,
+                  cost: 0.50,
+                  availability: 'available',
+                  filingDate: '2024-01-15'
+                }
+              ]
+            },
+            {
+              entryNumber: 2,
+              date: '2024-01-20',
+              filed: '2024-01-20',
+              description: 'Answer filed',
+              docketText: 'Defendant filed answer to complaint.',
+              filedBy: 'Jane Doe, Esq.',
+              documents: [
+                {
+                  documentId: 'doc-2',
+                  documentNumber: '2',
+                  description: 'Answer to Complaint',
+                  pages: 3,
+                  cost: 0.30,
+                  availability: 'available',
+                  filingDate: '2024-01-20'
+                }
+              ]
+            }
+          ],
+          totalEntries: 2,
+          estimatedFee: 0.80,
+          generatedAt: new Date().toISOString()
+        }
+      }
+      
+      // REAL MODE: Use docket fetcher
+      const fetcher = new PacerDocketFetcher(sessionToken)
+      return await fetcher.fetchDocketReport(caseNumber, court)
+      
+    } catch (error) {
+      console.error('[PACER] Docket report fetch error:', error)
+      throw this.handleError(error)
+    }
+  }
+
+  /**
+   * Estimate docket fees before fetching
+   */
+  async estimateDocketFee(sessionToken: string, caseNumber: string, court: string): Promise<number> {
+    try {
+      console.log('[PACER] Estimating docket fees for case:', caseNumber, 'in court:', court)
+      
+      this.validateSession(sessionToken)
+      
+      // MOCK MODE: Return simulated fee estimate
+      if (this.mockMode) {
+        console.log('[PACER] 🧪 Mock fee estimate for case:', caseNumber)
+        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate network delay
+        
+        // Simulate fee based on case number
+        const caseYear = this.extractCaseYear(caseNumber)
+        const currentYear = new Date().getFullYear()
+        const caseAge = currentYear - caseYear
+        
+        // Estimate based on case age (older cases typically have more entries)
+        const estimatedEntries = Math.max(10, caseAge * 5)
+        const estimatedPages = Math.ceil(estimatedEntries / 20) // ~20 entries per page
+        const estimatedFee = Math.max(0.00, estimatedPages * 0.10) // $0.10 per page
+        
+        return Math.round(estimatedFee * 100) / 100
+      }
+      
+      // REAL MODE: Use docket fetcher for estimation
+      const fetcher = new PacerDocketFetcher(sessionToken)
+      return await fetcher.estimateDocketFee(caseNumber, court)
+      
+    } catch (error) {
+      console.error('[PACER] Fee estimation error:', error)
+      throw this.handleError(error)
+    }
+  }
+
+  /**
+   * Extract case year from case number for fee estimation
+   */
+  private extractCaseYear(caseNumber: string): number {
+    const match = caseNumber.match(/:(\d{2})-/)
+    if (match) {
+      const year = parseInt(match[1])
+      return year > 50 ? 1900 + year : 2000 + year
+    }
+    return new Date().getFullYear()
   }
 
   /**

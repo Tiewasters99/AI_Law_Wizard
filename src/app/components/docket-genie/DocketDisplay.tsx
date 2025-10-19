@@ -83,6 +83,19 @@ export function DocketDisplay({ docket, onDownloadDocument, loading = false }: D
               <span className="font-semibold">${docket.estimatedFee.toFixed(2)}</span>
             </div>
           </div>
+
+          {/* Fee Breakdown */}
+          {docket.estimatedFee > 0 && (
+            <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-blue-700 font-medium">PACER Fees:</span>
+                <span className="text-blue-800 font-bold">${docket.estimatedFee.toFixed(2)}</span>
+              </div>
+              <div className="text-xs text-blue-600 mt-1">
+                Based on {Math.ceil(docket.estimatedFee / 0.10)} pages at $0.10/page
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -194,6 +207,11 @@ export function DocketDisplay({ docket, onDownloadDocument, loading = false }: D
                                   </p>
                                   <p className="text-xs text-gray-500">
                                     {doc.pages} pages • ${doc.cost?.toFixed(2)}
+                                    {doc.cost && doc.cost > 0 && (
+                                      <span className="ml-1 text-blue-600 font-medium">
+                                        (PACER fee)
+                                      </span>
+                                    )}
                                   </p>
                                 </div>
                               </div>

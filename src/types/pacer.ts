@@ -284,6 +284,22 @@ export interface DocumentDownloadResponse {
 }
 
 /**
+ * Docket Fee Estimate
+ */
+export interface DocketFeeEstimate {
+  caseNumber: string
+  court: string
+  estimatedPages: number
+  estimatedFee: number
+  breakdown: {
+    docketPages: number
+    documentPages: number
+  }
+  confidence: 'low' | 'medium' | 'high'
+  generatedAt: string
+}
+
+/**
  * Available Courts List
  */
 export const PACER_COURTS: PacerCourt[] = [
