@@ -122,10 +122,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   // Guest users get clean header with minimal navigation
+  // Special handling for attorney-features page to avoid double padding
+  const isAttorneyFeaturesPage = pathname === '/attorney-features'
+  
   return (
     <>
       <GuestHeader />
-      <main className="pt-16">
+      <main className={isAttorneyFeaturesPage ? '' : 'pt-16'}>
         {children}
       </main>
     </>

@@ -224,14 +224,16 @@ export default function AttorneyFeaturesPage() {
 
   return (
     <Layout>
-      <div className="h-screen overflow-hidden" style={{ backgroundColor: colors.background }}>
+      <div className="h-screen pt-16 overflow-hidden" style={{ backgroundColor: colors.background }}>
         {/* Mobile Menu Button */}
         {isMobile && !showMobileSidebar && (
           <button
             onClick={() => setShowMobileSidebar(true)}
-            className="fixed bottom-6 right-6 z-30 p-4 rounded-full shadow-xl backdrop-blur-md"
+            className="fixed bottom-6 right-6 z-30 p-4 rounded-full shadow-xl touch-manipulation"
             style={{
               background: 'linear-gradient(to right, #2563eb, #1e40af)',
+              minWidth: '56px',
+              minHeight: '56px',
             }}
           >
             <Image 
@@ -247,19 +249,19 @@ export default function AttorneyFeaturesPage() {
           {/* Desktop Sidebar - All Features */}
           {!isMobile && (
             <div 
-              className="w-72 border-r flex flex-col overflow-hidden backdrop-blur-xl"
+              className="w-72 border-r flex flex-col overflow-hidden"
               style={{ 
-                backgroundColor: 'rgba(248, 250, 252, 0.8)',
+                backgroundColor: 'rgba(248, 250, 252, 0.95)',
                 borderColor: 'rgba(226, 232, 240, 0.5)',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
               }}
             >
               {/* Sidebar Header */}
               <div 
-                className="p-4 border-b backdrop-blur-sm" 
+                className="p-4 border-b" 
                 style={{ 
                   borderColor: 'rgba(226, 232, 240, 0.5)',
-                  background: 'linear-gradient(to right, rgba(239, 246, 255, 0.8), rgba(219, 234, 254, 0.6))',
+                  background: 'linear-gradient(to right, rgba(239, 246, 255, 0.9), rgba(219, 234, 254, 0.8))',
                 }}
               >
               <div className="flex items-center space-x-3">
@@ -296,15 +298,16 @@ export default function AttorneyFeaturesPage() {
                       key={feature.id}
                       onClick={() => handleFeatureClick(feature)}
                       title={feature.tooltip}
-                      className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left group relative transition-all ${
+                      className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left group relative transition-all touch-manipulation ${
                         isActive ? '' : ''
                       }`}
                       style={isActive ? {
                         backgroundColor: 'rgba(239, 246, 255, 0.8)',
                         borderLeft: `3px solid ${colors.primary[700]}`,
                         color: colors.primary[900],
-                        backdropFilter: 'blur(8px)',
-                      } : {}}
+                      } : {
+                        minHeight: '48px',
+                      }}
                     >
                       <div className={`p-1.5 rounded`} style={{
                         backgroundColor: feature.category === 'premium' ? colors.accent[100] :
@@ -319,29 +322,29 @@ export default function AttorneyFeaturesPage() {
                           <Icon className="w-4 h-4" />
                         </span>
                       </div>
-                      <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex-1 min-w-0 overflow-hidden relative z-10">
                         <div className="flex items-center space-x-2">
-                          <span className="font-medium truncate text-sm">{feature.name}</span>
+                          <span className="font-medium truncate text-sm" style={{ color: '#000000' }}>{feature.name}</span>
                           {session && (session.user?.role === 'ATTORNEY' || session.user?.role === 'LAWYER') && (
                             <Shield className="w-3 h-3 flex-shrink-0" style={{ color: colors.accent[600] }} />
                           )}
                         </div>
-                        <p className="text-xs truncate mt-0.5" style={{ color: colors.secondary[500] }}>{feature.description}</p>
+                        <p className="text-xs truncate mt-0.5" style={{ color: '#374151' }}>{feature.description}</p>
                       </div>
 
                       {/* Hover Background */}
                       {!isActive && (
                         <div
-                          className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none backdrop-blur-sm"
+                          className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
                           style={{ 
-                            backgroundColor: 'rgba(241, 245, 249, 0.6)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                           }}
                         />
                       )}
                       
                       {/* Professional Tooltip */}
-                      <div className="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 backdrop-blur-xl text-xs rounded-lg px-4 py-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] max-w-xs whitespace-normal shadow-lg" style={{ 
+                      <div className="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 text-xs rounded-lg px-4 py-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 max-w-xs whitespace-normal shadow-lg" style={{ 
                         backgroundColor: 'rgba(30, 41, 59, 0.95)',
                         color: 'white',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -360,15 +363,15 @@ export default function AttorneyFeaturesPage() {
 
             {/* Professional Footer */}
             <div 
-              className="p-4 border-t backdrop-blur-sm" 
+              className="p-4 border-t" 
               style={{ 
                 borderColor: 'rgba(226, 232, 240, 0.5)',
               }}
             >
               <div 
-                className="p-3 rounded-lg backdrop-blur-md"
+                className="p-3 rounded-lg"
                 style={{ 
-                  backgroundColor: 'rgba(239, 246, 255, 0.7)',
+                  backgroundColor: 'rgba(239, 246, 255, 0.9)',
                   border: '1px solid rgba(59, 130, 246, 0.1)',
                 }}
               >
@@ -399,19 +402,20 @@ export default function AttorneyFeaturesPage() {
                 animate={{ x: 0 }}
                 exit={{ x: -280 }}
                 transition={{ duration: 0.3 }}
-                className="fixed inset-y-0 left-0 w-72 z-50 backdrop-blur-xl"
+                className="fixed inset-y-0 left-0 w-72 z-50"
                 style={{
-                  backgroundColor: 'rgba(248, 250, 252, 0.95)',
+                  backgroundColor: 'rgba(248, 250, 252, 0.98)',
                   borderRight: '1px solid rgba(226, 232, 240, 0.5)',
+                  boxShadow: '4px 0 6px -1px rgba(0, 0, 0, 0.1)',
                 }}
               >
                 {/* Mobile sidebar content - same as desktop */}
                 <div className="h-full flex flex-col">
                   <div 
-                    className="p-4 border-b backdrop-blur-sm" 
+                    className="p-4 border-b" 
                     style={{ 
                       borderColor: 'rgba(226, 232, 240, 0.5)',
-                      background: 'linear-gradient(to right, rgba(239, 246, 255, 0.8), rgba(219, 234, 254, 0.6))',
+                      background: 'linear-gradient(to right, rgba(239, 246, 255, 0.9), rgba(219, 234, 254, 0.8))',
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -432,7 +436,15 @@ export default function AttorneyFeaturesPage() {
                           <p className="text-xs" style={{ color: colors.secondary[600] }}>Attorney Tools</p>
                         </div>
                       </div>
-                      <button onClick={() => setShowMobileSidebar(false)}>
+                      <button 
+                        onClick={() => setShowMobileSidebar(false)}
+                        className="p-2 rounded-lg touch-manipulation"
+                        style={{ 
+                          backgroundColor: 'rgba(241, 245, 249, 0.8)',
+                          minWidth: '40px',
+                          minHeight: '40px',
+                        }}
+                      >
                         <span className="text-2xl" style={{ color: colors.secondary[600] }}>×</span>
                       </button>
                     </div>
@@ -451,12 +463,13 @@ export default function AttorneyFeaturesPage() {
                               handleFeatureClick(feature)
                               setShowMobileSidebar(false)
                             }}
-                            className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left group relative transition-all"
+                            className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left group relative transition-all touch-manipulation"
                             style={isActive ? {
                               backgroundColor: 'rgba(239, 246, 255, 0.8)',
                               borderLeft: `3px solid ${colors.primary[700]}`,
-                              backdropFilter: 'blur(8px)',
-                            } : {}}
+                            } : {
+                              minHeight: '48px',
+                            }}
                           >
                             <div className={`p-1.5 rounded relative z-10`} style={{
                               backgroundColor: feature.category === 'premium' ? colors.accent[100] : colors.primary[100]
@@ -466,12 +479,12 @@ export default function AttorneyFeaturesPage() {
                               </span>
                             </div>
                             <div className="flex-1 min-w-0 relative z-10">
-                              <span className="font-medium text-sm block truncate">{feature.name}</span>
-                              <p className="text-xs truncate" style={{ color: colors.secondary[500] }}>{feature.description}</p>
+                              <span className="font-medium text-sm block truncate" style={{ color: '#000000' }}>{feature.name}</span>
+                              <p className="text-xs truncate" style={{ color: '#374151' }}>{feature.description}</p>
                             </div>
                             {!isActive && (
-                              <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none backdrop-blur-sm"
-                                style={{ backgroundColor: 'rgba(241, 245, 249, 0.6)' }}
+                              <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                                style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
                               />
                             )}
                           </button>
@@ -486,7 +499,7 @@ export default function AttorneyFeaturesPage() {
 
           {/* Main Content - Selected Feature */}
           <div className="flex-1 overflow-hidden">
-            <div className="h-full p-6">
+            <div className="h-full p-1 md:p-2 lg:p-3">
               {selectedFeature ? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -496,17 +509,17 @@ export default function AttorneyFeaturesPage() {
                 >
                   {/* Professional Feature Header */}
                   <div 
-                    className="mb-6 pb-6 border-b backdrop-blur-md rounded-2xl p-6"
+                    className="mb-2 md:mb-3 pb-2 md:pb-3 border-b rounded-xl p-2 md:p-3"
                     style={{ 
                       borderColor: 'rgba(226, 232, 240, 0.5)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
                       border: '1px solid rgba(226, 232, 240, 0.5)',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                      boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.05)',
                     }}
                   >
-                    <div className="flex items-start space-x-4 mb-4">
+                    <div className="flex flex-col sm:flex-row items-start space-y-2 sm:space-y-0 sm:space-x-3 mb-2 md:mb-3">
                       <div 
-                        className="p-3 rounded-lg"
+                        className="p-1.5 sm:p-2 rounded-lg flex-shrink-0"
                         style={{
                           background: selectedFeature.category === 'premium' 
                             ? 'linear-gradient(to right, #d97706, #b45309)'
@@ -519,20 +532,20 @@ export default function AttorneyFeaturesPage() {
                             selectedFeature.category === 'advanced' ? colors.primary[700] :
                             colors.primary[700]
                         }}>
-                          <selectedFeature.icon className="w-8 h-8" />
+                          <selectedFeature.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                         </span>
                       </div>
-                      <div className="flex-1">
-                        <h2 className="text-3xl font-bold mb-2" style={{ color: colors.text }}>{selectedFeature.name}</h2>
-                        <p className="text-base" style={{ color: colors.secondary[600] }}>{selectedFeature.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-1 break-words" style={{ color: colors.text }}>{selectedFeature.name}</h2>
+                        <p className="text-xs sm:text-sm break-words" style={{ color: colors.secondary[600] }}>{selectedFeature.description}</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       {session && (session.user?.role === 'ATTORNEY' || session.user?.role === 'LAWYER') && (
                         <Badge 
                           variant="outline" 
-                          className="border-amber-200"
+                          className="border-amber-200 text-xs"
                           style={{ color: colors.accent[700], backgroundColor: colors.accent[50] }}
                         >
                           <Shield className="w-3 h-3 mr-1" />
@@ -542,6 +555,7 @@ export default function AttorneyFeaturesPage() {
                       {selectedFeature.category === 'premium' && (
                         <Badge 
                           variant="outline"
+                          className="text-xs"
                           style={{ color: colors.accent[700], backgroundColor: colors.accent[50], borderColor: colors.accent[200] }}
                         >
                           <Award className="w-3 h-3 mr-1" />
@@ -550,6 +564,7 @@ export default function AttorneyFeaturesPage() {
                       )}
                       <Badge 
                         variant="outline"
+                        className="text-xs"
                         style={{ color: colors.primary[700], backgroundColor: colors.primary[50], borderColor: colors.primary[200] }}
                       >
                         <CheckCircle className="w-3 h-3 mr-1" />
@@ -559,75 +574,75 @@ export default function AttorneyFeaturesPage() {
                   </div>
 
                   {/* Feature Content */}
-                  <div className="max-w-4xl">
-                    <div className="space-y-6">
+                  <div className="w-full max-w-4xl mx-auto">
+                    <div className="space-y-2 md:space-y-3">
                         {/* Professional Feature Details Card */}
                         <Card 
-                          className="backdrop-blur-md"
                           style={{ 
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
                             border: '1px solid rgba(226, 232, 240, 0.5)',
                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                           }}
                         >
-                          <CardHeader>
-                            <CardTitle style={{ color: colors.text }}>Professional Capabilities</CardTitle>
-                            <CardDescription style={{ color: colors.secondary[600] }}>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base md:text-lg" style={{ color: colors.text }}>Professional Capabilities</CardTitle>
+                            <CardDescription className="text-xs md:text-sm" style={{ color: colors.secondary[600] }}>
                               Comprehensive tools designed for legal professionals to enhance practice efficiency and client service delivery.
                             </CardDescription>
                           </CardHeader>
-                          <CardContent>
-                            <div className="space-y-5">
+                          <CardContent className="pt-0">
+                            <div className="space-y-3 md:space-y-4">
                               <div>
-                                <h4 className="font-semibold mb-3" style={{ color: colors.text }}>Key Features & Capabilities:</h4>
-                                <ul className="space-y-2.5">
+                                <h4 className="font-semibold mb-2 text-sm" style={{ color: colors.text }}>Key Features & Capabilities:</h4>
+                                <ul className="space-y-1.5 sm:space-y-2">
                                   {selectedFeature.features.map((feature, idx) => (
-                                    <li key={idx} className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50 transition-colors">
-                                      <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: colors.success[600] }} />
-                                      <span className="text-sm" style={{ color: colors.secondary[700] }}>{feature}</span>
+                                    <li key={idx} className="flex items-start space-x-2 p-1.5 rounded hover:bg-gray-50 transition-colors">
+                                      <CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: colors.success[600] }} />
+                                      <span className="text-xs break-words" style={{ color: colors.secondary[700] }}>{feature}</span>
                                     </li>
                                   ))}
                                 </ul>
                               </div>
 
                               {selectedFeature.pricing && (
-                                <div className="pt-4 border-t" style={{ borderColor: colors.secondary[200] }}>
-                                  <h4 className="font-semibold mb-3" style={{ color: colors.text }}>Service Tiers:</h4>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 rounded-lg border" style={{ 
+                                <div className="pt-2 border-t" style={{ borderColor: colors.secondary[200] }}>
+                                  <h4 className="font-semibold mb-2 text-sm" style={{ color: colors.text }}>Service Tiers:</h4>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                                    <div className="p-2 sm:p-3 rounded-lg border" style={{ 
                                       backgroundColor: colors.secondary[50],
                                       borderColor: colors.secondary[200]
                                     }}>
-                                      <div className="flex items-center space-x-2 mb-2">
-                                        <Building className="w-4 h-4" style={{ color: colors.secondary[600] }} />
-                                        <span className="text-sm font-medium" style={{ color: colors.secondary[700] }}>Standard Access</span>
+                                      <div className="flex items-center space-x-2 mb-1">
+                                        <Building className="w-3 h-3" style={{ color: colors.secondary[600] }} />
+                                        <span className="text-xs font-medium" style={{ color: colors.secondary[700] }}>Standard Access</span>
                                       </div>
-                                      <p className="text-sm" style={{ color: colors.secondary[600] }}>{selectedFeature.pricing.free}</p>
+                                      <p className="text-xs" style={{ color: colors.secondary[600] }}>{selectedFeature.pricing.free}</p>
                                     </div>
-                                    <div className="p-4 rounded-lg border" style={{ 
+                                    <div className="p-2 sm:p-3 rounded-lg border" style={{ 
                                       backgroundColor: colors.primary[50],
                                       borderColor: colors.primary[200]
                                     }}>
-                                      <div className="flex items-center space-x-2 mb-2">
-                                        <Award className="w-4 h-4" style={{ color: colors.primary[700] }} />
-                                        <span className="text-sm font-medium" style={{ color: colors.primary[900] }}>Attorney Tier</span>
+                                      <div className="flex items-center space-x-2 mb-1">
+                                        <Award className="w-3 h-3" style={{ color: colors.primary[700] }} />
+                                        <span className="text-xs font-medium" style={{ color: colors.primary[900] }}>Attorney Tier</span>
                                       </div>
-                                      <p className="text-sm font-semibold" style={{ color: colors.primary[800] }}>{selectedFeature.pricing.paid}</p>
+                                      <p className="text-xs font-semibold" style={{ color: colors.primary[800] }}>{selectedFeature.pricing.paid}</p>
                                     </div>
                                   </div>
                                 </div>
                               )}
 
                               {/* Professional CTA */}
-                                  <div className="pt-4">
+                              <div className="pt-2">
                                 <Button
                                   onClick={() => handleTryFeature(selectedFeature)}
-                                  className="w-full shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
-                                  size="lg"
+                                  className="w-full shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm"
+                                  size="sm"
                                 >
-                                  <BookOpen className="w-5 h-5 mr-2" />
-                                  Explore Interactive Demo
-                                  <ArrowRight className="w-5 h-5 ml-2" />
+                                  <BookOpen className="w-4 h-4 mr-2" />
+                                  <span className="hidden sm:inline">Explore Interactive Demo</span>
+                                  <span className="sm:hidden">Try Demo</span>
+                                  <ArrowRight className="w-4 h-4 ml-2" />
                                 </Button>
                               </div>
                             </div>
@@ -636,30 +651,29 @@ export default function AttorneyFeaturesPage() {
 
                         {/* Professional Benefits Card */}
                         <Card 
-                          className="backdrop-blur-md"
                           style={{ 
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
                             border: '1px solid rgba(226, 232, 240, 0.5)',
                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                           }}
                         >
-                          <CardHeader>
-                            <CardTitle style={{ color: colors.text }}>Professional Benefits</CardTitle>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base md:text-lg" style={{ color: colors.text }}>Professional Benefits</CardTitle>
                           </CardHeader>
-                          <CardContent>
-                            <div className="grid md:grid-cols-2 gap-4">
+                          <CardContent className="pt-0">
+                            <div className="grid md:grid-cols-2 gap-2 sm:gap-3">
                               {[
                                 { icon: Scale, title: 'Bar Compliance', desc: 'Meets professional standards and ethical guidelines' },
                                 { icon: Shield, title: 'Secure & Confidential', desc: 'Enterprise-grade security for client data' },
                                 { icon: BarChart3, title: 'Practice Analytics', desc: 'Track efficiency and case outcomes' },
                                 { icon: Users, title: 'Client Management', desc: 'Streamlined client communication tools' },
                               ].map((benefit, idx) => (
-                                <div key={idx} className="flex items-start space-x-3 p-3 rounded-lg" style={{ backgroundColor: colors.secondary[50] }}>
-                                  <div className="p-2 rounded" style={{ backgroundColor: colors.primary[100] }}>
-                                    <benefit.icon className="w-4 h-4" style={{ color: colors.primary[700] }} />
+                                <div key={idx} className="flex items-start space-x-2 p-2 rounded-lg" style={{ backgroundColor: colors.secondary[50] }}>
+                                  <div className="p-1.5 rounded" style={{ backgroundColor: colors.primary[100] }}>
+                                    <benefit.icon className="w-3 h-3" style={{ color: colors.primary[700] }} />
                                   </div>
                                   <div>
-                                    <h5 className="text-sm font-semibold mb-1" style={{ color: colors.text }}>{benefit.title}</h5>
+                                    <h5 className="text-xs font-semibold mb-1" style={{ color: colors.text }}>{benefit.title}</h5>
                                     <p className="text-xs" style={{ color: colors.secondary[600] }}>{benefit.desc}</p>
                                   </div>
                                 </div>
@@ -676,13 +690,13 @@ export default function AttorneyFeaturesPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="h-full flex flex-col justify-center items-center px-8"
+                  className="h-full flex flex-col justify-center items-center px-4 md:px-8"
                 >
                   {/* Professional Hero Section */}
                   <div className="text-center max-w-2xl">
                     {/* Professional Icon */}
                     <div 
-                      className="w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl"
+                      className="w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-xl"
                       style={{ 
                         background: 'linear-gradient(to right, #2563eb, #1e40af)',
                       }}
@@ -690,23 +704,24 @@ export default function AttorneyFeaturesPage() {
                       <Image 
                         src="/images/logo_icon.png" 
                         alt="AI Wizard Logo" 
-                        width={48} 
-                        height={48}
+                        width={32} 
+                        height={32}
+                        className="md:w-12 md:h-12"
                       />
                     </div>
                     
                     {/* Professional Headline */}
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: colors.text }}>
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-4" style={{ color: colors.text }}>
                       Professional Legal Services
                     </h1>
                     
                     {/* Subtitle */}
-                    <p className="text-lg mb-8" style={{ color: colors.secondary[600] }}>
+                    <p className="text-base md:text-lg mb-6 md:mb-8" style={{ color: colors.secondary[600] }}>
                       Attorney-grade AI tools designed to enhance legal practice efficiency, client service, and professional excellence.
                     </p>
 
                     {/* Professional Features Grid */}
-                    <div className="grid grid-cols-2 gap-4 mb-8 max-w-2xl mx-auto">
+                    <div className="grid grid-cols-2 gap-2 md:gap-4 mb-6 md:mb-8 max-w-2xl mx-auto">
                       {attorneyFeatures.slice(0, 4).map((feature, idx) => {
                         const Icon = feature.icon
                         return (
@@ -716,9 +731,9 @@ export default function AttorneyFeaturesPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className="p-6 rounded-2xl text-center backdrop-blur-md hover:shadow-xl transition-all hover:-translate-y-1"
+                            className="p-6 rounded-2xl text-center hover:shadow-xl transition-all hover:-translate-y-1"
                             style={{ 
-                              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              backgroundColor: 'rgba(255, 255, 255, 0.95)',
                               border: '1px solid rgba(226, 232, 240, 0.5)',
                             }}
                           >
@@ -750,9 +765,9 @@ export default function AttorneyFeaturesPage() {
                       </Button>
                     ) : session.user?.role !== 'ATTORNEY' && session.user?.role !== 'LAWYER' ? (
                       <div 
-                        className="rounded-xl p-6 max-w-md mx-auto backdrop-blur-md" 
+                        className="rounded-xl p-6 max-w-md mx-auto" 
                         style={{ 
-                          backgroundColor: 'rgba(255, 251, 235, 0.9)',
+                          backgroundColor: 'rgba(255, 251, 235, 0.95)',
                           border: '1px solid rgba(217, 119, 6, 0.3)',
                         }}
                       >

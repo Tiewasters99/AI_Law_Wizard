@@ -89,18 +89,18 @@ export function InteractiveFeaturePanel({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 h-full w-full md:w-2/3 lg:w-1/2 bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 h-full w-full sm:w-4/5 md:w-2/3 lg:w-1/2 xl:w-2/5 bg-white shadow-2xl z-50 flex flex-col"
           >
             {/* Panel Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex-shrink-0">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 sm:p-6 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                    <Icon className="w-6 h-6" />
+                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm flex-shrink-0">
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <div>
-                    <h2 className="text-2xl font-bold">{featureName}</h2>
-                    <p className="text-blue-100 text-sm">{featureDescription}</p>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{featureName}</h2>
+                    <p className="text-blue-100 text-xs sm:text-sm truncate">{featureDescription}</p>
                   </div>
                 </div>
                 <Button
@@ -134,15 +134,15 @@ export function InteractiveFeaturePanel({
             </div>
 
             {/* Panel Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               {/* Usage Notice for Guests */}
               {!session && canUseFreebie && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-green-900 mb-1">Try Document Analysis Free</h3>
-                      <p className="text-sm text-green-700 mb-3">
+                <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-green-900 mb-1 text-sm sm:text-base">Try Document Analysis Free</h3>
+                      <p className="text-xs sm:text-sm text-green-700 mb-3">
                         Upload one document and ask one question to try this feature. 
                         Sign in as a lawyer for unlimited access.
                       </p>
@@ -150,9 +150,9 @@ export function InteractiveFeaturePanel({
                         onClick={onUpgrade}
                         size="sm"
                         variant="outline"
-                        className="border-green-600 text-green-700 hover:bg-green-600 hover:text-white"
+                        className="border-green-600 text-green-700 hover:bg-green-600 hover:text-white text-xs sm:text-sm"
                       >
-                        <ArrowRight className="w-4 h-4 mr-2" />
+                        <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                         Sign In to Continue
                       </Button>
                     </div>
@@ -162,28 +162,28 @@ export function InteractiveFeaturePanel({
 
               {/* Interactive Feature Component */}
               {(canUseFreebie || isLawyer) ? (
-                <div className="bg-gray-50 rounded-lg p-6 min-h-[400px]">
+                <div className="bg-gray-50 rounded-lg p-4 sm:p-6 min-h-[300px] sm:min-h-[400px]">
                   {children}
                 </div>
               ) : (
-                <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-8 min-h-[400px] flex items-center justify-center">
-                  <div className="text-center max-w-md">
-                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Lock className="w-10 h-10 text-blue-600" />
+                <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 sm:p-8 min-h-[300px] sm:min-h-[400px] flex items-center justify-center">
+                  <div className="text-center max-w-md px-4">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                      <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3">
                       Continue as a Lawyer
                     </h3>
-                    <p className="text-gray-600 mb-6 leading-relaxed">
+                    <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed">
                       You've completed your free trial. Sign in or create a lawyer account to unlock unlimited document analysis, advanced features, and professional legal tools.
                     </p>
                     <div className="space-y-3">
                       <Button
                         onClick={onUpgrade}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg text-sm sm:text-base"
                         size="lg"
                       >
-                        <ArrowRight className="w-5 h-5 mr-2" />
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                         Sign In as Lawyer
                       </Button>
                       <p className="text-xs text-gray-500">
@@ -196,11 +196,12 @@ export function InteractiveFeaturePanel({
             </div>
 
             {/* Panel Footer */}
-            <div className="p-4 border-t bg-gray-50 flex-shrink-0">
+            <div className="p-3 sm:p-4 border-t bg-gray-50 flex-shrink-0">
               <div className="flex justify-end">
                 <Button
                   variant="outline"
                   onClick={onClose}
+                  className="text-sm"
                 >
                   Close
                 </Button>
