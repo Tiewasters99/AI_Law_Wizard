@@ -12,9 +12,13 @@ const compat = new FlatCompat({
 })
 
 export default [
-  ...compat.extends('next/core-web-vitals'),
+  ...compat.extends('next/core-web-vitals', 'prettier'),
   {
+    plugins: {
+      prettier: (await import('eslint-plugin-prettier')).default,
+    },
     rules: {
+      'prettier/prettier': 'error',
       'react/no-unescaped-entities': 'warn', // Change from error to warning
       'react-hooks/exhaustive-deps': 'warn', // Change from error to warning
       '@next/next/no-img-element': 'warn', // Change from error to warning

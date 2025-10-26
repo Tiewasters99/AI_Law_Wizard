@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* Highlight.js theme for code blocks */
-@import 'highlight.js/styles/github.css';
+@import "highlight.js/styles/github.css";
 
 @layer base {
   :root {
@@ -62,7 +62,7 @@
     padding: 0;
     min-height: 100vh;
   }
-  
+
   html {
     height: 100%;
   }
@@ -73,29 +73,29 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
+
   /* Custom scrollbar for webkit browsers */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: rgba(156, 163, 175, 0.5);
     border-radius: 3px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(156, 163, 175, 0.7);
   }
-  
+
   /* Toast animations */
   @keyframes slideInFromTop {
     from {
@@ -107,7 +107,7 @@
       opacity: 1;
     }
   }
-  
+
   @keyframes slideOutToTop {
     from {
       transform: translateY(0);
@@ -118,11 +118,11 @@
       opacity: 0;
     }
   }
-  
+
   .toast-enter {
     animation: slideInFromTop 0.3s ease-out;
   }
-  
+
   .toast-exit {
     animation: slideOutToTop 0.3s ease-in;
   }

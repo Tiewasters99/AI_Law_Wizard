@@ -1,39 +1,40 @@
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { ToasterComponent } from '@/app/components/ui/toaster'
-import { Providers } from './providers'
-import Layout from '@/app/components/Layout'
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ToasterComponent } from "@/components/ui/toaster";
+import { Providers } from "@/app/providers";
 
-const inter = Inter({ 
-  subsets: ['latin'],
-  variable: '--font-inter',
-})
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
 
 export const metadata = {
-  title: 'AI Law Wizard',
-  description: 'AI-powered legal consultation platform combining wizard intelligence with scales of justice',
+  title: "AI Law Wizard",
+  description:
+    "AI-powered legal consultation platform combining wizard intelligence with scales of justice",
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
-}
+};
 
-export default function RootLayout({ 
-  children 
-}: { 
-  children: React.ReactNode 
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning={true}>
+      <body
+        className={`${inter.variable} font-sans antialiased`}
+        suppressHydrationWarning={true}
+      >
         <Providers>
-          <Layout>
-            {children}
-          </Layout>
+          {children}
           <ToasterComponent />
         </Providers>
       </body>
     </html>
-  )
+  );
 }

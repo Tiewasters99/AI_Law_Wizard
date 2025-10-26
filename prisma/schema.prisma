@@ -275,9 +275,9 @@ model Comment {
 
 // Enums for User Roles
 enum Role {
-  LAWYER
   CUSTOMER
   ATTORNEY
+  ADMIN
 }
 
 // User model for authentication

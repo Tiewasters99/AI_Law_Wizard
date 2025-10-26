@@ -8,36 +8,40 @@ export default withAuth(
 
     // Define protected routes and their required roles
     const protectedRoutes = {
-      '/wizard': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
-      '/tokens': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
-      '/admin': ['ATTORNEY', 'LAWYER'],
-      '/grand-wizard': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
-      '/profile': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
-      '/query-history': ['ATTORNEY', 'LAWYER', 'CUSTOMER'],
+      "/client": ["CUSTOMER", "ADMIN"],
+      "/client/dashboard": ["CUSTOMER", "ADMIN"],
+      "/attorney": ["ATTORNEY", "ADMIN"],
+      "/attorney/dashboard": ["ATTORNEY", "ADMIN"],
+      "/admin": ["ADMIN"],
+      "/admin/dashboard": ["ADMIN"],
     };
 
     // Check if the current path requires authentication
-    const requiredRoles = protectedRoutes[pathname as keyof typeof protectedRoutes];
-    
-    if (requiredRoles) {
+    const route = Object.keys(protectedRoutes).find(route =>
+      pathname.startsWith(route)
+    );
+
+    if (route) {
+      const requiredRoles =
+        protectedRoutes[route as keyof typeof protectedRoutes];
+
       // User must be authenticated
       if (!token) {
-        return NextResponse.redirect(new URL('/auth', req.url));
+        return NextResponse.redirect(new URL("/auth/login", req.url));
       }
 
       // Check if user has required role
-      if (!requiredRoles.includes(token.role as 'ATTORNEY' | 'LAWYER' | 'CUSTOMER')) {
+      if (
+        !requiredRoles.includes(token.role as "ATTORNEY" | "CUSTOMER" | "ADMIN")
+      ) {
         // Redirect based on user's actual role
-        if (token.role === 'ATTORNEY' || token.role === 'LAWYER') {
-          return NextResponse.redirect(new URL('/wizard', req.url));
+        if (token.role === "ATTORNEY") {
+          return NextResponse.redirect(new URL("/attorney/dashboard", req.url));
+        } else if (token.role === "ADMIN") {
+          return NextResponse.redirect(new URL("/admin/dashboard", req.url));
         } else {
-          return NextResponse.redirect(new URL('/', req.url));
+          return NextResponse.redirect(new URL("/client/dashboard", req.url));
         }
-      }
-
-      // Only redirect to profile-setup if user has no role and is trying to access protected routes
-      if (!token.role && requiredRoles && pathname !== '/profile-setup') {
-        return NextResponse.redirect(new URL('/profile-setup', req.url));
       }
     }
 
@@ -47,18 +51,17 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
-        
+
         // Allow access to public routes
         const publicRoutes = [
-          '/',
-          '/auth',
-          '/login',
-          '/register',
-          '/api/auth',
-          '/profile-setup',
-          '/blog',
-          '/miniverse',
-          '/apprentice',
+          "/",
+          "/auth",
+          "/auth/login",
+          "/auth/register",
+          "/api/auth",
+          "/blog",
+          "/legal-research",
+          "/attorney-features",
         ];
 
         if (publicRoutes.some(route => pathname.startsWith(route))) {
@@ -82,6 +85,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
   ],
 };
