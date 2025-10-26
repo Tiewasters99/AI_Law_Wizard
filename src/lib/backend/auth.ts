@@ -101,7 +101,7 @@ export const authOptions: AuthOptions = {
               await prisma.wallet.create({
                 data: {
                   userId: newUser.id,
-                  tokens: 5000,
+                  balance: 5000,
                 },
               });
               console.log(
@@ -124,7 +124,7 @@ export const authOptions: AuthOptions = {
                 await prisma.wallet.create({
                   data: {
                     userId: existingUser.id,
-                    tokens: 5000,
+                    balance: 5000,
                   },
                 });
                 console.log(

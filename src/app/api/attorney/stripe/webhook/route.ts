@@ -104,7 +104,7 @@ async function handlePaymentSuccess(paymentIntent: any) {
         wallet = await tx.wallet.create({
           data: {
             userId: purchase.userId,
-            tokens: 0,
+            balance: 0,
           },
         });
       }
@@ -112,17 +112,22 @@ async function handlePaymentSuccess(paymentIntent: any) {
       // Add tokens to wallet
       await tx.wallet.update({
         where: { id: wallet.id },
-        data: { tokens: { increment: purchase.tokensAwarded } },
+        data: { balance: { increment: purchase.tokensAwarded } },
       });
 
       // Create transaction record
       await tx.tokenTransaction.create({
         data: {
           walletId: wallet.id,
+          userId: purchase.userId,
           type: "PURCHASE",
           amount: purchase.tokensAwarded,
           description: `Token purchase - ${purchase.tokensAwarded} tokens`,
           reference: paymentIntent.id,
+          metadata: {
+            paymentIntentId: paymentIntent.id,
+            tokensAwarded: purchase.tokensAwarded,
+          },
         },
       });
     });

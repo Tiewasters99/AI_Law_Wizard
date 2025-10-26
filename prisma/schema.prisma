@@ -244,6 +244,10 @@ model Blog {
   title String
   content String @db.Text
   author String @default("Admin") // Blog author name
+  category String? // Blog category (Corporate, Criminal, Family, etc.)
+  tags String[] @default([]) // Tags for filtering
+  readTime Int? // Estimated read time in minutes
+  views Int @default(0) // View count
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   published Boolean @default(false)
@@ -293,24 +297,33 @@ model User {
   profileData     Json?     // Store additional profile information
   freeConsultationRequestsUsed Int @default(0) // Track free consultation requests used
   maxFreeConsultationRequests  Int @default(1) // Max free consultation requests allowed
+  
+  // Profile fields
+  phone           String?
+  company         String?
+  industry        String?
+  location        String?
+  bio             String?   @db.Text
+  
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // Relations
-  accounts                Account[]
-  sessions                Session[]
-  lawyerProfile           LawyerProfile?
-  customerProfile         CustomerProfile?
-  wallet                  Wallet?
-  purchases               Purchase[]
-  chatSessions            ChatSession[]
-  documentAnalysisSessions DocumentAnalysisSession[]
-  clientConsultationRequests ConsultationRequest[] @relation("ClientRequests")
-  attorneyConsultationRequests ConsultationRequest[] @relation("AttorneyRequests")
-  clientConversations     Conversation[] @relation("ClientConversations")
-  attorneyConversations   Conversation[] @relation("AttorneyConversations")
-  sentMessages            Message[] @relation("SentMessages")
-  notifications           Notification[]
+  accounts                     Account[]
+  sessions                     Session[]
+  lawyerProfile                LawyerProfile?
+  customerProfile              CustomerProfile?
+  wallet                       Wallet?
+  purchases                    Purchase[]
+  chatSessions                 ChatSession[]
+  documentAnalysisSessions     DocumentAnalysisSession[]
+  clientConsultationRequests   ConsultationRequest[]  @relation("ClientRequests")
+  attorneyConsultationRequests ConsultationRequest[]  @relation("AttorneyRequests")
+  clientConversations          Conversation[]         @relation("ClientConversations")
+  attorneyConversations        Conversation[]         @relation("AttorneyConversations")
+  sentMessages                 Message[]              @relation("SentMessages")
+  notifications                Notification[]
+  tokenTransactions            TokenTransaction[]     @relation("UserTokenTransactions")
 
   @@map("users")
 }
@@ -362,14 +375,21 @@ model VerificationToken {
 
 // Profile for Lawyers
 model LawyerProfile {
-  id               String  @id @default(cuid())
-  userId           String  @unique
-  specialty        String? // e.g., "Corporate Law", "Criminal Law"
-  barLicense       String? // Bar license number
-  bio              String? @db.Text
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  specialty         String? // e.g., "Corporate Law", "Criminal Law"
+  barLicense        String? // Bar license number
+  barNumber         String? // Bar number
+  bio               String?  @db.Text
   yearsOfExperience Int?
-  firmName         String? // Law firm name
-  verified         Boolean @default(false) // For future verification system
+  firmName          String? // Law firm name
+  verified          Boolean  @default(false) // For future verification system
+  location          String? // Attorney location
+  practiceAreas     String[] @default([]) // Array of practice areas
+  rating            Float? // Attorney rating (0-5)
+  casesHandled      Int? // Number of cases handled
+  availability      String? // Availability status
+  hourlyRate        Float? // Hourly rate in dollars
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -395,14 +415,14 @@ model CustomerProfile {
 
 // Wallet model for token management
 model Wallet {
-  id      String @id @default(cuid())
-  userId  String @unique
-  tokens  Int    @default(0)
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(0) // Token balance
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions TokenTransaction[]
 
   @@map("wallets")
@@ -410,16 +430,19 @@ model Wallet {
 
 // Token transactions for tracking token usage and purchases
 model TokenTransaction {
-  id          String            @id @default(cuid())
+  id          String          @id @default(cuid())
   walletId    String
+  userId      String // User ID for easier querying
   type        TransactionType
-  amount      Int               // Positive for purchase, negative for consumption
+  amount      Int // Positive for purchase, negative for consumption
   description String?
-  reference   String?           // Payment intent ID or operation reference
-  createdAt   DateTime          @default(now())
+  reference   String? // Payment intent ID or operation reference
+  metadata    Json? // Additional metadata (feature, operation details, etc.)
+  createdAt   DateTime        @default(now())
 
   // Relations
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserTokenTransactions", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("token_transactions")
 }

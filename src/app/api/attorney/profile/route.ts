@@ -12,8 +12,7 @@ export async function GET() {
     }
 
     // Check if user is attorney
-    const isAttorney =
-      session.user.role === "ATTORNEY" || session.user.role === "LAWYER";
+    const isAttorney = session.user.role === "ATTORNEY";
     if (!isAttorney) {
       return NextResponse.json(
         { error: "Attorney access required" },
@@ -49,9 +48,9 @@ export async function GET() {
       firmName: user.lawyerProfile?.firmName || "",
       verified: user.lawyerProfile?.verified || false,
       // Additional fields that might be in profileData JSON
-      phone: user.profileData?.phone || "",
-      address: user.profileData?.address || "",
-      website: user.profileData?.website || "",
+      phone: (user.profileData as any)?.phone || "",
+      address: (user.profileData as any)?.address || "",
+      website: (user.profileData as any)?.website || "",
     };
 
     return NextResponse.json({ profile: profileData });
@@ -73,8 +72,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if user is attorney
-    const isAttorney =
-      session.user.role === "ATTORNEY" || session.user.role === "LAWYER";
+    const isAttorney = session.user.role === "ATTORNEY";
     if (!isAttorney) {
       return NextResponse.json(
         { error: "Attorney access required" },
@@ -187,9 +185,9 @@ export async function PUT(request: NextRequest) {
         yearsOfExperience: result.lawyerProfile.yearsOfExperience,
         firmName: result.lawyerProfile.firmName,
         verified: result.lawyerProfile.verified,
-        phone: result.user.profileData?.phone || "",
-        address: result.user.profileData?.address || "",
-        website: result.user.profileData?.website || "",
+        phone: (result.user.profileData as any)?.phone || "",
+        address: (result.user.profileData as any)?.address || "",
+        website: (result.user.profileData as any)?.website || "",
       },
     });
   } catch (error) {

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       await prisma.wallet.create({
         data: {
           userId: user.id,
-          tokens: 5000,
+          balance: 5000,
         },
       });
     } catch (walletError) {

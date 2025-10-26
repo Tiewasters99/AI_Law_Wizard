@@ -29,7 +29,7 @@ export async function GET() {
       wallet = await prisma.wallet.create({
         data: {
           userId: session.user.id,
-          tokens: 0,
+          balance: 0,
         },
         include: {
           transactions: true,
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
     }
 
-    if (wallet.tokens < amount) {
+    if (wallet.balance < amount) {
       return NextResponse.json(
         { error: "Insufficient tokens" },
         { status: 400 }
@@ -90,13 +90,14 @@ export async function POST(req: NextRequest) {
       // Deduct tokens
       await tx.wallet.update({
         where: { id: wallet!.id },
-        data: { tokens: { decrement: amount } },
+        data: { balance: { decrement: amount } },
       });
 
       // Create transaction record
       await tx.tokenTransaction.create({
         data: {
           walletId: wallet!.id,
+          userId: session.user.id,
           type: "CONSUMPTION",
           amount: -amount,
           description: description || "Token consumption",
