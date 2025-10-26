@@ -80,6 +80,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const userId = session.user.id;
     const {
       name,
       email,
@@ -129,7 +130,7 @@ export async function PUT(request: NextRequest) {
     const result = await prisma.$transaction(async tx => {
       // Update basic user data
       const updatedUser = await tx.user.update({
-        where: { id: session.user.id },
+        where: { id: session?.user?.id },
         data: {
           name,
           email,
@@ -144,7 +145,7 @@ export async function PUT(request: NextRequest) {
 
       // Update or create lawyer profile
       const lawyerProfile = await tx.lawyerProfile.upsert({
-        where: { userId: session.user.id },
+        where: { userId: session?.user?.id },
         update: {
           specialty: specialty || "",
           barLicense: barLicense || "",
@@ -155,7 +156,7 @@ export async function PUT(request: NextRequest) {
           firmName: firmName || "",
         },
         create: {
-          userId: session.user.id,
+          userId: userId,
           specialty: specialty || "",
           barLicense: barLicense || "",
           bio: bio || "",

@@ -61,7 +61,7 @@ export default function GuestHomePage() {
         let apiEndpoint = "/api/guest/legal-research"; // Default for guests
 
         if (session) {
-          const userRole = session.user.role as any;
+          const userRole = session?.user?.role as any;
           if (userRole === "ATTORNEY" || userRole === "LAWYER") {
             apiEndpoint = "/api/attorney/legal-research";
           } else if (userRole === "CUSTOMER") {

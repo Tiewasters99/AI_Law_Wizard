@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
@@ -62,56 +62,59 @@ export default function BlogPage() {
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [activeTab, setActiveTab] = useState("all");
 
-  const categories_data: BlogCategory[] = [
-    {
-      id: "all",
-      name: "All Posts",
-      count: 0,
-      color: "bg-gray-100 text-gray-800",
-    },
-    {
-      id: "contract-law",
-      name: "Contract Law",
-      count: 12,
-      color: "bg-blue-100 text-blue-800",
-    },
-    {
-      id: "litigation",
-      name: "Litigation",
-      count: 8,
-      color: "bg-red-100 text-red-800",
-    },
-    {
-      id: "business-law",
-      name: "Business Law",
-      count: 15,
-      color: "bg-green-100 text-green-800",
-    },
-    {
-      id: "family-law",
-      name: "Family Law",
-      count: 6,
-      color: "bg-purple-100 text-purple-800",
-    },
-    {
-      id: "criminal-law",
-      name: "Criminal Law",
-      count: 4,
-      color: "bg-orange-100 text-orange-800",
-    },
-    {
-      id: "real-estate",
-      name: "Real Estate",
-      count: 9,
-      color: "bg-yellow-100 text-yellow-800",
-    },
-    {
-      id: "employment",
-      name: "Employment Law",
-      count: 7,
-      color: "bg-pink-100 text-pink-800",
-    },
-  ];
+  const categories_data: BlogCategory[] = useMemo(
+    () => [
+      {
+        id: "all",
+        name: "All Posts",
+        count: 0,
+        color: "bg-gray-100 text-gray-800",
+      },
+      {
+        id: "contract-law",
+        name: "Contract Law",
+        count: 12,
+        color: "bg-blue-100 text-blue-800",
+      },
+      {
+        id: "litigation",
+        name: "Litigation",
+        count: 8,
+        color: "bg-red-100 text-red-800",
+      },
+      {
+        id: "business-law",
+        name: "Business Law",
+        count: 15,
+        color: "bg-green-100 text-green-800",
+      },
+      {
+        id: "family-law",
+        name: "Family Law",
+        count: 6,
+        color: "bg-purple-100 text-purple-800",
+      },
+      {
+        id: "criminal-law",
+        name: "Criminal Law",
+        count: 4,
+        color: "bg-orange-100 text-orange-800",
+      },
+      {
+        id: "real-estate",
+        name: "Real Estate",
+        count: 9,
+        color: "bg-yellow-100 text-yellow-800",
+      },
+      {
+        id: "employment",
+        name: "Employment Law",
+        count: 7,
+        color: "bg-pink-100 text-pink-800",
+      },
+    ],
+    []
+  );
 
   // Mock data - in real app, this would come from API
   useEffect(() => {
@@ -283,7 +286,7 @@ export default function BlogPage() {
     });
 
     setFilteredPosts(filtered);
-  }, [posts, searchQuery, selectedCategory, sortBy]);
+  }, [posts, searchQuery, selectedCategory, sortBy, categories_data]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Globe,
@@ -286,9 +287,11 @@ export default function MiniversePage() {
                     <div className="flex items-start mb-4">
                       <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mr-4 flex-shrink-0">
                         {attorney.image ? (
-                          <img
+                          <Image
                             src={attorney.image}
                             alt={attorney.name || "Attorney"}
+                            width={64}
+                            height={64}
                             className="w-full h-full rounded-full object-cover"
                           />
                         ) : (

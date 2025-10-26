@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -21,17 +22,15 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
 Avatar.displayName = "Avatar";
 
 const AvatarImage = React.forwardRef<
-  HTMLImageElement,
-  React.ImgHTMLAttributes<HTMLImageElement>
->(({ className, src, alt, ...props }, ref) => {
+  HTMLDivElement,
+  React.ImgHTMLAttributes<HTMLImageElement> & { src?: string; alt?: string }
+>(({ className, src, alt = "", ...props }, ref) => {
+  if (!src) return null;
+
   return (
-    <img
-      ref={ref}
-      src={src}
-      alt={alt}
-      className={`aspect-square h-full w-full object-cover ${className || ""}`}
-      {...props}
-    />
+    <div ref={ref} className={`relative w-full h-full ${className || ""}`}>
+      <Image src={src} alt={alt} fill className="object-cover rounded-full" />
+    </div>
   );
 });
 

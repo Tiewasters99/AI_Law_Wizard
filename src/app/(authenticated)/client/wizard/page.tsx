@@ -72,8 +72,8 @@ function UpgradeModal({
       <div className="bg-white p-6 rounded-lg max-w-md">
         <h3 className="text-lg font-semibold mb-2">Token Limit Reached</h3>
         <p className="text-gray-600 mb-4">
-          You've used {currentUsage} of {limit} tokens. Purchase more tokens to
-          continue using {feature}.
+          You&apos;ve used {currentUsage} of {limit} tokens. Purchase more
+          tokens to continue using {feature}.
         </p>
         <Button onClick={onClose}>Close</Button>
       </div>
@@ -363,7 +363,14 @@ export default function WizardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [inputValue, session?.user?.id, sessionId, consultationType, messages]);
+  }, [
+    inputValue,
+    session?.user?.id,
+    sessionId,
+    consultationType,
+    messages,
+    isLoading,
+  ]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

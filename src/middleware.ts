@@ -8,13 +8,22 @@ export default withAuth(
 
     // Define protected routes and their required roles
     const protectedRoutes = {
-      "/client": ["CUSTOMER", "ADMIN"],
-      "/client/dashboard": ["CUSTOMER", "ADMIN"],
-      "/attorney": ["ATTORNEY", "ADMIN"],
-      "/attorney/dashboard": ["ATTORNEY", "ADMIN"],
+      "/client": ["CUSTOMER"],
+      "/client/dashboard": ["CUSTOMER"],
+      "/attorney": ["ATTORNEY"],
+      "/attorney/dashboard": ["ATTORNEY"],
       "/admin": ["ADMIN"],
       "/admin/dashboard": ["ADMIN"],
+      "/admin/customers": ["ADMIN"],
+      "/admin/attorneys": ["ADMIN"],
+      "/admin/features": ["ADMIN"],
+      "/admin/pricing": ["ADMIN"],
     };
+
+    // Skip authentication check for admin login page
+    if (pathname === "/admin/login") {
+      return NextResponse.next();
+    }
 
     // Check if the current path requires authentication
     const route = Object.keys(protectedRoutes).find(route =>
@@ -31,14 +40,18 @@ export default withAuth(
       }
 
       // Check if user has required role
-      if (
-        !requiredRoles.includes(token.role as "ATTORNEY" | "CUSTOMER" | "ADMIN")
-      ) {
+      const userRole = token.role as "ATTORNEY" | "CUSTOMER";
+      const isAdmin = token.isAdmin as boolean;
+
+      // For admin routes, check admin authentication
+      if (pathname.startsWith("/admin")) {
+        if (!token || !token.isAdmin) {
+          return NextResponse.redirect(new URL("/admin/login", req.url));
+        }
+      } else if (!requiredRoles.includes(userRole)) {
         // Redirect based on user's actual role
-        if (token.role === "ATTORNEY") {
+        if (userRole === "ATTORNEY") {
           return NextResponse.redirect(new URL("/attorney/dashboard", req.url));
-        } else if (token.role === "ADMIN") {
-          return NextResponse.redirect(new URL("/admin/dashboard", req.url));
         } else {
           return NextResponse.redirect(new URL("/client/dashboard", req.url));
         }
@@ -58,6 +71,7 @@ export default withAuth(
           "/auth",
           "/auth/login",
           "/auth/register",
+          "/admin/login", // Add admin login to public routes
           "/api/auth",
           "/blog",
           "/legal-research",

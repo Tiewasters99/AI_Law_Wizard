@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
+    const userId = session?.user?.id;
+    if (!userId) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     let wallet = await prisma.wallet.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
     });
 
     if (!wallet) {
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
       await tx.tokenTransaction.create({
         data: {
           walletId: wallet!.id,
-          userId: session.user.id,
+          userId,
           type: "CONSUMPTION",
           amount: -amount,
           description: description || "Token consumption",
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch updated wallet
     const updatedWallet = await prisma.wallet.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
     });
 
     return NextResponse.json({ wallet: updatedWallet, success: true });

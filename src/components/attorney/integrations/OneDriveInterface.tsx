@@ -69,7 +69,7 @@ export function OneDriveInterface({
   );
 
   // Handle OAuth callback results
-  useEffect(() => {
+  const handleOAuthCallback = useCallback(() => {
     const error = searchParams.get("error");
     const success = searchParams.get("success");
 
@@ -84,12 +84,20 @@ export function OneDriveInterface({
     }
   }, [searchParams, router]);
 
-  // Load files when authenticated
   useEffect(() => {
+    handleOAuthCallback();
+  }, [handleOAuthCallback]);
+
+  // Load files when authenticated
+  const handleLoadFiles = useCallback(() => {
     if (isAuthenticated) {
       loadFiles();
     }
   }, [isAuthenticated, loadFiles]);
+
+  useEffect(() => {
+    handleLoadFiles();
+  }, [handleLoadFiles]);
 
   // Show authentication screen if not authenticated
   if (!isAuthenticated) {

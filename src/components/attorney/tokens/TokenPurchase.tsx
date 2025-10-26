@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,29 +49,29 @@ export const TokenPurchase = ({
   const { data: session } = useSession();
   const router = useRouter();
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [packagesData, walletData] = await Promise.all([
-          fetchTokenPackages(),
-          fetchWallet(),
-        ]);
-        setPackages(packagesData);
-        setWallet(walletData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [packagesData, walletData] = await Promise.all([
+        fetchTokenPackages(),
+        fetchWallet(),
+      ]);
+      setPackages(packagesData);
+      setWallet(walletData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     if (session?.user) {
       loadData();
     }
-  }, [session]);
+  }, [session, loadData]);
 
-  const handlePackageSelect = async (pkg: TokenPackage) => {
+  const handlePackageSelect = useCallback(async (pkg: TokenPackage) => {
     setSelectedPackage(pkg);
     setPaymentLoading(true);
 
@@ -86,22 +86,35 @@ export const TokenPurchase = ({
     } finally {
       setPaymentLoading(false);
     }
-  };
+  }, []);
 
-  const handlePaymentSuccess = async (tokens: number) => {
+  const handlePaymentSuccess = useCallback(
+    async (tokens: number) => {
+      setShowPaymentForm(false);
+      setSelectedPackage(null);
+      setPaymentClientSecret(null);
+
+      // Refresh wallet data
+      try {
+        const updatedWallet = await fetchWallet();
+        setWallet(updatedWallet);
+        onSuccess?.(tokens);
+      } catch (err) {
+        console.error("Failed to refresh wallet:", err);
+      }
+    },
+    [onSuccess]
+  );
+
+  const handleCancelPayment = useCallback(() => {
     setShowPaymentForm(false);
     setSelectedPackage(null);
     setPaymentClientSecret(null);
+  }, []);
 
-    // Refresh wallet data
-    try {
-      const updatedWallet = await fetchWallet();
-      setWallet(updatedWallet);
-      onSuccess?.(tokens);
-    } catch (err) {
-      console.error("Failed to refresh wallet:", err);
-    }
-  };
+  const handleRetry = useCallback(() => {
+    window.location.reload();
+  }, []);
 
   if (!session?.user) {
     return (
@@ -140,7 +153,7 @@ export const TokenPurchase = ({
           Error Loading Packages
         </h3>
         <p className="text-red-600 mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
+        <Button onClick={handleRetry}>Try Again</Button>
       </div>
     );
   }
@@ -150,14 +163,7 @@ export const TokenPurchase = ({
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold">Complete Purchase</h3>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setShowPaymentForm(false);
-              setSelectedPackage(null);
-              setPaymentClientSecret(null);
-            }}
-          >
+          <Button variant="outline" onClick={handleCancelPayment}>
             Cancel
           </Button>
         </div>
@@ -207,11 +213,7 @@ export const TokenPurchase = ({
             <PaymentForm
               package={selectedPackage}
               onSuccess={handlePaymentSuccess}
-              onCancel={() => {
-                setShowPaymentForm(false);
-                setSelectedPackage(null);
-                setPaymentClientSecret(null);
-              }}
+              onCancel={handleCancelPayment}
               clientSecret={paymentClientSecret}
             />
           </Elements>

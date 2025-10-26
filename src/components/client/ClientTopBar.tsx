@@ -149,9 +149,11 @@ export function ClientTopBar() {
               style={{ backgroundColor: colors.primary[100] }}
             >
               {session?.user?.image ? (
-                <img
+                <Image
                   src={session.user.image}
                   alt={session.user.name || "User"}
+                  width={32}
+                  height={32}
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (

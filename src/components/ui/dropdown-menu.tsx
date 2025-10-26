@@ -1,23 +1,93 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/frontend/utils";
 
-export interface DropdownMenuProps {
+interface DropdownMenuProps {
   children: React.ReactNode;
 }
 
+interface DropdownMenuTriggerProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  asChild?: boolean;
+}
+
+interface DropdownMenuContentProps
+  extends React.HTMLAttributes<HTMLDivElement> {
+  align?: "start" | "end";
+}
+
+interface DropdownMenuItemProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+interface DropdownMenuLabelProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+interface DropdownMenuSeparatorProps
+  extends React.HTMLAttributes<HTMLDivElement> {}
+
 const DropdownMenu = ({ children }: DropdownMenuProps) => {
-  return <div className="relative inline-block">{children}</div>;
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const handleClickOutside = React.useCallback((event: MouseEvent) => {
+    const target = event.target as Element;
+    if (!target.closest("[data-dropdown-menu]")) {
+      setIsOpen(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [isOpen, handleClickOutside]);
+
+  return (
+    <div className="relative inline-block" data-dropdown-menu>
+      {React.Children.map(children, child => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child, {
+            isOpen,
+            setIsOpen,
+          } as any);
+        }
+        return child;
+      })}
+    </div>
+  );
 };
 
 const DropdownMenuTrigger = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
->(({ className, children, asChild, ...props }, ref) => {
+  HTMLButtonElement,
+  DropdownMenuTriggerProps
+>(({ className, children, asChild, onClick, ...props }, ref) => {
+  const { isOpen, setIsOpen } = (props as any) || {};
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setIsOpen?.(!isOpen);
+    onClick?.(e);
+  };
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      ...(children.props || {}),
+      onClick: handleClick,
+      className: cn(className, (children.props as any)?.className),
+    } as any);
+  }
+
   return (
-    <div ref={ref} className={className || ""} {...props}>
+    <button
+      ref={ref}
+      className={cn(
+        "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50",
+        className
+      )}
+      onClick={handleClick}
+      {...props}
+    >
       {children}
-    </div>
+    </button>
   );
 });
 
@@ -25,17 +95,25 @@ DropdownMenuTrigger.displayName = "DropdownMenuTrigger";
 
 const DropdownMenuContent = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, children, ...props }, ref) => {
+  DropdownMenuContentProps
+>(({ className, children, align = "end", ...props }, ref) => {
+  const { isOpen } = (props as any) || {};
+
+  if (!isOpen) return null;
+
   return (
     <div
       ref={ref}
-      className={`absolute right-0 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg z-50 ${
-        className || ""
-      }`}
+      className={cn(
+        "absolute z-50 min-w-[8rem] rounded-md border bg-white p-1 shadow-lg",
+        align === "end" ? "right-0" : "left-0",
+        "top-full mt-1",
+        className
+      )}
+      onClick={e => e.stopPropagation()}
       {...props}
     >
-      <div className="py-1">{children}</div>
+      {children}
     </div>
   );
 });
@@ -44,14 +122,15 @@ DropdownMenuContent.displayName = "DropdownMenuContent";
 
 const DropdownMenuItem = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
+  DropdownMenuItemProps
 >(({ className, children, ...props }, ref) => {
   return (
     <div
       ref={ref}
-      className={`relative flex cursor-pointer select-none items-center px-3 py-2 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100 ${
-        className || ""
-      }`}
+      className={cn(
+        "flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-gray-100 focus:bg-gray-100",
+        className
+      )}
       {...props}
     >
       {children}
@@ -61,9 +140,46 @@ const DropdownMenuItem = React.forwardRef<
 
 DropdownMenuItem.displayName = "DropdownMenuItem";
 
+const DropdownMenuLabel = React.forwardRef<
+  HTMLDivElement,
+  DropdownMenuLabelProps
+>(({ className, children, ...props }, ref) => {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "px-2 py-1.5 text-sm font-semibold text-gray-900",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+});
+
+DropdownMenuLabel.displayName = "DropdownMenuLabel";
+
+const DropdownMenuSeparator = React.forwardRef<
+  HTMLDivElement,
+  DropdownMenuSeparatorProps
+>(({ className, ...props }, ref) => {
+  return (
+    <div
+      ref={ref}
+      className={cn("my-1 h-px bg-gray-200", className)}
+      {...props}
+    />
+  );
+});
+
+DropdownMenuSeparator.displayName = "DropdownMenuSeparator";
+
 export {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 };

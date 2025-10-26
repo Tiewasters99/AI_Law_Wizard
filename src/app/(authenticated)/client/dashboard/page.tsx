@@ -24,81 +24,6 @@ export default function ClientDashboard() {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      if (issue.trim() && !isLoading) {
-        handleSubmitIssue(issue.trim());
-      }
-    },
-    [issue, isLoading]
-  );
-
-  const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSubmit(e as React.FormEvent);
-      }
-    },
-    [handleSubmit]
-  );
-
-  const handleFileUpload = useCallback(async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-
-    setUploadingFiles(true);
-
-    try {
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append("files", files[i]);
-      }
-
-      const response = await fetch("/api/embedding", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to upload files");
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || "Upload failed");
-      }
-
-      // Add uploaded files to the issue text
-      const fileNames = Array.from(files)
-        .map(f => f.name)
-        .join(", ");
-      setIssue(
-        prev => prev + (prev ? "\n\n" : "") + `Uploaded files: ${fileNames}`
-      );
-    } catch (error) {
-      console.error("Error uploading files:", error);
-      alert("Failed to upload files. Please try again.");
-    } finally {
-      setUploadingFiles(false);
-    }
-  }, []);
-
-  const triggerFileInput = useCallback(
-    (type: "document" | "image" | "video") => {
-      if (fileInputRef.current) {
-        fileInputRef.current.accept =
-          type === "document"
-            ? ".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.json"
-            : type === "image"
-            ? ".jpg,.jpeg,.png,.gif,.webp"
-            : ".mp4,.avi,.mov,.wmv,.flv,.webm";
-        fileInputRef.current.click();
-      }
-    },
-    []
-  );
-
   const handleSubmitIssue = useCallback(
     async (userIssue: string) => {
       setIsLoading(true);
@@ -260,6 +185,81 @@ export default function ClientDashboard() {
       }
     },
     [router]
+  );
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (issue.trim() && !isLoading) {
+        handleSubmitIssue(issue.trim());
+      }
+    },
+    [issue, isLoading, handleSubmitIssue]
+  );
+
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit(e as React.FormEvent);
+      }
+    },
+    [handleSubmit]
+  );
+
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setUploadingFiles(true);
+
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]);
+      }
+
+      const response = await fetch("/api/embedding", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload files");
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      // Add uploaded files to the issue text
+      const fileNames = Array.from(files)
+        .map(f => f.name)
+        .join(", ");
+      setIssue(
+        prev => prev + (prev ? "\n\n" : "") + `Uploaded files: ${fileNames}`
+      );
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      alert("Failed to upload files. Please try again.");
+    } finally {
+      setUploadingFiles(false);
+    }
+  }, []);
+
+  const triggerFileInput = useCallback(
+    (type: "document" | "image" | "video") => {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept =
+          type === "document"
+            ? ".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.json"
+            : type === "image"
+              ? ".jpg,.jpeg,.png,.gif,.webp"
+              : ".mp4,.avi,.mov,.wmv,.flv,.webm";
+        fileInputRef.current.click();
+      }
+    },
+    []
   );
 
   return (

@@ -281,9 +281,9 @@ export default function LegalChatPage() {
       // Use appropriate API based on user role
       let apiEndpoint = "/api/guest/legal-research"; // Default for guests
 
-      if (session) {
+      if (session?.user) {
         const userRole = session.user.role as any;
-        if (userRole === "ATTORNEY" || userRole === "LAWYER") {
+        if (userRole === "ATTORNEY") {
           apiEndpoint = "/api/attorney/legal-research";
         } else if (userRole === "CUSTOMER") {
           apiEndpoint = "/api/client/legal-research";

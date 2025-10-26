@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useMiniverseStore } from "@/stores/miniverseStore";
 import { ColorPicker } from "./ColorPicker";
 import { PositionControls } from "./PositionControls";
@@ -21,7 +21,7 @@ export const MiniverseEditor: React.FC = () => {
     setViewMode,
   } = useMiniverseStore();
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     const configJson = exportConfig();
     const blob = new Blob([configJson], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -32,9 +32,9 @@ export const MiniverseEditor: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
+  }, [exportConfig]);
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -71,7 +71,25 @@ export const MiniverseEditor: React.FC = () => {
       alert("Error reading file. Please try again.");
     };
     reader.readAsText(file);
-  };
+  }, [importConfig]);
+
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab);
+  }, []);
+
+  const handleViewModeChange = useCallback(() => {
+    setViewMode("3d");
+  }, [setViewMode]);
+
+  const handleResetConfig = useCallback(() => {
+    if (
+      confirm(
+        "Are you sure you want to reset to default configuration?"
+      )
+    ) {
+      resetConfig();
+    }
+  }, [resetConfig]);
 
   const tabs = [
     { id: "scene", label: "Scene", icon: "🏠" },
@@ -87,7 +105,7 @@ export const MiniverseEditor: React.FC = () => {
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-bold text-white">Miniverse Editor</h3>
           <button
-            onClick={() => setViewMode("3d")}
+            onClick={handleViewModeChange}
             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center space-x-1"
             title="Switch to 3D View"
           >
@@ -103,7 +121,7 @@ export const MiniverseEditor: React.FC = () => {
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
+            onClick={() => handleTabChange(tab.id as TabType)}
             className={`flex-1 px-3 py-2 text-xs font-medium transition-all duration-300 ${
               activeTab === tab.id
                 ? "bg-slate-700/50 text-white border-b-2 border-blue-400"
@@ -483,15 +501,7 @@ export const MiniverseEditor: React.FC = () => {
                     Reset to default configuration
                   </p>
                   <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "Are you sure you want to reset to default configuration?"
-                        )
-                      ) {
-                        resetConfig();
-                      }
-                    }}
+                    onClick={handleResetConfig}
                     className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded text-xs font-medium transition-colors"
                   >
                     Reset to Default

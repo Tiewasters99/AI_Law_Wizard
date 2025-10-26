@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   FileText,
@@ -41,11 +41,29 @@ export function CaseSearchResults({
 }: CaseSearchResultsProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const copyToClipboard = (text: string, id: string) => {
+  const copyToClipboard = useCallback((text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
+  }, []);
+
+  const handleViewDetails = useCallback(
+    (caseData: PacerCase) => {
+      onViewDetails(caseData);
+    },
+    [onViewDetails]
+  );
+
+  const handleViewDocket = useCallback(
+    (caseInfo: { caseNumber: string; court: string }) => {
+      onViewDocket(caseInfo);
+    },
+    [onViewDocket]
+  );
+
+  const handleOpenLink = useCallback((url: string) => {
+    window.open(url, "_blank");
+  }, []);
 
   if (loading) {
     return (
@@ -262,7 +280,7 @@ export function CaseSearchResults({
               {/* Hover Action Bar */}
               <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 <Button
-                  onClick={() => onViewDetails(caseItem)}
+                  onClick={() => handleViewDetails(caseItem)}
                   size="sm"
                   className="flex-1 sm:flex-none bg-blue-700 hover:bg-blue-800 font-semibold"
                 >
@@ -272,7 +290,7 @@ export function CaseSearchResults({
 
                 {caseItem.caseLink && (
                   <Button
-                    onClick={() => window.open(caseItem.caseLink, "_blank")}
+                    onClick={() => handleOpenLink(caseItem.caseLink || "")}
                     size="sm"
                     variant="outline"
                     className="flex-1 sm:flex-none font-semibold border-blue-200 text-blue-700 hover:bg-blue-50"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [validationError, setValidationError] = useState<string>("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setValidationError("");
 
@@ -66,9 +66,9 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
     });
 
     onSearch(filteredParams);
-  };
+  }, [searchParams, onSearch]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setSearchParams({
       caseNumber: "",
       caseTitle: "",
@@ -79,9 +79,9 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
       filingDateTo: "",
     });
     setValidationError("");
-  };
+  }, []);
 
-  const handlePreset = (type: "caseNumber" | "party" | "attorney") => {
+  const handlePreset = useCallback((type: "caseNumber" | "party" | "attorney") => {
     handleClear();
     // Just focus on the respective field
     setTimeout(() => {
@@ -93,7 +93,19 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
             : "attorneyName";
       document.getElementById(fieldId)?.focus();
     }, 100);
-  };
+  }, [handleClear]);
+
+  const handleInputChange = useCallback((field: keyof PacerSearchQuery, value: string) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+    if (validationError) setValidationError("");
+  }, [validationError]);
+
+  const handleAdvancedToggle = useCallback(() => {
+    setShowAdvanced(prev => !prev);
+  }, []);
 
   const hasRequiredField = !!(
     searchParams.caseNumber?.trim() ||
@@ -204,13 +216,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
               id="caseNumber"
               type="text"
               value={searchParams.caseNumber || ""}
-              onChange={e => {
-                setSearchParams({
-                  ...searchParams,
-                  caseNumber: e.target.value,
-                });
-                if (validationError) setValidationError("");
-              }}
+              onChange={e => handleInputChange("caseNumber", e.target.value)}
               placeholder="e.g., 1:23-cv-12345"
               disabled={loading}
               className="h-9 text-sm"
@@ -230,10 +236,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
               id="partyName"
               type="text"
               value={searchParams.partyName || ""}
-              onChange={e => {
-                setSearchParams({ ...searchParams, partyName: e.target.value });
-                if (validationError) setValidationError("");
-              }}
+              onChange={e => handleInputChange("partyName", e.target.value)}
               placeholder="Enter party name"
               disabled={loading}
               className="h-9 text-sm"
@@ -253,13 +256,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
               id="attorneyName"
               type="text"
               value={searchParams.attorneyName || ""}
-              onChange={e => {
-                setSearchParams({
-                  ...searchParams,
-                  attorneyName: e.target.value,
-                });
-                if (validationError) setValidationError("");
-              }}
+              onChange={e => handleInputChange("attorneyName", e.target.value)}
               placeholder="Enter attorney"
               disabled={loading}
               className="h-9 text-sm"
@@ -280,10 +277,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
             id="caseTitle"
             type="text"
             value={searchParams.caseTitle || ""}
-            onChange={e => {
-              setSearchParams({ ...searchParams, caseTitle: e.target.value });
-              if (validationError) setValidationError("");
-            }}
+            onChange={e => handleInputChange("caseTitle", e.target.value)}
             placeholder="e.g., Smith v. Jones"
             disabled={loading}
             className="h-9 text-sm"
@@ -293,7 +287,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
         {/* Advanced Filters Toggle */}
         <button
           type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
+          onClick={handleAdvancedToggle}
           className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-800 font-medium mb-3 transition-colors"
         >
           {showAdvanced ? (
@@ -327,12 +321,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
                     <select
                       id="court"
                       value={searchParams.court || ""}
-                      onChange={e =>
-                        setSearchParams({
-                          ...searchParams,
-                          court: e.target.value,
-                        })
-                      }
+                      onChange={e => handleInputChange("court", e.target.value)}
                       disabled={loading}
                       className="w-full h-9 px-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     >
@@ -357,12 +346,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
                       id="filingDateFrom"
                       type="date"
                       value={searchParams.filingDateFrom}
-                      onChange={e =>
-                        setSearchParams({
-                          ...searchParams,
-                          filingDateFrom: e.target.value,
-                        })
-                      }
+                      onChange={e => handleInputChange("filingDateFrom", e.target.value)}
                       disabled={loading}
                       className="h-9 text-sm"
                     />
@@ -380,12 +364,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
                       id="filingDateTo"
                       type="date"
                       value={searchParams.filingDateTo}
-                      onChange={e =>
-                        setSearchParams({
-                          ...searchParams,
-                          filingDateTo: e.target.value,
-                        })
-                      }
+                      onChange={e => handleInputChange("filingDateTo", e.target.value)}
                       disabled={loading}
                       className="h-9 text-sm"
                     />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Track } from "../hooks/useMusicPlayer";
 import { AudioPlayer } from "./AudioPlayer";
@@ -52,9 +52,93 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
 }) => {
   const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
+  const handleClientReady = useCallback(() => {
     setIsClient(true);
   }, []);
+
+  const handlePlayerReady = useCallback(() => {
+    console.log("Player ready - YouTube controls active");
+    onPlayerReady();
+  }, [onPlayerReady]);
+
+  const handlePlayerPlay = useCallback(() => {
+    console.log("Video playing");
+    onPlayerPlay();
+  }, [onPlayerPlay]);
+
+  const handlePlayerPause = useCallback(() => {
+    console.log("Video paused");
+    onPlayerPause();
+  }, [onPlayerPause]);
+
+  const handlePlayerEnded = useCallback(() => {
+    console.log("Video ended");
+    onPlayerEnded();
+  }, [onPlayerEnded]);
+
+  const handlePlayerError = useCallback(
+    (e: any) => {
+      console.error("Player error:", e);
+      // Check if it's a YouTube embed error
+      const isEmbedError = currentTrack?.url.includes("youtube.com/embed/");
+      const errorMessage = isEmbedError
+        ? "YouTube embed failed. The video may not allow embedding or may be restricted. Try using the watch URL instead."
+        : "Failed to load audio/video. Try a different track or check the file.";
+      onPlayerError(errorMessage);
+    },
+    [currentTrack?.url, onPlayerError]
+  );
+
+  const handlePlayerLoad = useCallback(() => {
+    console.log("Video loaded successfully");
+  }, []);
+
+  const handleAudioReady = useCallback(() => {
+    console.log("Audio player ready");
+    onPlayerReady();
+  }, [onPlayerReady]);
+
+  const handleAudioPlay = useCallback(() => {
+    console.log("Audio playing");
+    onPlayerPlay();
+  }, [onPlayerPlay]);
+
+  const handleAudioPause = useCallback(() => {
+    console.log("Audio paused");
+    onPlayerPause();
+  }, [onPlayerPause]);
+
+  const handleAudioEnded = useCallback(() => {
+    console.log("Audio ended");
+    onPlayerEnded();
+  }, [onPlayerEnded]);
+
+  const handleAudioError = useCallback(
+    (error: string) => {
+      console.error("Audio player error:", error);
+      onPlayerError(error);
+    },
+    [onPlayerError]
+  );
+
+  const handleAudioLoad = useCallback(() => {
+    console.log("Audio loaded successfully");
+  }, []);
+
+  const handleTrackSelect = useCallback(
+    (track: Track) => {
+      onTrackSelect(track);
+    },
+    [onTrackSelect]
+  );
+
+  const handleRetryError = useCallback(() => {
+    onPlayerError(null);
+  }, [onPlayerError]);
+
+  useEffect(() => {
+    handleClientReady();
+  }, [handleClientReady]);
 
   if (!isPlayerOpen || !currentTrack) return null;
 
@@ -154,9 +238,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
                       </div>
                     )}
                     <button
-                      onClick={() => {
-                        onPlayerError(null);
-                      }}
+                      onClick={handleRetryError}
                       className="block bg-gray-600 text-white px-4 py-2 rounded-lg text-xs hover:bg-gray-700"
                     >
                       Try Again
@@ -177,29 +259,12 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
                     <AudioPlayer
                       src={currentTrack.url}
                       title={currentTrack.title}
-                      onReady={() => {
-                        console.log("Audio player ready");
-                        onPlayerReady();
-                      }}
-                      onPlay={() => {
-                        console.log("Audio playing");
-                        onPlayerPlay();
-                      }}
-                      onPause={() => {
-                        console.log("Audio paused");
-                        onPlayerPause();
-                      }}
-                      onEnded={() => {
-                        console.log("Audio ended");
-                        onPlayerEnded();
-                      }}
-                      onError={(error: string) => {
-                        console.error("Audio player error:", error);
-                        onPlayerError(error);
-                      }}
-                      onLoad={() => {
-                        console.log("Audio loaded successfully");
-                      }}
+                      onReady={handleAudioReady}
+                      onPlay={handleAudioPlay}
+                      onPause={handleAudioPause}
+                      onEnded={handleAudioEnded}
+                      onError={handleAudioError}
+                      onLoad={handleAudioLoad}
                     />
                   ) : (
                     <ReactPlayer
@@ -241,39 +306,13 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
                           },
                         },
                       }}
-                      onReady={() => {
-                        console.log("Player ready - YouTube controls active");
-                        onPlayerReady();
-                      }}
-                      onStart={() => {
-                        console.log("Video started playing");
-                        onPlayerPlay();
-                      }}
-                      onPlay={() => {
-                        console.log("Video playing");
-                        onPlayerPlay();
-                      }}
-                      onPause={() => {
-                        console.log("Video paused");
-                        onPlayerPause();
-                      }}
-                      onEnded={() => {
-                        console.log("Video ended");
-                        onPlayerEnded();
-                      }}
-                      onError={(e: any) => {
-                        console.error("Player error:", e);
-                        // Check if it's a YouTube embed error
-                        const isEmbedError =
-                          currentTrack.url.includes("youtube.com/embed/");
-                        const errorMessage = isEmbedError
-                          ? "YouTube embed failed. The video may not allow embedding or may be restricted. Try using the watch URL instead."
-                          : "Failed to load audio/video. Try a different track or check the file.";
-                        onPlayerError(errorMessage);
-                      }}
-                      onLoad={() => {
-                        console.log("Video loaded successfully");
-                      }}
+                      onReady={handlePlayerReady}
+                      onStart={handlePlayerPlay}
+                      onPlay={handlePlayerPlay}
+                      onPause={handlePlayerPause}
+                      onEnded={handlePlayerEnded}
+                      onError={handlePlayerError}
+                      onLoad={handlePlayerLoad}
                     />
                   ))}
               </div>
@@ -299,7 +338,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
                   tracks.map(track => (
                     <button
                       key={track.title}
-                      onClick={() => onTrackSelect(track)}
+                      onClick={() => handleTrackSelect(track)}
                       className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-all duration-300 ${
                         currentTrack.title === track.title
                           ? "bg-blue-500/40 border border-blue-400/40 text-white"
