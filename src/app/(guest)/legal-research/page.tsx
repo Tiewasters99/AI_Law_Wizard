@@ -511,10 +511,7 @@ export default function LegalChatPage() {
             >
               <div className="p-4 border-b border-sidebar-border">
                 <div className="flex items-center justify-between">
-                  <h2
-                    className="text-lg font-semibold"
-                    className="text-sidebar-foreground"
-                  >
+                  <h2 className="text-lg font-semibold text-sidebar-foreground">
                     Legal Research
                   </h2>
                   <Button
@@ -531,10 +528,7 @@ export default function LegalChatPage() {
               {/* Consultation Type Selection */}
               <div className="p-4 border-b border-sidebar-border">
                 <h3 className="text-sm font-semibold mb-3 flex items-center">
-                  <Briefcase
-                    className="w-4 h-4 mr-2"
-                    className="text-primary"
-                  />
+                  <Briefcase className="w-4 h-4 mr-2 text-primary" />
                   Consultation Type
                 </h3>
                 <div className="space-y-2">
@@ -562,10 +556,7 @@ export default function LegalChatPage() {
 
               {/* Professional Features */}
               <div className="p-4">
-                <h3
-                  className="text-sm font-semibold mb-3"
-                          className="text-foreground"
-                >
+                <h3 className="text-sm font-semibold mb-3 text-foreground">
                   Professional Services
                 </h3>
                 <div className="space-y-3">
@@ -590,26 +581,14 @@ export default function LegalChatPage() {
                       key={idx}
                       className="flex items-start space-x-3 p-3 rounded-lg hover:bg-sidebar-accent transition-colors"
                     >
-                      <div
-                        className="p-2 rounded"
-                        className="p-2 rounded bg-accent"
-                      >
-                        <feature.icon
-                          className="w-4 h-4"
-                          className="text-primary"
-                        />
+                      <div className="p-2 rounded bg-accent">
+                        <feature.icon className="w-4 h-4 text-primary" />
                       </div>
                       <div>
-                        <h4
-                          className="text-sm font-medium"
-                          className="text-sidebar-foreground"
-                        >
+                        <h4 className="text-sm font-medium text-sidebar-foreground">
                           {feature.title}
                         </h4>
-                        <p
-                          className="text-xs"
-                          className="text-muted-foreground"
-                        >
+                        <p className="text-xs text-muted-foreground">
                           {feature.desc}
                         </p>
                       </div>
@@ -686,7 +665,10 @@ export default function LegalChatPage() {
         </div>
 
         {/* Messages */}
-        <div ref={scrollAreaRef} className="flex-1 overflow-y-auto bg-background">
+        <div
+          ref={scrollAreaRef}
+          className="flex-1 overflow-y-auto bg-background"
+        >
           <div className="w-full">
             {/* Quick Prompts - Show when no messages or when explicitly shown */}
             {messages.length === 0 && showQuickPrompts && (
@@ -774,9 +756,7 @@ export default function LegalChatPage() {
                     >
                       <div
                         className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                          message.role === "user"
-                            ? "bg-primary"
-                            : "bg-muted"
+                          message.role === "user" ? "bg-primary" : "bg-muted"
                         }`}
                       >
                         {message.role === "user" ? (
@@ -855,9 +835,7 @@ export default function LegalChatPage() {
         </div>
 
         {/* Input Area */}
-        <div
-          className="flex-shrink-0 border-t border-border bg-background py-4"
-        >
+        <div className="flex-shrink-0 border-t border-border bg-background py-4">
           <div className="px-4 max-w-5xl mx-auto">
             {/* Quick Actions Bar */}
             {messages.length > 0 && (
