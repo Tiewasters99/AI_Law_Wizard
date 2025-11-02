@@ -82,6 +82,7 @@ export default function InboxPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tokenBalance, setTokenBalance] = useState(0);
 
   const statusOptions = [
     { value: "all", label: "All Conversations", color: "text-gray-600" },
@@ -92,138 +93,139 @@ export default function InboxPage() {
     { value: "cancelled", label: "Cancelled", color: "text-red-600" },
   ];
 
-  // Mock data - in real app, this would come from API
+  // Fetch conversations from API
   useEffect(() => {
-    const mockConversations: Conversation[] = [
-      {
-        id: "1",
-        attorneyId: "attorney-1",
-        attorneyName: "Sarah Johnson",
-        attorneyAvatar: undefined,
-        lastMessage: {
-          id: "msg-1",
-          content:
-            "I've reviewed your case documents. Let's schedule a call to discuss the next steps.",
-          senderId: "attorney-1",
-          senderName: "Sarah Johnson",
-          senderType: "attorney",
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          isRead: false,
-        },
-        unreadCount: 2,
-        status: "accepted",
-        caseType: "Personal Injury",
-        urgency: "medium",
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-        updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      },
-      {
-        id: "2",
-        attorneyId: "attorney-2",
-        attorneyName: "Michael Chen",
-        attorneyAvatar: undefined,
-        lastMessage: {
-          id: "msg-2",
-          content:
-            "Thank you for the consultation request. I'll review your business contract and get back to you within 24 hours.",
-          senderId: "attorney-2",
-          senderName: "Michael Chen",
-          senderType: "attorney",
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-          isRead: true,
-        },
-        unreadCount: 0,
-        status: "pending",
-        caseType: "Business Law",
-        urgency: "low",
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: "3",
-        attorneyId: "attorney-3",
-        attorneyName: "Emily Rodriguez",
-        attorneyAvatar: undefined,
-        lastMessage: {
-          id: "msg-3",
-          content:
-            "I understand this is a sensitive family matter. Let's discuss your options confidentially.",
-          senderId: "attorney-3",
-          senderName: "Emily Rodriguez",
-          senderType: "attorney",
-          timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-          isRead: false,
-        },
-        unreadCount: 1,
-        status: "in-progress",
-        caseType: "Family Law",
-        urgency: "high",
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-        updatedAt: new Date(Date.now() - 30 * 60 * 1000),
-      },
-    ];
+    const fetchConversations = async () => {
+      try {
+        const response = await fetch("/api/client/conversations");
+        if (!response.ok) {
+          throw new Error("Failed to fetch conversations");
+        }
 
-    setConversations(mockConversations);
-    setIsLoading(false);
-  }, []);
+        const data = await response.json();
+        if (data.success) {
+          // Transform API data to match component interface
+          const transformedConversations: Conversation[] =
+            data.conversations.map((conv: any) => ({
+              id: conv.id,
+              attorneyId: conv.attorney.id,
+              attorneyName: conv.attorney.name,
+              attorneyAvatar: conv.attorney.image,
+              lastMessage: conv.lastMessage
+                ? {
+                    id: conv.lastMessage.id,
+                    content: conv.lastMessage.content,
+                    senderId: conv.lastMessage.senderId,
+                    senderName:
+                      conv.lastMessage.senderId === session?.user?.id
+                        ? "You"
+                        : conv.attorney.name,
+                    senderType:
+                      conv.lastMessage.senderId === session?.user?.id
+                        ? "client"
+                        : "attorney",
+                    timestamp: new Date(conv.lastMessage.createdAt),
+                    isRead: conv.lastMessage.isRead,
+                  }
+                : {
+                    id: "empty",
+                    content: "No messages yet",
+                    senderId: "",
+                    senderName: "",
+                    senderType: "attorney",
+                    timestamp: new Date(conv.createdAt),
+                    isRead: true,
+                  },
+              unreadCount: conv.unreadCount,
+              status: conv.consultationRequest?.status || "pending",
+              caseType:
+                conv.consultationRequest?.caseType || "General Consultation",
+              urgency: conv.consultationRequest?.urgency || "medium",
+              createdAt: new Date(conv.createdAt),
+              updatedAt: new Date(conv.lastMessageAt),
+            }));
 
-  // Mock messages for selected conversation
+          setConversations(transformedConversations);
+        } else {
+          throw new Error(data.error || "Failed to fetch conversations");
+        }
+      } catch (error) {
+        console.error("Error fetching conversations:", error);
+        setError("Failed to load conversations. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (session?.user?.id) {
+      fetchConversations();
+    }
+  }, [session?.user?.id]);
+
+  // Fetch token balance
+  useEffect(() => {
+    const fetchTokenBalance = async () => {
+      try {
+        const response = await fetch("/api/client/tokens/balance");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setTokenBalance(data.balance);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching token balance:", error);
+      }
+    };
+
+    if (session?.user?.id) {
+      fetchTokenBalance();
+    }
+  }, [session?.user?.id]);
+
+  // Fetch messages for selected conversation
   useEffect(() => {
     if (selectedConversation) {
-      const mockMessages: Message[] = [
-        {
-          id: "msg-1",
-          content:
-            "Hello, I need help with a personal injury case. I was in a car accident last week.",
-          senderId: session?.user?.id || "client",
-          senderName: "You",
-          senderType: "client",
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-          isRead: true,
-        },
-        {
-          id: "msg-2",
-          content:
-            "I'm sorry to hear about your accident. I'd be happy to help you with your personal injury case. Can you tell me more about what happened?",
-          senderId: selectedConversation.attorneyId,
-          senderName: selectedConversation.attorneyName,
-          senderType: "attorney",
-          timestamp: new Date(
-            Date.now() - 3 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000
-          ),
-          isRead: true,
-        },
-        {
-          id: "msg-3",
-          content:
-            "I was rear-ended at a red light. The other driver was clearly at fault. I have some minor injuries and my car is damaged.",
-          senderId: session?.user?.id || "client",
-          senderName: "You",
-          senderType: "client",
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          isRead: true,
-        },
-        {
-          id: "msg-4",
-          content:
-            "I've reviewed your case documents. Let's schedule a call to discuss the next steps.",
-          senderId: selectedConversation.attorneyId,
-          senderName: selectedConversation.attorneyName,
-          senderType: "attorney",
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          isRead: false,
-          attachments: [
-            {
-              name: "Case Analysis.pdf",
-              url: "#",
-              type: "application/pdf",
-              size: 1024000,
-            },
-          ],
-        },
-      ];
+      const fetchMessages = async () => {
+        try {
+          const response = await fetch(
+            `/api/client/messages/${selectedConversation.id}`
+          );
+          if (!response.ok) {
+            throw new Error("Failed to fetch messages");
+          }
 
-      setMessages(mockMessages);
+          const data = await response.json();
+          if (data.success) {
+            // Transform API data to match component interface
+            const transformedMessages: Message[] = data.messages.map(
+              (msg: any) => ({
+                id: msg.id,
+                content: msg.content,
+                senderId: msg.senderId,
+                senderName:
+                  msg.senderId === session?.user?.id ? "You" : msg.sender.name,
+                senderType:
+                  msg.senderId === session?.user?.id ? "client" : "attorney",
+                timestamp: new Date(msg.createdAt),
+                isRead: msg.isRead,
+                attachments: msg.attachments
+                  ? JSON.parse(msg.attachments)
+                  : undefined,
+              })
+            );
+
+            setMessages(transformedMessages);
+          } else {
+            throw new Error(data.error || "Failed to fetch messages");
+          }
+        } catch (error) {
+          console.error("Error fetching messages:", error);
+          setError("Failed to load messages. Please try again.");
+        }
+      };
+
+      fetchMessages();
     }
   }, [selectedConversation, session?.user?.id]);
 
@@ -243,35 +245,63 @@ export default function InboxPage() {
     setError(null);
 
     try {
-      // In real app, this would send to API
-      const message: Message = {
-        id: Date.now().toString(),
-        content: newMessage.trim(),
-        senderId: session?.user?.id || "client",
-        senderName: "You",
-        senderType: "client",
-        timestamp: new Date(),
-        isRead: true,
-      };
-
-      setMessages(prev => [...prev, message]);
-      setNewMessage("");
-
-      // Update conversation's last message
-      setConversations(prev =>
-        prev.map(conv =>
-          conv.id === selectedConversation.id
-            ? {
-                ...conv,
-                lastMessage: message,
-                updatedAt: new Date(),
-              }
-            : conv
-        )
+      const response = await fetch(
+        `/api/client/messages/${selectedConversation.id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: newMessage.trim(),
+            attachments: null, // TODO: Add file attachment support
+          }),
+        }
       );
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send message");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        // Add the new message to the messages list
+        const newMessageObj: Message = {
+          id: data.message.id,
+          content: data.message.content,
+          senderId: data.message.senderId,
+          senderName:
+            data.message.senderId === session?.user?.id
+              ? "You"
+              : data.message.sender.name,
+          senderType:
+            data.message.senderId === session?.user?.id ? "client" : "attorney",
+          timestamp: new Date(data.message.createdAt),
+          isRead: true,
+          attachments: data.message.attachments
+            ? JSON.parse(data.message.attachments)
+            : undefined,
+        };
+
+        setMessages(prev => [...prev, newMessageObj]);
+        setNewMessage("");
+
+        // Update conversation's last message
+        setConversations(prev =>
+          prev.map(conv =>
+            conv.id === selectedConversation.id
+              ? {
+                  ...conv,
+                  lastMessage: newMessageObj,
+                  updatedAt: new Date(),
+                }
+              : conv
+          )
+        );
+      } else {
+        throw new Error(data.error || "Failed to send message");
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       setError("Failed to send message. Please try again.");
@@ -354,10 +384,15 @@ export default function InboxPage() {
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
-            <Badge variant="secondary" className="bg-primary text-white">
-              {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)}{" "}
-              unread
-            </Badge>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="text-sm">
+                {tokenBalance} tokens
+              </Badge>
+              <Badge variant="secondary" className="bg-primary text-white">
+                {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)}{" "}
+                unread
+              </Badge>
+            </div>
           </div>
 
           {/* Search and Filter */}

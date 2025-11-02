@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { colors } from "@/lib/frontend/designSystem";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
@@ -140,34 +139,18 @@ export function ClientSidebar({
       initial={false}
       animate={{ width: isCollapsed ? 72 : 280 }}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-      className="relative h-full flex flex-col border-r backdrop-blur-xl"
-      style={{
-        backgroundColor: "rgba(248, 250, 252, 0.8)",
-        borderColor: "rgba(226, 232, 240, 0.5)",
-        boxShadow:
-          "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)",
-      }}
+      className="relative h-full flex flex-col border-r border-sidebar-border bg-sidebar shadow-sm"
     >
       {/* Toggle Button */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full border shadow-md flex items-center justify-center transition-all hover:shadow-lg hover:scale-110 backdrop-blur-lg"
-        style={{
-          backgroundColor: "rgba(255, 255, 255, 0.9)",
-          borderColor: "rgba(226, 232, 240, 0.6)",
-        }}
+        className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full border shadow-md bg-background border-border flex items-center justify-center transition-all hover:shadow-lg hover:scale-110 hover:bg-muted"
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {isCollapsed ? (
-          <ChevronRight
-            className="w-4 h-4"
-            style={{ color: colors.secondary[600] }}
-          />
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
         ) : (
-          <ChevronLeft
-            className="w-4 h-4"
-            style={{ color: colors.secondary[600] }}
-          />
+          <ChevronLeft className="w-4 h-4 text-muted-foreground" />
         )}
       </button>
 
@@ -179,10 +162,7 @@ export function ClientSidebar({
               {/* Section Header */}
               {!isCollapsed && (
                 <div className="px-3 mb-2">
-                  <h3
-                    className="text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.secondary[600] }}
-                  >
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     {section.label}
                   </h3>
                 </div>
@@ -207,26 +187,22 @@ export function ClientSidebar({
                       href={item.href}
                       onMouseEnter={() => handleMouseEnter(item.href)}
                       onMouseLeave={handleMouseLeave}
-                      className="relative flex items-center rounded-lg transition-all group"
+                      className={`relative flex items-center rounded-lg transition-all group ${
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-primary"
+                          : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      }`}
                       style={{
-                        backgroundColor: isActive
-                          ? "rgba(239, 246, 255, 0.8)"
-                          : "transparent",
-                        borderLeft: isActive
-                          ? `3px solid ${colors.primary[700]}`
-                          : "3px solid transparent",
                         padding: isCollapsed ? "12px" : "10px 12px",
                         justifyContent: isCollapsed ? "center" : "flex-start",
-                        backdropFilter: isActive ? "blur(8px)" : "none",
                       }}
                     >
                       <div
-                        className="transition-colors relative z-10"
-                        style={{
-                          color: isActive
-                            ? colors.primary[700]
-                            : colors.secondary[600],
-                        }}
+                        className={
+                          isActive
+                            ? "text-primary"
+                            : "text-sidebar-foreground group-hover:text-sidebar-accent-foreground"
+                        }
                       >
                         <Icon className="w-5 h-5 flex-shrink-0" />
                       </div>
@@ -234,12 +210,11 @@ export function ClientSidebar({
                       {!isCollapsed && (
                         <>
                           <span
-                            className="ml-3 text-sm font-medium transition-colors relative z-10"
-                            style={{
-                              color: isActive
-                                ? colors.primary[900]
-                                : colors.text,
-                            }}
+                            className={`ml-3 text-sm font-medium transition-colors relative z-10 ${
+                              isActive
+                                ? "text-primary font-semibold"
+                                : "text-sidebar-foreground group-hover:text-sidebar-accent-foreground"
+                            }`}
                           >
                             {item.label}
                           </span>
@@ -257,15 +232,7 @@ export function ClientSidebar({
 
                       {/* Collapsed Tooltip */}
                       {isCollapsed && hoveredItem === item.href && (
-                        <div
-                          className="absolute left-full ml-2 px-3 py-2 rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none backdrop-blur-xl"
-                          style={{
-                            backgroundColor: "rgba(30, 41, 59, 0.95)",
-                            color: "white",
-                            fontSize: "12px",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                          }}
-                        >
+                        <div className="absolute left-full ml-2 px-3 py-2 rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none bg-popover text-popover-foreground border border-border text-xs">
                           {item.label}
                           {showBadge && (
                             <Badge
@@ -276,17 +243,6 @@ export function ClientSidebar({
                             </Badge>
                           )}
                         </div>
-                      )}
-
-                      {/* Hover Background */}
-                      {!isActive && (
-                        <div
-                          className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none backdrop-blur-sm"
-                          style={{
-                            backgroundColor: "rgba(241, 245, 249, 0.6)",
-                            boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                          }}
-                        />
                       )}
                     </Link>
                   );
@@ -299,34 +255,15 @@ export function ClientSidebar({
 
       {/* Bottom Stats Widget */}
       {!isCollapsed && (
-        <div
-          className="p-4 border-t backdrop-blur-sm"
-          style={{ borderColor: "rgba(226, 232, 240, 0.5)" }}
-        >
-          <div
-            className="p-3 rounded-lg backdrop-blur-md"
-            style={{
-              backgroundColor: "rgba(239, 246, 255, 0.7)",
-              border: "1px solid rgba(59, 130, 246, 0.1)",
-              boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-            }}
-          >
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="p-3 rounded-lg bg-accent/50 border border-primary/20">
             <div className="flex items-center justify-between mb-2">
-              <span
-                className="text-xs font-medium"
-                style={{ color: colors.primary[900] }}
-              >
+              <span className="text-xs font-medium text-primary">
                 My Credits
               </span>
-              <Coins
-                className="w-4 h-4"
-                style={{ color: colors.primary[700] }}
-              />
+              <Coins className="w-4 h-4 text-primary" />
             </div>
-            <p
-              className="text-lg font-bold"
-              style={{ color: colors.primary[900] }}
-            >
+            <p className="text-lg font-bold text-foreground">
               {tokenLoading ? "..." : currentTokens.toLocaleString()}
             </p>
           </div>

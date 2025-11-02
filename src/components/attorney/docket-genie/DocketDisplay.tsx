@@ -55,56 +55,56 @@ export function DocketDisplay({
   return (
     <div className="space-y-3">
       {/* Case Header - Compact */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+      <div className="bg-muted/50 border border-border rounded-lg p-3">
         <div className="space-y-2">
           <div>
-            <h3 className="text-sm font-bold text-gray-900">
+            <h3 className="text-sm font-bold text-foreground">
               {docket.caseInfo.caseTitle}
             </h3>
-            <p className="text-xs text-blue-700 font-mono mt-0.5">
+            <p className="text-xs text-primary font-mono mt-0.5">
               {docket.caseInfo.caseNumber}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <span className="text-gray-500">Court:</span>{" "}
-              <span className="font-semibold text-gray-900">
+              <span className="text-muted-foreground">Court:</span>{" "}
+              <span className="font-semibold text-foreground">
                 {docket.caseInfo.courtName || docket.caseInfo.court}
               </span>
             </div>
             {docket.caseInfo.judge && (
               <div>
-                <span className="text-gray-500">Judge:</span>{" "}
-                <span className="font-semibold text-gray-900">
+                <span className="text-muted-foreground">Judge:</span>{" "}
+                <span className="font-semibold text-foreground">
                   {docket.caseInfo.judge}
                 </span>
               </div>
             )}
             <div>
-              <span className="text-gray-500">Filed:</span>{" "}
-              <span className="font-semibold text-gray-900">
+              <span className="text-muted-foreground">Filed:</span>{" "}
+              <span className="font-semibold text-foreground">
                 {new Date(docket.caseInfo.filingDate).toLocaleDateString()}
               </span>
             </div>
             {docket.caseInfo.status && (
               <div>
-                <span className="text-gray-500">Status:</span>{" "}
-                <span className="font-semibold text-gray-900">
+                <span className="text-muted-foreground">Status:</span>{" "}
+                <span className="font-semibold text-foreground">
                   {docket.caseInfo.status}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-gray-300 text-xs">
-            <div className="flex items-center gap-1 text-gray-700">
+          <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
+            <div className="flex items-center gap-1 text-foreground">
               <FileText className="w-3 h-3" />
               <span className="font-semibold">
                 {docket.totalEntries} entries
               </span>
             </div>
-            <div className="flex items-center gap-1 text-blue-700">
+            <div className="flex items-center gap-1 text-primary">
               <DollarSign className="w-3 h-3" />
               <span className="font-semibold">
                 ${docket.estimatedFee.toFixed(2)}
@@ -114,14 +114,14 @@ export function DocketDisplay({
 
           {/* Fee Breakdown */}
           {docket.estimatedFee > 0 && (
-            <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="mt-3 p-2 bg-primary/10 border border-primary/30 rounded-md">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-blue-700 font-medium">PACER Fees:</span>
-                <span className="text-blue-800 font-bold">
+                <span className="text-primary font-medium">PACER Fees:</span>
+                <span className="text-primary font-bold">
                   ${docket.estimatedFee.toFixed(2)}
                 </span>
               </div>
-              <div className="text-xs text-blue-600 mt-1">
+              <div className="text-xs text-primary/80 mt-1">
                 Based on {Math.ceil(docket.estimatedFee / 0.1)} pages at
                 $0.10/page
               </div>
@@ -132,19 +132,19 @@ export function DocketDisplay({
 
       {/* Filter Bar */}
       {docket.docketEntries.length > 5 && (
-        <div className="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg">
-          <Filter className="w-4 h-4 text-gray-500" />
+        <div className="flex items-center gap-2 p-2 bg-background border border-border rounded-lg">
+          <Filter className="w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             value={filterText}
             onChange={e => setFilterText(e.target.value)}
             placeholder="Filter entries..."
-            className="flex-1 text-sm bg-transparent border-none outline-none placeholder-gray-400"
+            className="flex-1 text-sm bg-transparent border-none outline-none placeholder-muted-foreground"
           />
           {filterText && (
             <button
               onClick={() => setFilterText("")}
-              className="text-xs text-blue-700 hover:text-blue-800 font-medium"
+              className="text-xs text-primary hover:text-primary/80 font-medium"
             >
               Clear
             </button>
@@ -153,7 +153,7 @@ export function DocketDisplay({
       )}
 
       {/* Entries Count */}
-      <div className="text-xs text-gray-600 px-1">
+      <div className="text-xs text-muted-foreground px-1">
         Showing <strong>{filteredEntries.length}</strong> of{" "}
         <strong>{docket.totalEntries}</strong> entries
       </div>
@@ -166,33 +166,33 @@ export function DocketDisplay({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.01 }}
-            className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-blue-300 transition-colors"
+            className="bg-card border border-border rounded-lg overflow-hidden hover:border-primary/50 transition-colors"
           >
             {/* Entry Header - Compact */}
             <button
               onClick={() => toggleEntry(entry.entryNumber)}
-              className="w-full px-3 py-2 flex items-start gap-3 hover:bg-gray-50 transition-colors text-left"
+              className="w-full px-3 py-2 flex items-start gap-3 hover:bg-muted/50 transition-colors text-left"
             >
               {/* Entry Number Badge */}
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center mt-0.5">
-                <span className="text-blue-800 font-bold text-xs">
+              <div className="flex-shrink-0 w-8 h-8 bg-primary/20 rounded-md flex items-center justify-center mt-0.5">
+                <span className="text-primary font-bold text-xs">
                   {entry.entryNumber}
                 </span>
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-1">
-                  <h4 className="font-semibold text-gray-900 text-sm leading-tight">
+                  <h4 className="font-semibold text-foreground text-sm leading-tight">
                     {entry.description}
                   </h4>
                   {expandedEntries.has(entry.entryNumber) ? (
-                    <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                   )}
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-gray-600">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     <span>{entry.date}</span>
@@ -201,7 +201,7 @@ export function DocketDisplay({
                     <span className="truncate">By: {entry.filedBy}</span>
                   )}
                   {entry.documents && entry.documents.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">
+                    <span className="px-1.5 py-0.5 bg-primary/10 text-primary rounded font-semibold">
                       {entry.documents.length} doc
                       {entry.documents.length > 1 ? "s" : ""}
                     </span>
@@ -218,12 +218,12 @@ export function DocketDisplay({
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="border-t border-gray-200 bg-gray-50"
+                  className="border-t border-border bg-muted/30"
                 >
                   <div className="px-3 py-3 space-y-3">
                     {/* Docket Text */}
                     <div>
-                      <p className="text-xs text-gray-700 leading-relaxed">
+                      <p className="text-xs text-foreground leading-relaxed">
                         {entry.docketText}
                       </p>
                     </div>
@@ -231,25 +231,25 @@ export function DocketDisplay({
                     {/* Documents */}
                     {entry.documents && entry.documents.length > 0 && (
                       <div>
-                        <p className="text-xs font-semibold text-gray-900 mb-2">
+                        <p className="text-xs font-semibold text-foreground mb-2">
                           Associated Documents:
                         </p>
                         <div className="space-y-1.5">
                           {entry.documents.map(doc => (
                             <div
                               key={doc.documentId}
-                              className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded-md"
+                              className="flex items-center justify-between p-2 bg-background border border-border rounded-md"
                             >
                               <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <FileText className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                                <FileText className="w-4 h-4 text-primary flex-shrink-0" />
                                 <div className="min-w-0">
-                                  <p className="text-xs font-semibold text-gray-900 truncate">
+                                  <p className="text-xs font-semibold text-foreground truncate">
                                     Document #{doc.documentNumber}
                                   </p>
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-xs text-muted-foreground">
                                     {doc.pages} pages • ${doc.cost?.toFixed(2)}
                                     {doc.cost && doc.cost > 0 && (
-                                      <span className="ml-1 text-blue-600 font-medium">
+                                      <span className="ml-1 text-primary font-medium">
                                         (PACER fee)
                                       </span>
                                     )}
@@ -282,8 +282,8 @@ export function DocketDisplay({
       </div>
 
       {filteredEntries.length === 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-sm text-gray-600">
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
+          <p className="text-sm text-muted-foreground">
             {filterText
               ? "No entries match your filter"
               : "No docket entries found for this case"}

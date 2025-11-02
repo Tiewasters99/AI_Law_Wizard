@@ -244,7 +244,7 @@ export default function BlogPage() {
       }))
     );
     setIsLoading(false);
-  }, []);
+  }, [categories_data]);
 
   // Filter and search posts
   useEffect(() => {

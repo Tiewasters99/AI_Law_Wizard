@@ -76,12 +76,12 @@ export default function QueryHistoryPage() {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center space-x-4">
-        <div className="w-14 h-14 rounded-xl bg-blue-700 flex items-center justify-center">
+        <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
           <History className="w-7 h-7 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Query History</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Query History</h1>
+          <p className="text-muted-foreground mt-1">
             View and manage your document analysis queries
           </p>
         </div>
@@ -92,18 +92,18 @@ export default function QueryHistoryPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Queries</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-slate-500">All time</p>
+            <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">This Week</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600" />
+            <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.thisWeek}</div>
@@ -114,7 +114,7 @@ export default function QueryHistoryPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Time</CardTitle>
-            <Filter className="h-4 w-4 text-blue-600" />
+            <Filter className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -129,7 +129,7 @@ export default function QueryHistoryPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search queries..."
               value={searchQuery}
@@ -145,8 +145,8 @@ export default function QueryHistoryPage() {
         <Card>
           <CardContent className="py-12">
             <div className="flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
-              <p className="text-slate-600">Loading queries...</p>
+              <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+              <p className="text-muted-foreground">Loading queries...</p>
             </div>
           </CardContent>
         </Card>
@@ -154,8 +154,8 @@ export default function QueryHistoryPage() {
         <Card>
           <CardContent className="py-12">
             <div className="flex flex-col items-center justify-center">
-              <History className="w-16 h-16 text-slate-400 mb-4" />
-              <p className="text-slate-600">No queries found</p>
+              <History className="w-16 h-16 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No queries found</p>
             </div>
           </CardContent>
         </Card>
@@ -190,7 +190,7 @@ export default function QueryHistoryPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-slate-600 line-clamp-2">
+                <p className="text-sm text-muted-foreground line-clamp-2">
                   {query.response}
                 </p>
               </CardContent>
@@ -227,13 +227,13 @@ export default function QueryHistoryPage() {
             <CardContent className="space-y-4">
               <div>
                 <h4 className="font-semibold mb-2">Prompt:</h4>
-                <p className="text-sm bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm bg-muted p-3 rounded-lg">
                   {selectedQuery.prompt}
                 </p>
               </div>
               <div>
                 <h4 className="font-semibold mb-2">Response:</h4>
-                <p className="text-sm whitespace-pre-wrap bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm whitespace-pre-wrap bg-accent/50 p-3 rounded-lg">
                   {selectedQuery.response}
                 </p>
               </div>

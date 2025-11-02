@@ -120,31 +120,31 @@ export function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
       initial={false}
       animate={{ width: isCollapsed ? 72 : 280 }}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-      className="relative h-full flex flex-col bg-slate-800 border-r border-slate-700 shadow-lg"
+      className="relative h-full flex flex-col bg-sidebar border-r border-sidebar-border shadow-lg"
     >
       {/* Toggle Button */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full border shadow-md bg-slate-700 border-slate-600 flex items-center justify-center transition-all hover:shadow-lg hover:scale-110 hover:bg-slate-600"
+        className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full border shadow-md bg-sidebar-accent border-sidebar-border flex items-center justify-center transition-all hover:shadow-lg hover:scale-110 hover:bg-sidebar-accent"
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {isCollapsed ? (
-          <ChevronRight className="w-4 h-4 text-slate-300" />
+          <ChevronRight className="w-4 h-4 text-sidebar-foreground/70" />
         ) : (
-          <ChevronLeft className="w-4 h-4 text-slate-300" />
+          <ChevronLeft className="w-4 h-4 text-sidebar-foreground/70" />
         )}
       </button>
 
       {/* Header */}
-      <div className="p-4 border-b border-slate-700">
+      <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 bg-destructive rounded-lg flex items-center justify-center">
+            <Shield className="w-5 h-5 text-primary-foreground" />
           </div>
           {!isCollapsed && (
             <div>
-              <h2 className="text-lg font-semibold text-white">Admin Portal</h2>
-              <p className="text-xs text-slate-400">System Management</p>
+              <h2 className="text-lg font-semibold text-sidebar-foreground">Admin Portal</h2>
+              <p className="text-xs text-sidebar-foreground/70">System Management</p>
             </div>
           )}
         </div>
@@ -158,7 +158,7 @@ export function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
               {/* Section Header */}
               {!isCollapsed && (
                 <div className="px-3 mb-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70">
                     {section.label}
                   </h3>
                 </div>
@@ -177,15 +177,13 @@ export function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
                       onMouseEnter={() => handleMouseEnter(item.href)}
                       onMouseLeave={handleMouseLeave}
                       className={`relative flex items-center rounded-lg transition-all group ${
-                        !isActive && "hover:bg-slate-700"
+                        !isActive && "hover:bg-sidebar-accent"
+                      } ${
+                        isActive
+                          ? "bg-destructive/10 border-l-[3px] border-l-destructive"
+                          : "border-l-[3px] border-l-transparent"
                       }`}
                       style={{
-                        backgroundColor: isActive
-                          ? "rgba(239, 68, 68, 0.1)"
-                          : "transparent",
-                        borderLeft: isActive
-                          ? "3px solid #ef4444"
-                          : "3px solid transparent",
                         padding: isCollapsed ? "12px" : "10px 12px",
                         justifyContent: isCollapsed ? "center" : "flex-start",
                       }}
@@ -193,8 +191,8 @@ export function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
                       <div
                         className={
                           isActive
-                            ? "text-red-400 group-hover:text-red-400"
-                            : "text-slate-400 group-hover:text-slate-200"
+                            ? "text-destructive group-hover:text-destructive"
+                            : "text-sidebar-foreground/70 group-hover:text-sidebar-foreground"
                         }
                       >
                         <Icon className="w-5 h-5 flex-shrink-0" />
@@ -204,8 +202,8 @@ export function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
                         <span
                           className={`ml-3 text-sm font-medium ${
                             isActive
-                              ? "text-red-300 font-semibold"
-                              : "text-slate-300 group-hover:text-white"
+                              ? "text-destructive font-semibold"
+                              : "text-sidebar-foreground/80 group-hover:text-sidebar-foreground"
                           }`}
                         >
                           {item.label}
@@ -214,7 +212,7 @@ export function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
 
                       {/* Collapsed Tooltip */}
                       {isCollapsed && hoveredItem === item.href && (
-                        <div className="absolute left-full ml-2 px-3 py-2 rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none bg-slate-900 text-white text-xs border border-slate-700">
+                        <div className="absolute left-full ml-2 px-3 py-2 rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none bg-sidebar border border-sidebar-border text-sidebar-foreground text-xs">
                           {item.label}
                         </div>
                       )}
@@ -229,15 +227,15 @@ export function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
 
       {/* Footer */}
       {!isCollapsed && (
-        <div className="p-4 border-t border-slate-700">
-          <div className="p-3 rounded-lg bg-slate-700/50">
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="p-3 rounded-lg bg-sidebar-accent">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-300">
+              <span className="text-xs font-medium text-sidebar-foreground/80">
                 Admin Status
               </span>
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-chart-1 rounded-full"></div>
             </div>
-            <p className="text-sm text-slate-400">System Online</p>
+            <p className="text-sm text-sidebar-foreground/70">System Online</p>
           </div>
         </div>
       )}

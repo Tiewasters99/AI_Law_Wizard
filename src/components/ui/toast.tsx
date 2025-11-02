@@ -38,7 +38,7 @@ function ToastComponent({ toast, onRemove }: ToastProps) {
       case "warning":
         return <AlertTriangle className="h-5 w-5 text-amber-500" />;
       case "info":
-        return <Info className="h-5 w-5 text-blue-500" />;
+        return <Info className="h-5 w-5 text-primary" />;
       default:
         return <CheckCircle className="h-5 w-5 text-green-500" />;
     }
@@ -53,7 +53,7 @@ function ToastComponent({ toast, onRemove }: ToastProps) {
       case "warning":
         return "bg-amber-50 border-amber-200";
       case "info":
-        return "bg-blue-50 border-blue-200";
+        return "bg-accent/50 border-primary/20";
       default:
         return "bg-green-50 border-green-200";
     }
@@ -71,17 +71,17 @@ function ToastComponent({ toast, onRemove }: ToastProps) {
           <div className="flex-shrink-0">{getIcon()}</div>
           <div className="ml-3 w-0 flex-1">
             {toast.title && (
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-foreground">
                 {toast.title}
               </p>
             )}
             {toast.description && (
-              <p className="mt-1 text-sm text-slate-500">{toast.description}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{toast.description}</p>
             )}
           </div>
           <div className="ml-4 flex-shrink-0 flex">
             <button
-              className="inline-flex text-slate-400 hover:text-slate-500 focus:outline-none"
+              className="inline-flex text-muted-foreground hover:text-foreground focus:outline-none"
               onClick={() => {
                 setIsVisible(false);
                 setTimeout(() => onRemove(toast.id), 300);

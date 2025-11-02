@@ -237,12 +237,12 @@ export default function GuestHomePage() {
   // Consultation view
   return (
     <>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-4">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-8 sm:py-12 lg:py-16">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-lg sm:text-xl font-bold text-foreground mb-1.5">
             The Future Awaits
           </h1>
-          <p className="text-xs sm:text-sm text-gray-600 mb-3">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-3">
             Get instant legal guidance, manage and manipulate your documents
             with AI agents, generate and read custom blogs, create your own
             legal Miniverse™ — tomorrow today!

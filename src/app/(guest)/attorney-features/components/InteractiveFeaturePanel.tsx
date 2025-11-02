@@ -93,11 +93,7 @@ export function InteractiveFeaturePanel({
           >
             {/* Panel Header */}
             <div
-              className="text-white p-4 sm:p-6 flex-shrink-0"
-              style={{
-                background: "linear-gradient(to right, #2563eb, #1e40af)",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-              }}
+              className="text-white p-4 sm:p-6 flex-shrink-0 bg-primary text-primary-foreground shadow-md"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
@@ -200,11 +196,7 @@ export function InteractiveFeaturePanel({
                 </div>
               ) : (
                 <div
-                  className="rounded-lg p-4 sm:p-8 min-h-[300px] sm:min-h-[400px] flex items-center justify-center"
-                  style={{
-                    background:
-                      "linear-gradient(to bottom right, rgba(239, 246, 255, 0.8), rgba(219, 234, 254, 0.8))",
-                  }}
+                  className="rounded-lg p-4 sm:p-8 min-h-[300px] sm:min-h-[400px] flex items-center justify-center bg-accent/80"
                 >
                   <div className="text-center max-w-md px-4">
                     <div
@@ -234,11 +226,6 @@ export function InteractiveFeaturePanel({
                       <Button
                         onClick={onUpgrade}
                         className="w-full shadow-lg text-white text-sm sm:text-base"
-                        style={{
-                          background:
-                            "linear-gradient(to right, #2563eb, #1e40af)",
-                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                        }}
                         size="lg"
                       >
                         <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />

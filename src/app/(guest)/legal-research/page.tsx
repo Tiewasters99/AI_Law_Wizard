@@ -15,7 +15,6 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { colors } from "@/lib/frontend/designSystem";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import {
   ArrowLeft,
@@ -42,6 +41,7 @@ import {
   Lightbulb,
   TrendingUp,
   Zap,
+  Scale,
 } from "lucide-react";
 
 interface Message {
@@ -487,7 +487,7 @@ export default function LegalChatPage() {
   }, [messages]);
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-gray-50 flex overflow-hidden">
+    <div className="h-[calc(100vh-64px)] bg-background flex overflow-hidden">
       {/* Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -507,13 +507,13 @@ export default function LegalChatPage() {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: "tween", duration: 0.2 }}
-              className="fixed lg:relative top-0 left-0 h-full w-72 bg-white border-r border-gray-200 z-50 flex flex-col"
+              className="fixed lg:relative top-0 left-0 h-full w-72 bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
             >
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-4 border-b border-sidebar-border">
                 <div className="flex items-center justify-between">
                   <h2
                     className="text-lg font-semibold"
-                    style={{ color: colors.text }}
+                    className="text-sidebar-foreground"
                   >
                     Legal Research
                   </h2>
@@ -521,7 +521,7 @@ export default function LegalChatPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleNewChat}
-                    className="text-blue-600 hover:text-blue-700"
+                    className="text-primary hover:text-primary/80"
                   >
                     New Chat
                   </Button>
@@ -529,11 +529,11 @@ export default function LegalChatPage() {
               </div>
 
               {/* Consultation Type Selection */}
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-4 border-b border-sidebar-border">
                 <h3 className="text-sm font-semibold mb-3 flex items-center">
                   <Briefcase
                     className="w-4 h-4 mr-2"
-                    style={{ color: colors.primary[700] }}
+                    className="text-primary"
                   />
                   Consultation Type
                 </h3>
@@ -550,8 +550,8 @@ export default function LegalChatPage() {
                       onClick={() => setSelectedConsultationType(type)}
                       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                         selectedConsultationType === type
-                          ? "bg-blue-50 text-blue-900 border border-blue-200"
-                          : "text-gray-600 hover:bg-gray-100"
+                          ? "bg-accent/50 text-primary border border-primary/20"
+                          : "text-muted-foreground hover:bg-sidebar-accent"
                       }`}
                     >
                       {type}
@@ -564,7 +564,7 @@ export default function LegalChatPage() {
               <div className="p-4">
                 <h3
                   className="text-sm font-semibold mb-3"
-                  style={{ color: colors.text }}
+                          className="text-foreground"
                 >
                   Professional Services
                 </h3>
@@ -588,27 +588,27 @@ export default function LegalChatPage() {
                   ].map((feature, idx) => (
                     <div
                       key={idx}
-                      className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-start space-x-3 p-3 rounded-lg hover:bg-sidebar-accent transition-colors"
                     >
                       <div
                         className="p-2 rounded"
-                        style={{ backgroundColor: colors.primary[50] }}
+                        className="p-2 rounded bg-accent"
                       >
                         <feature.icon
                           className="w-4 h-4"
-                          style={{ color: colors.primary[700] }}
+                          className="text-primary"
                         />
                       </div>
                       <div>
                         <h4
                           className="text-sm font-medium"
-                          style={{ color: colors.text }}
+                          className="text-sidebar-foreground"
                         >
                           {feature.title}
                         </h4>
                         <p
                           className="text-xs"
-                          style={{ color: colors.secondary[600] }}
+                          className="text-muted-foreground"
                         >
                           {feature.desc}
                         </p>
@@ -623,12 +623,9 @@ export default function LegalChatPage() {
       </AnimatePresence>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
+      <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Header */}
-        <div
-          className="flex-shrink-0 bg-white border-b shadow-sm"
-          style={{ borderColor: colors.secondary[200] }}
-        >
+        <div className="flex-shrink-0 bg-background border-b border-border shadow-sm">
           <div className="px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -636,7 +633,7 @@ export default function LegalChatPage() {
                   variant="ghost"
                   size="sm"
                   onClick={toggleSidebar}
-                  className="hover:bg-gray-50 lg:hidden"
+                  className="hover:bg-muted lg:hidden"
                 >
                   <Menu className="w-5 h-5" />
                 </Button>
@@ -644,37 +641,23 @@ export default function LegalChatPage() {
                   variant="ghost"
                   size="sm"
                   onClick={handleBack}
-                  className="hover:bg-gray-50"
+                  className="hover:bg-muted"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
-                <div
-                  className="hidden lg:block p-2 rounded-lg"
-                  style={{ backgroundColor: colors.primary[50] }}
-                >
-                  <Image
-                    src="/images/logo_icon.png"
-                    alt="AI Wizard Logo"
-                    width={20}
-                    height={20}
-                  />
+                <div className="hidden lg:block p-2 rounded-lg bg-primary/10">
+                  <Scale className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h1
-                    className="text-base sm:text-lg font-semibold"
-                    style={{ color: colors.text }}
-                  >
+                  <h1 className="text-base sm:text-lg font-semibold text-foreground">
                     Legal Research Assistant
                   </h1>
-                  <p
-                    className="text-xs sm:text-sm"
-                    style={{ color: colors.secondary[500] }}
-                  >
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {selectedConsultationType} • AI-Powered Legal Research
                     {sessionId && (
-                      <span className="ml-2 inline-flex items-center gap-1 text-green-600">
+                      <span className="ml-2 inline-flex items-center gap-1 text-primary">
                         •{" "}
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />{" "}
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />{" "}
                         Context Active
                       </span>
                     )}
@@ -685,25 +668,15 @@ export default function LegalChatPage() {
                 {isAttorney && (
                   <Badge
                     variant="outline"
-                    className="border-amber-200"
-                    style={{
-                      color: colors.accent[700],
-                      backgroundColor: colors.accent[50],
-                    }}
+                    className="bg-accent/50 text-accent-foreground border-accent"
                   >
                     <Shield className="w-3 h-3 mr-1" />
                     Attorney Access
                   </Badge>
                 )}
                 {session?.user && (
-                  <div
-                    className="flex items-center space-x-2 text-sm"
-                    style={{ color: colors.secondary[600] }}
-                  >
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: colors.success[500] }}
-                    />
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
                     <span>Online</span>
                   </div>
                 )}
@@ -713,20 +686,20 @@ export default function LegalChatPage() {
         </div>
 
         {/* Messages */}
-        <div ref={scrollAreaRef} className="flex-1 overflow-y-auto bg-gray-50">
+        <div ref={scrollAreaRef} className="flex-1 overflow-y-auto bg-background">
           <div className="w-full">
             {/* Quick Prompts - Show when no messages or when explicitly shown */}
             {messages.length === 0 && showQuickPrompts && (
               <div className="p-6">
                 <div className="max-w-4xl mx-auto">
                   <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
-                      <Sparkles className="w-8 h-8 text-blue-600" />
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent mb-4">
+                      <Sparkles className="w-8 h-8 text-primary" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    <h2 className="text-2xl font-bold text-foreground mb-2">
                       Welcome to Legal Research Assistant
                     </h2>
-                    <p className="text-gray-600 mb-6">
+                    <p className="text-muted-foreground mb-6">
                       Get instant legal guidance and research assistance. Choose
                       a topic below or ask your own question.
                     </p>
@@ -739,20 +712,20 @@ export default function LegalChatPage() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleQuickPrompt(prompt)}
-                        className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+                        className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
                       >
                         <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                            <prompt.icon className="w-5 h-5 text-blue-600" />
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-accent flex items-center justify-center group-hover:bg-accent/80 transition-colors">
+                            <prompt.icon className="w-5 h-5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                            <h3 className="font-semibold text-foreground text-sm mb-1">
                               {prompt.title}
                             </h3>
-                            <p className="text-xs text-gray-600 mb-2">
+                            <p className="text-xs text-muted-foreground mb-2">
                               {prompt.description}
                             </p>
-                            <div className="flex items-center text-xs text-blue-600 group-hover:text-blue-700">
+                            <div className="flex items-center text-xs text-primary group-hover:text-primary/80">
                               <span>Try this prompt</span>
                               <ChevronDown className="w-3 h-3 ml-1" />
                             </div>
@@ -763,10 +736,10 @@ export default function LegalChatPage() {
                   </div>
 
                   <div className="text-center mt-8">
-                    <p className="text-sm text-gray-500 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Or type your own legal question below
                     </p>
-                    <div className="flex items-center justify-center space-x-2 text-xs text-gray-400">
+                    <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
                       <TrendingUp className="w-4 h-4" />
                       <span>Powered by AI • Secure & Confidential</span>
                     </div>
@@ -802,14 +775,14 @@ export default function LegalChatPage() {
                       <div
                         className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                           message.role === "user"
-                            ? "bg-blue-600"
-                            : "bg-gray-600"
+                            ? "bg-primary"
+                            : "bg-muted"
                         }`}
                       >
                         {message.role === "user" ? (
-                          <User className="w-4 h-4 text-white" />
+                          <User className="w-4 h-4 text-primary-foreground" />
                         ) : (
-                          <Bot className="w-4 h-4 text-white" />
+                          <Bot className="w-4 h-4 text-foreground" />
                         )}
                       </div>
                       <div
@@ -820,27 +793,27 @@ export default function LegalChatPage() {
                         <div
                           className={`inline-block p-4 rounded-lg ${
                             message.role === "user"
-                              ? "bg-blue-600 text-white"
-                              : "bg-white border border-gray-200"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-card border border-border"
                           }`}
                         >
                           {message.isTyping ? (
                             <div className="flex items-center space-x-2">
                               <div className="flex space-x-1">
                                 <div
-                                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                  className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
                                   style={{ animationDelay: "0ms" }}
                                 ></div>
                                 <div
-                                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                  className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
                                   style={{ animationDelay: "150ms" }}
                                 ></div>
                                 <div
-                                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                  className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"
                                   style={{ animationDelay: "300ms" }}
                                 ></div>
                               </div>
-                              <span className="text-sm text-gray-600">
+                              <span className="text-sm text-muted-foreground">
                                 {typingText}
                               </span>
                             </div>
@@ -849,7 +822,7 @@ export default function LegalChatPage() {
                           )}
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             {message.timestamp.toLocaleTimeString()}
                           </span>
                           {message.role === "assistant" &&
@@ -860,10 +833,10 @@ export default function LegalChatPage() {
                                 onClick={() =>
                                   handleCopy(message.content, message.id)
                                 }
-                                className="h-6 w-6 p-0 hover:bg-gray-100"
+                                className="h-6 w-6 p-0 hover:bg-muted"
                               >
                                 {copiedMessageId === message.id ? (
-                                  <Check className="w-3 h-3 text-green-600" />
+                                  <Check className="w-3 h-3 text-chart-1" />
                                 ) : (
                                   <Copy className="w-3 h-3" />
                                 )}
@@ -883,8 +856,7 @@ export default function LegalChatPage() {
 
         {/* Input Area */}
         <div
-          className="flex-shrink-0 border-t bg-white py-4"
-          style={{ borderColor: colors.secondary[200] }}
+          className="flex-shrink-0 border-t border-border bg-background py-4"
         >
           <div className="px-4 max-w-5xl mx-auto">
             {/* Quick Actions Bar */}
@@ -910,7 +882,7 @@ export default function LegalChatPage() {
                     New Chat
                   </Button>
                 </div>
-                <div className="flex items-center space-x-2 text-xs text-gray-500">
+                <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                   <Clock className="w-3 h-3" />
                   <span>{messages.length} messages</span>
                 </div>
@@ -934,7 +906,7 @@ export default function LegalChatPage() {
                 />
                 {inputMessage.trim() && (
                   <div className="absolute right-2 top-2 flex items-center space-x-1">
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       {inputMessage.length}/2000
                     </span>
                   </div>
@@ -956,28 +928,28 @@ export default function LegalChatPage() {
 
             {/* Enhanced Legal Disclaimer */}
             <div className="mt-3">
-              <div className="text-center text-xs text-gray-500 space-y-1.5">
+              <div className="text-center text-xs text-muted-foreground space-y-1.5">
                 <p className="flex items-center justify-center gap-1.5 flex-wrap">
                   <span className="inline-flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     AI-generated legal information
                   </span>
-                  <span className="text-gray-400">•</span>
+                  <span className="text-muted-foreground">•</span>
                   <span>Not legal advice</span>
-                  <span className="text-gray-400">•</span>
+                  <span className="text-muted-foreground">•</span>
                   <Link
                     href="/directory"
-                    className="text-blue-600 hover:text-blue-700 hover:underline font-medium transition-colors"
+                    className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
                   >
                     Consult an attorney
                   </Link>
                 </p>
                 {!session && (
-                  <p className="text-gray-400 text-[11px]">
+                  <p className="text-muted-foreground/70 text-[11px]">
                     Sign in for secure communication with attorneys
                   </p>
                 )}
-                <div className="flex items-center justify-center space-x-4 text-[10px] text-gray-400 mt-2">
+                <div className="flex items-center justify-center space-x-4 text-[10px] text-muted-foreground/70 mt-2">
                   <span className="flex items-center">
                     <Shield className="w-3 h-3 mr-1" />
                     Secure & Confidential

@@ -131,28 +131,28 @@ export function DocketDashboard({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-blue-700 to-blue-800 rounded-xl p-8 text-white"
+          className="bg-gradient-to-br from-primary to-primary/80 rounded-xl p-8 text-primary-foreground"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-3xl font-bold mb-2">
                 Welcome to Docket Genie
               </h2>
-              <p className="text-blue-100 mb-6">
+              <p className="text-primary-foreground/80 mb-6">
                 Search federal court records, view dockets, and download
                 documents directly from PACER.
               </p>
               <Button
                 onClick={onConnect}
                 size="lg"
-                className="bg-white text-blue-700 hover:bg-blue-50 font-semibold"
+                className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold"
               >
                 <Lock className="w-5 h-5 mr-2" />
                 Connect to PACER
               </Button>
             </div>
-            <div className="hidden lg:block w-32 h-32 bg-white/10 rounded-2xl flex items-center justify-center">
-              <FileText className="w-16 h-16 text-white/80" />
+            <div className="hidden lg:block w-32 h-32 bg-primary-foreground/10 rounded-2xl flex items-center justify-center">
+              <FileText className="w-16 h-16 text-primary-foreground/80" />
             </div>
           </div>
         </motion.div>
@@ -189,42 +189,42 @@ export function DocketDashboard({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6"
+        className="bg-gradient-to-br from-chart-1/10 to-chart-1/5 border-2 border-chart-1/30 rounded-xl p-6"
       >
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center">
-              <Unlock className="w-8 h-8 text-green-600" />
+            <div className="w-16 h-16 bg-chart-1/20 rounded-xl flex items-center justify-center">
+              <Unlock className="w-8 h-8 text-chart-1" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-green-900 mb-1">
+              <h3 className="text-xl font-bold text-chart-1 mb-1">
                 Connected to PACER
               </h3>
-              <p className="text-sm text-green-700">
+              <p className="text-sm text-chart-1/80">
                 Logged in as: <strong>{username}</strong>
               </p>
             </div>
           </div>
           <div className="flex items-center gap-6">
             <div className="text-center">
-              <div className="flex items-center gap-2 text-green-700 mb-1">
+              <div className="flex items-center gap-2 text-chart-1 mb-1">
                 <Clock className="w-4 h-4" />
                 <span className="text-xs font-medium uppercase">
                   Time Remaining
                 </span>
               </div>
-              <div className="text-2xl font-bold font-mono text-green-900">
+              <div className="text-2xl font-bold font-mono text-chart-1">
                 {timeRemaining || "Active"}
               </div>
             </div>
-            <div className="text-center border-l border-green-300 pl-6">
-              <div className="flex items-center gap-2 text-green-700 mb-1">
+            <div className="text-center border-l border-chart-1/30 pl-6">
+              <div className="flex items-center gap-2 text-chart-1 mb-1">
                 <DollarSign className="w-4 h-4" />
                 <span className="text-xs font-medium uppercase">
                   Session Cost
                 </span>
               </div>
-              <div className="text-2xl font-bold text-green-900">
+              <div className="text-2xl font-bold text-chart-1">
                 ${sessionCost.toFixed(2)}
               </div>
             </div>
@@ -262,16 +262,16 @@ export function DocketDashboard({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-white border border-gray-200 rounded-xl p-6"
+        className="bg-card border border-border rounded-xl p-6"
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Quick Search</h3>
+          <h3 className="text-lg font-bold text-foreground">Quick Search</h3>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-            className="text-blue-700 hover:text-blue-800"
+            className="text-primary hover:text-primary/80"
           >
             {showAdvancedSearch ? "Simple" : "Advanced"}
           </Button>
@@ -330,7 +330,7 @@ export function DocketDashboard({
                         ? "Enter party name"
                         : "Enter attorney name"
                   }
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
                 <Button type="submit" disabled={!quickSearchValue.trim()}>
                   <Search className="w-4 h-4 mr-2" />
@@ -341,7 +341,7 @@ export function DocketDashboard({
               {/* Search History */}
               {searchHistory.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  <span className="text-xs text-gray-500 font-medium">
+                  <span className="text-xs text-muted-foreground font-medium">
                     Recent:
                   </span>
                   {searchHistory.slice(0, 3).map((term, index) => (
@@ -349,7 +349,7 @@ export function DocketDashboard({
                       key={index}
                       type="button"
                       onClick={() => setQuickSearchValue(term)}
-                      className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                      className="text-xs px-2 py-1 bg-muted hover:bg-muted/80 rounded-md transition-colors"
                     >
                       {term}
                     </button>
@@ -370,10 +370,10 @@ export function DocketDashboard({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-white border border-gray-200 rounded-xl p-6"
+          className="bg-card border border-border rounded-xl p-6"
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
               <History className="w-5 h-5" />
               Recent Searches
             </h3>
@@ -385,27 +385,27 @@ export function DocketDashboard({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.5 + index * 0.05 }}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors group"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     {search.query.caseNumber && (
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-foreground">
                         Case: {search.query.caseNumber}
                       </span>
                     )}
                     {search.query.partyName && (
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-foreground">
                         Party: {search.query.partyName}
                       </span>
                     )}
                     {search.query.attorneyName && (
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-foreground">
                         Attorney: {search.query.attorneyName}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{new Date(search.timestamp).toLocaleString()}</span>
                     <span>•</span>
                     <span>{search.resultCount} results</span>
@@ -442,9 +442,9 @@ function FeatureCard({
   color: string;
 }) {
   const colorClasses = {
-    blue: "bg-blue-50 text-blue-700 border-blue-200",
-    purple: "bg-purple-50 text-purple-700 border-purple-200",
-    amber: "bg-amber-50 text-amber-700 border-amber-200",
+    blue: "bg-primary/10 text-primary border-primary/30",
+    purple: "bg-chart-4/10 text-chart-4 border-chart-4/30",
+    amber: "bg-chart-3/10 text-chart-3 border-chart-3/30",
   };
 
   return (
@@ -472,9 +472,9 @@ function StatsCard({
   delay: number;
 }) {
   const colorClasses = {
-    blue: "bg-blue-50 text-blue-700",
-    purple: "bg-purple-50 text-purple-700",
-    amber: "bg-amber-50 text-amber-700",
+    blue: "bg-primary/10 text-primary",
+    purple: "bg-chart-4/10 text-chart-4",
+    amber: "bg-chart-3/10 text-chart-3",
   };
 
   return (
@@ -482,7 +482,7 @@ function StatsCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay }}
-      className="bg-white border border-gray-200 rounded-xl p-4"
+      className="bg-card border border-border rounded-xl p-4"
     >
       <div className="flex items-center gap-3">
         <div
@@ -491,8 +491,8 @@ function StatsCard({
           {icon}
         </div>
         <div>
-          <p className="text-sm text-gray-600">{label}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold text-foreground">{value}</p>
         </div>
       </div>
     </motion.div>
@@ -569,7 +569,7 @@ function AdvancedSearchForm({
       {/* Multiple Search Inputs */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-foreground">
             Search Terms ({searchTerms.filter(t => t.trim()).length} entered)
           </label>
           <Button
@@ -577,7 +577,7 @@ function AdvancedSearchForm({
             size="sm"
             variant="outline"
             onClick={addSearchTerm}
-            className="text-blue-700 border-blue-200 hover:bg-blue-50"
+            className="text-primary border-primary/30 hover:bg-primary/10"
           >
             + Add Term
           </Button>
@@ -596,7 +596,7 @@ function AdvancedSearchForm({
                     ? `Party name ${index + 1}`
                     : `Attorney name ${index + 1}`
               }
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
             {searchTerms.length > 1 && (
               <Button
@@ -604,7 +604,7 @@ function AdvancedSearchForm({
                 size="sm"
                 variant="ghost"
                 onClick={() => removeSearchTerm(index)}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 ×
               </Button>
@@ -617,14 +617,14 @@ function AdvancedSearchForm({
       <Button
         type="submit"
         disabled={searchTerms.filter(t => t.trim()).length === 0}
-        className="w-full bg-blue-700 hover:bg-blue-800"
+        className="w-full"
       >
         <Search className="w-4 h-4 mr-2" />
         Search All Terms ({searchTerms.filter(t => t.trim()).length})
       </Button>
 
       {/* Help Text */}
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-muted-foreground">
         Each term will be searched separately. You can search multiple case
         numbers, party names, or attorney names at once.
       </p>

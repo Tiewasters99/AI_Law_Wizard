@@ -73,18 +73,18 @@ export function PacerAuthForm({
 
   if (isAuthenticated) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xl max-w-2xl mx-auto">
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 rounded-t-xl p-6">
+      <div className="bg-card rounded-xl border border-border shadow-xl max-w-2xl mx-auto">
+        <div className="bg-gradient-to-r from-chart-1/10 to-chart-1/5 border-b border-chart-1/30 rounded-t-xl p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-                <Unlock className="w-7 h-7 text-green-600" />
+              <div className="w-14 h-14 bg-chart-1/20 rounded-xl flex items-center justify-center">
+                <Unlock className="w-7 h-7 text-chart-1" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-green-900 mb-1">
+                <h3 className="text-xl font-bold text-chart-1 mb-1">
                   Connected to PACER
                 </h3>
-                <p className="text-sm text-green-700">
+                <p className="text-sm text-chart-1/80">
                   Logged in as: <strong>{username}</strong>
                 </p>
               </div>
@@ -92,10 +92,10 @@ export function PacerAuthForm({
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-chart-1/10 rounded-lg transition-colors"
                 disabled={loading}
               >
-                <X className="w-5 h-5 text-green-600" />
+                <X className="w-5 h-5 text-chart-1" />
               </button>
             )}
           </div>
@@ -104,7 +104,7 @@ export function PacerAuthForm({
           <Button
             onClick={handleLogout}
             variant="outline"
-            className="w-full border-red-200 text-red-600 hover:bg-red-50"
+            className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
             disabled={loading}
           >
             Disconnect from PACER
@@ -115,17 +115,17 @@ export function PacerAuthForm({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-xl max-w-2xl mx-auto">
+    <div className="bg-card rounded-xl border border-border shadow-xl max-w-2xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-700 to-blue-800 rounded-t-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-primary to-primary/80 rounded-t-xl p-6 text-primary-foreground">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
-              <Lock className="w-7 h-7 text-white" />
+            <div className="w-14 h-14 bg-primary-foreground/20 rounded-xl flex items-center justify-center backdrop-blur">
+              <Lock className="w-7 h-7 text-primary-foreground" />
             </div>
             <div>
               <h2 className="text-2xl font-bold mb-1">Connect to PACER</h2>
-              <p className="text-sm text-blue-100">
+              <p className="text-sm text-primary-foreground/80">
                 Enter your credentials to access court records
               </p>
             </div>
@@ -133,20 +133,20 @@ export function PacerAuthForm({
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 hover:bg-primary-foreground/10 rounded-lg transition-colors"
               disabled={loading}
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-5 h-5 text-primary-foreground" />
             </button>
           )}
         </div>
       </div>
 
       {/* Info Alert */}
-      <div className="p-6 border-b border-gray-200">
-        <Alert className="bg-blue-50 border-blue-200">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-sm text-blue-900">
+      <div className="p-6 border-b border-border">
+        <Alert className="bg-primary/10 border-primary/30">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-sm text-foreground">
             Your credentials are not stored and are only used for this session.
             Standard PACER fees apply and will be billed directly to your PACER
             account.
@@ -157,9 +157,9 @@ export function PacerAuthForm({
       {/* Error Alert */}
       {error && (
         <div className="px-6 pt-4">
-          <Alert className="bg-red-50 border-red-200">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-sm text-red-900">
+          <Alert className="bg-destructive/10 border-destructive/30">
+            <AlertCircle className="h-4 w-4 text-destructive" />
+            <AlertDescription className="text-sm text-destructive">
               {error}
             </AlertDescription>
           </Alert>
@@ -219,7 +219,7 @@ export function PacerAuthForm({
         <button
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-800 font-medium transition-colors"
+          className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
         >
           {showAdvanced ? (
             <ChevronUp className="w-4 h-4" />
@@ -247,7 +247,7 @@ export function PacerAuthForm({
                     className="text-sm font-semibold mb-1.5 block"
                   >
                     Client Code{" "}
-                    <span className="text-gray-500 font-normal">
+                    <span className="text-muted-foreground font-normal">
                       (Optional)
                     </span>
                   </Label>
@@ -271,7 +271,7 @@ export function PacerAuthForm({
                     className="text-sm font-semibold mb-1.5 block"
                   >
                     One-Time Passcode{" "}
-                    <span className="text-gray-500 font-normal">
+                    <span className="text-muted-foreground font-normal">
                       (If MFA enabled)
                     </span>
                   </Label>
@@ -294,7 +294,7 @@ export function PacerAuthForm({
         </AnimatePresence>
 
         {/* Redaction Acknowledgment - Compact */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <div className="bg-chart-3/10 border border-chart-3/30 rounded-lg p-3">
           <div className="flex items-start gap-2">
             <input
               type="checkbox"
@@ -302,16 +302,16 @@ export function PacerAuthForm({
               checked={redactionAcknowledged}
               onChange={e => setRedactionAcknowledged(e.target.checked)}
               disabled={loading}
-              className="mt-0.5 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="mt-0.5 h-4 w-4 text-primary focus:ring-primary border-border rounded"
             />
             <div className="flex-1">
               <Label
                 htmlFor="redaction"
-                className="cursor-pointer text-sm font-semibold text-amber-900"
+                className="cursor-pointer text-sm font-semibold text-chart-3"
               >
                 I acknowledge federal redaction rules
               </Label>
-              <p className="text-xs text-amber-800 mt-1">
+              <p className="text-xs text-chart-3/80 mt-1">
                 Required for filers: I will redact SSNs, DOBs, minor names,
                 financial account numbers, and home addresses per Fed. R. App.
                 P. 25(a)(5), Fed. R. Civ. P. 5.2, Fed. R. Crim. P. 49.1, Fed. R.
@@ -341,7 +341,7 @@ export function PacerAuthForm({
         </Button>
 
         {/* Fee Disclaimer */}
-        <p className="text-xs text-gray-500 text-center pt-2 border-t border-gray-200">
+        <p className="text-xs text-muted-foreground text-center pt-2 border-t border-border">
           By connecting, you acknowledge that PACER fees ($0.10/page, $3.00 cap
           per document) will be billed to your PACER account.
         </p>

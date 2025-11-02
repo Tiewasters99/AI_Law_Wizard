@@ -4,7 +4,6 @@ import { useCallback } from "react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-import { colors } from "@/lib/frontend/designSystem";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -45,21 +44,14 @@ export function ClientTopBar() {
   }, []);
 
   return (
-    <div
-      className="h-16 border-b flex items-center justify-between px-6"
-      style={{
-        backgroundColor: "white",
-        borderColor: colors.secondary[200],
-        boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-      }}
-    >
+    <div className="h-16 border-b border-border bg-background shadow-sm flex items-center justify-between px-6">
       {/* Logo */}
       <Link
         href="/client/dashboard"
         className="flex items-center hover:opacity-80 transition-opacity"
       >
         <Image
-          src="/images/ai_law_wizard_logo_v1.png"
+          src="/images/ai_law_wizard_logo_v1.svg"
           alt="AI Law Wizard"
           width={1964}
           height={468}
@@ -74,26 +66,19 @@ export function ClientTopBar() {
         <Button
           variant="outline"
           size="sm"
-          className="hidden md:flex items-center space-x-2"
-          style={{
-            borderColor: colors.success[300],
-            color: colors.success[700],
-            backgroundColor: colors.success[50],
-          }}
+          className="hidden md:flex items-center space-x-2 border-border hover:bg-muted"
         >
-          <HelpCircle className="w-4 h-4" />
-          <span className="text-sm font-medium">Help Center</span>
+          <HelpCircle className="w-4 h-4 text-foreground" />
+          <span className="text-sm font-medium text-foreground">
+            Help Center
+          </span>
         </Button>
 
         {/* Quick Action - Find Attorney */}
         <Button
           asChild
           size="sm"
-          className="hidden lg:flex"
-          style={{
-            backgroundColor: colors.primary[700],
-            color: "white",
-          }}
+          className="hidden lg:flex bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           <Link
             href="/client/directory"
@@ -108,12 +93,11 @@ export function ClientTopBar() {
         <Button
           variant="outline"
           size="sm"
-          className="relative"
-          style={{ borderColor: colors.secondary[300] }}
+          className="relative border-border hover:bg-muted"
           asChild
         >
           <Link href="/client/inbox">
-            <Bell className="w-4 h-4" />
+            <Bell className="w-4 h-4 text-foreground" />
             {counts.total > 0 && (
               <Badge
                 variant="destructive"
@@ -130,7 +114,7 @@ export function ClientTopBar() {
           variant="outline"
           size="sm"
           onClick={handleSignOut}
-          className="hidden sm:flex items-center space-x-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+          className="hidden sm:flex items-center space-x-2 border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-colors"
         >
           <LogOut className="w-4 h-4" />
           <span className="hidden md:inline text-sm font-medium">Sign Out</span>
@@ -140,14 +124,10 @@ export function ClientTopBar() {
         <div className="relative" ref={dropdownRef}>
           <Button
             variant="outline"
-            className="flex items-center space-x-2"
-            style={{ borderColor: colors.secondary[300] }}
+            className="flex items-center space-x-2 border-border hover:bg-muted"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: colors.primary[100] }}
-            >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-accent border border-border">
               {session?.user?.image ? (
                 <Image
                   src={session.user.image}
@@ -157,60 +137,39 @@ export function ClientTopBar() {
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
-                <User
-                  className="w-4 h-4"
-                  style={{ color: colors.primary[700] }}
-                />
+                <User className="w-4 h-4 text-primary" />
               )}
             </div>
-            <span
-              className="hidden md:inline text-sm font-medium"
-              style={{ color: colors.text }}
-            >
+            <span className="hidden md:inline text-sm font-medium text-foreground">
               {session?.user?.name || "My Account"}
             </span>
-            <ChevronDown
-              className="w-4 h-4"
-              style={{ color: colors.secondary[600] }}
-            />
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </Button>
 
           {/* Dropdown Menu */}
           {isDropdownOpen && (
-            <div
-              className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-50"
-              style={{ borderColor: colors.secondary[200] }}
-            >
-              <div
-                className="p-3 border-b"
-                style={{ borderColor: colors.secondary[200] }}
-              >
+            <div className="absolute right-0 mt-2 w-56 bg-popover border border-border rounded-md shadow-lg z-50">
+              <div className="p-3 border-b border-border">
                 <div className="flex flex-col space-y-1">
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: colors.text }}
-                  >
+                  <p className="text-sm font-medium text-popover-foreground">
                     {session?.user?.name || "User"}
                   </p>
-                  <p
-                    className="text-xs"
-                    style={{ color: colors.secondary[600] }}
-                  >
+                  <p className="text-xs text-muted-foreground">
                     {session?.user?.email}
                   </p>
                 </div>
               </div>
               <div className="py-1">
                 <Link href="/client/profile" className="block">
-                  <div className="flex items-center px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer">
-                    <User className="w-4 h-4 mr-2" />
-                    My Profile
+                  <div className="flex items-center px-3 py-2 text-sm hover:bg-accent cursor-pointer transition-colors">
+                    <User className="w-4 h-4 mr-2 text-foreground" />
+                    <span className="text-foreground">My Profile</span>
                   </div>
                 </Link>
                 <Link href="/client/tokens" className="block">
-                  <div className="flex items-center px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer">
-                    <Settings className="w-4 h-4 mr-2" />
-                    My Credits
+                  <div className="flex items-center px-3 py-2 text-sm hover:bg-accent cursor-pointer transition-colors">
+                    <Settings className="w-4 h-4 mr-2 text-foreground" />
+                    <span className="text-foreground">My Credits</span>
                   </div>
                 </Link>
               </div>

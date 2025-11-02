@@ -80,7 +80,7 @@ const DropdownMenuTrigger = React.forwardRef<
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50",
         className
       )}
       onClick={handleClick}
@@ -105,7 +105,7 @@ const DropdownMenuContent = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "absolute z-50 min-w-[8rem] rounded-md border bg-white p-1 shadow-lg",
+        "absolute z-50 min-w-[8rem] rounded-md border bg-popover text-popover-foreground p-1 shadow-lg",
         align === "end" ? "right-0" : "left-0",
         "top-full mt-1",
         className
@@ -128,7 +128,7 @@ const DropdownMenuItem = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-gray-100 focus:bg-gray-100",
+        "flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent",
         className
       )}
       {...props}
@@ -148,7 +148,7 @@ const DropdownMenuLabel = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "px-2 py-1.5 text-sm font-semibold text-gray-900",
+        "px-2 py-1.5 text-sm font-semibold text-foreground",
         className
       )}
       {...props}
@@ -167,7 +167,7 @@ const DropdownMenuSeparator = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("my-1 h-px bg-gray-200", className)}
+      className={cn("my-1 h-px bg-border", className)}
       {...props}
     />
   );

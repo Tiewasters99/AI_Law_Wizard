@@ -122,14 +122,14 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
+      className="bg-card border border-border rounded-xl shadow-sm overflow-hidden"
     >
       <form onSubmit={handleSubmit} className="p-4">
         {/* Header with presets */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Search className="w-5 h-5 text-blue-700" />
-            <h3 className="text-lg font-bold text-gray-900">Search Cases</h3>
+            <Search className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold text-foreground">Search Cases</h3>
           </div>
           <div className="flex items-center gap-2">
             {/* Quick Presets */}
@@ -183,10 +183,10 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
 
         {/* Validation Error */}
         {validationError && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+          <div className="mb-4 bg-destructive/10 border border-destructive/30 rounded-lg p-3 flex items-start gap-2">
             <div className="flex-shrink-0 mt-0.5">
               <svg
-                className="w-4 h-4 text-red-600"
+                className="w-4 h-4 text-destructive"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -197,7 +197,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
                 />
               </svg>
             </div>
-            <p className="text-sm text-red-800">{validationError}</p>
+            <p className="text-sm text-destructive">{validationError}</p>
           </div>
         )}
 
@@ -207,7 +207,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
           <div>
             <Label
               htmlFor="caseNumber"
-              className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1"
+              className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1"
             >
               <Hash className="w-3 h-3" />
               Case Number
@@ -227,7 +227,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
           <div>
             <Label
               htmlFor="partyName"
-              className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1"
+              className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1"
             >
               <User className="w-3 h-3" />
               Party Name
@@ -247,7 +247,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
           <div>
             <Label
               htmlFor="attorneyName"
-              className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1"
+              className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3" />
               Attorney Name
@@ -268,7 +268,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
         <div className="mb-4">
           <Label
             htmlFor="caseTitle"
-            className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1"
+            className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1"
           >
             <FileText className="w-3 h-3" />
             Case Title
@@ -288,7 +288,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
         <button
           type="button"
           onClick={handleAdvancedToggle}
-          className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-800 font-medium mb-3 transition-colors"
+          className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium mb-3 transition-colors"
         >
           {showAdvanced ? (
             <ChevronUp className="w-4 h-4" />
@@ -308,13 +308,13 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="border-t border-gray-200 pt-4 mb-4">
+              <div className="border-t border-border pt-4 mb-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {/* Court */}
                   <div className="md:col-span-3">
                     <Label
                       htmlFor="court"
-                      className="text-xs font-semibold text-gray-700 mb-1"
+                      className="text-xs font-semibold text-muted-foreground mb-1"
                     >
                       Court (Optional)
                     </Label>
@@ -323,7 +323,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
                       value={searchParams.court || ""}
                       onChange={e => handleInputChange("court", e.target.value)}
                       disabled={loading}
-                      className="w-full h-9 px-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="w-full h-9 px-3 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
                     >
                       <option value="">All Courts</option>
                       {PACER_COURTS.map(court => (
@@ -338,7 +338,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
                   <div>
                     <Label
                       htmlFor="filingDateFrom"
-                      className="text-xs font-semibold text-gray-700 mb-1"
+                      className="text-xs font-semibold text-muted-foreground mb-1"
                     >
                       Filing From
                     </Label>
@@ -356,7 +356,7 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
                   <div>
                     <Label
                       htmlFor="filingDateTo"
-                      className="text-xs font-semibold text-gray-700 mb-1"
+                      className="text-xs font-semibold text-muted-foreground mb-1"
                     >
                       Filing To
                     </Label>
@@ -397,14 +397,14 @@ export function CaseSearchForm({ onSearch, loading }: CaseSearchFormProps) {
 
           {/* Search hint */}
           {!hasRequiredField && !loading && (
-            <span className="text-xs text-gray-500 hidden sm:block">
+            <span className="text-xs text-muted-foreground hidden sm:block">
               Enter at least one field above
             </span>
           )}
         </div>
 
         {/* Info Footer */}
-        <p className="text-xs text-gray-500 text-center mt-3 pt-3 border-t border-gray-100">
+        <p className="text-xs text-muted-foreground text-center mt-3 pt-3 border-t border-border">
           Results limited to 50 cases. Standard PACER fees apply ($0.10 per
           page).
         </p>

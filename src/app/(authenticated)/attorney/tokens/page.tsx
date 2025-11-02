@@ -64,9 +64,9 @@ export default function TokensPage() {
         title: "Available Credits",
         value: wallet?.tokens || 0,
         icon: Coins,
-        iconColor: "text-blue-700",
-        bgColor: "bg-blue-50",
-        borderColor: "border-blue-200",
+        iconColor: "text-primary",
+        bgColor: "bg-accent",
+        borderColor: "border-primary/20",
       },
       {
         title: "Credits Used",
@@ -153,20 +153,20 @@ export default function TokensPage() {
         transition={{ duration: 0.3 }}
       >
         {/* Professional Header */}
-        <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
           <div>
             <div className="flex items-center space-x-3 mb-2">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm bg-blue-700">
-                <Coins className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm bg-primary">
+                <Coins className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-slate-900">
+                <h1 className="text-3xl font-bold text-foreground">
                   Service Credit Management
                 </h1>
                 {isAttorney && (
                   <Badge
                     variant="outline"
-                    className="mt-1 text-blue-700 bg-blue-50 border-blue-200"
+                    className="mt-1 text-primary bg-accent border-primary/20"
                   >
                     <Award className="w-3 h-3 mr-1" />
                     Attorney Account
@@ -174,13 +174,13 @@ export default function TokensPage() {
                 )}
               </div>
             </div>
-            <p className="mt-2 text-slate-600">
+            <p className="mt-2 text-muted-foreground">
               Professional legal analysis credits for AI-powered services
             </p>
           </div>
-          <div className="flex items-center space-x-2 p-3 rounded-lg border bg-blue-50 border-blue-200">
-            <Shield className="w-5 h-5 text-blue-700" />
-            <span className="text-sm font-semibold text-blue-900">
+          <div className="flex items-center space-x-2 p-3 rounded-lg border bg-accent border-primary/20">
+            <Shield className="w-5 h-5 text-primary" />
+            <span className="text-sm font-semibold text-primary">
               Secure Platform
             </span>
           </div>
@@ -203,10 +203,10 @@ export default function TokensPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium mb-1 text-slate-700">
+                        <p className="text-sm font-medium mb-1 text-foreground">
                           {stat.title}
                         </p>
-                        <p className="text-3xl font-bold text-slate-900">
+                        <p className="text-3xl font-bold text-foreground">
                           {stat.value}
                         </p>
                       </div>
@@ -223,7 +223,7 @@ export default function TokensPage() {
 
         {/* Professional Actions */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-slate-900">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">
             Credit Management
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -236,17 +236,17 @@ export default function TokensPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                 >
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow border border-gray-200">
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow border border-border">
                     <CardContent className="p-4">
                       <div className="flex items-start space-x-3">
-                        <div className="p-2 rounded-lg bg-blue-50">
-                          <Icon className="w-5 h-5 text-blue-700" />
+                        <div className="p-2 rounded-lg bg-accent">
+                          <Icon className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-sm mb-1 text-slate-900">
+                          <h3 className="font-semibold text-sm mb-1 text-foreground">
                             {action.title}
                           </h3>
-                          <p className="text-xs text-slate-600">
+                          <p className="text-xs text-muted-foreground">
                             {action.description}
                           </p>
                         </div>
@@ -261,7 +261,7 @@ export default function TokensPage() {
 
         {/* Professional Credit Purchase Section */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-slate-900">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">
             Purchase Service Credits
           </h2>
           <Card className="border shadow-sm border-gray-200">
@@ -272,39 +272,33 @@ export default function TokensPage() {
         </div>
 
         {/* Professional Usage Information */}
-        <div className="rounded-xl p-6 border bg-slate-50 border-gray-200">
+        <div className="rounded-xl p-6 border bg-muted border-border">
           <div className="flex items-center space-x-3 mb-4">
-            <FileText className="w-5 h-5 text-blue-700" />
-            <h3 className="text-lg font-semibold text-slate-900">
+            <FileText className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">
               Service Credit Information
             </h3>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold mb-2 text-blue-900">
+              <h4 className="text-sm font-semibold mb-2 text-primary">
                 Credit Usage
               </h4>
               <div className="flex items-start space-x-2">
-                <Clock className="w-4 h-4 mt-0.5 text-blue-700" />
-                <span className="text-sm text-slate-700">
+                <Clock className="w-4 h-4 mt-0.5 text-primary" />
+                <span className="text-sm text-foreground">
                   Standard legal analysis: 1-3 credits per query
                 </span>
               </div>
               <div className="flex items-start space-x-2">
                 <FileText className="w-4 h-4 mt-0.5 text-blue-700" />
-                <span className="text-sm text-slate-700">
+                <span className="text-sm text-foreground">
                   Complex document processing: 3-5 credits per document
                 </span>
               </div>
               <div className="flex items-start space-x-2">
-                <Image
-                  src="/images/logo_icon.png"
-                  alt="AI Wizard Logo"
-                  width={16}
-                  height={16}
-                  className="mt-0.5"
-                />
-                <span className="text-sm text-slate-700">
+                <Scale className="w-4 h-4 mt-0.5 text-primary" />
+                <span className="text-sm text-foreground">
                   Advanced case law research: 5-10 credits per session
                 </span>
               </div>
@@ -315,19 +309,19 @@ export default function TokensPage() {
               </h4>
               <div className="flex items-start space-x-2">
                 <Shield className="w-4 h-4 mt-0.5 text-green-700" />
-                <span className="text-sm text-slate-700">
+                <span className="text-sm text-foreground">
                   Credits never expire - lifetime validity
                 </span>
               </div>
               <div className="flex items-start space-x-2">
                 <Award className="w-4 h-4 mt-0.5 text-green-700" />
-                <span className="text-sm text-slate-700">
+                <span className="text-sm text-foreground">
                   Volume discounts for law firm packages
                 </span>
               </div>
               <div className="flex items-start space-x-2">
                 <BarChart3 className="w-4 h-4 mt-0.5 text-green-700" />
-                <span className="text-sm text-slate-700">
+                <span className="text-sm text-foreground">
                   Detailed usage analytics and reporting
                 </span>
               </div>

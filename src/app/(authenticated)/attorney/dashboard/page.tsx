@@ -16,10 +16,10 @@ export default function AttorneyDashboard() {
     <div className="p-8">
       {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
           Welcome back, Attorney
         </h1>
-        <p className="text-slate-600">
+        <p className="text-muted-foreground">
           Manage your clients, analyze documents, and grow your practice
         </p>
       </div>
@@ -29,11 +29,11 @@ export default function AttorneyDashboard() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
+            <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-slate-500">+0 from last month</p>
+            <p className="text-xs text-muted-foreground">+0 from last month</p>
           </CardContent>
         </Card>
 
@@ -42,11 +42,11 @@ export default function AttorneyDashboard() {
             <CardTitle className="text-sm font-medium">
               Unread Messages
             </CardTitle>
-            <MessageSquare className="h-4 w-4 text-purple-600" />
+            <MessageSquare className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-slate-500">New conversations</p>
+            <p className="text-xs text-muted-foreground">New conversations</p>
           </CardContent>
         </Card>
 
@@ -55,22 +55,22 @@ export default function AttorneyDashboard() {
             <CardTitle className="text-sm font-medium">
               Documents Processed
             </CardTitle>
-            <FileText className="h-4 w-4 text-green-600" />
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-slate-500">This month</p>
+            <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Query History</CardTitle>
-            <History className="h-4 w-4 text-orange-600" />
+            <History className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-slate-500">Total queries</p>
+            <p className="text-xs text-muted-foreground">Total queries</p>
           </CardContent>
         </Card>
       </div>

@@ -128,8 +128,8 @@ export default function ProfilePage() {
     return (
       <div className="p-8 space-y-6">
         <div className="animate-pulse">
-          <div className="h-16 bg-gray-200 rounded mb-6"></div>
-          <div className="h-96 bg-gray-200 rounded"></div>
+          <div className="h-16 bg-muted rounded mb-6"></div>
+          <div className="h-96 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -140,31 +140,31 @@ export default function ProfilePage() {
       {/* Header with profile status */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div className="w-14 h-14 rounded-xl bg-blue-700 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
             <User className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
-            <p className="text-slate-600 mt-1">Manage your attorney profile</p>
+            <h1 className="text-3xl font-bold text-foreground">Profile</h1>
+            <p className="text-muted-foreground mt-1">Manage your attorney profile</p>
           </div>
         </div>
         {profileData && (
           <div className="flex items-center space-x-2">
             {profileData.verified ? (
-              <Badge className="bg-green-100 text-green-800 border-green-200">
+              <Badge className="bg-accent text-primary border-primary/20">
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Verified
               </Badge>
             ) : (
               <Badge
                 variant="outline"
-                className="text-yellow-700 border-yellow-200"
+                className="text-primary border-primary/20"
               >
                 <AlertCircle className="w-3 h-3 mr-1" />
                 Pending Verification
               </Badge>
             )}
-            <Badge variant="outline" className="text-blue-700 border-blue-200">
+            <Badge variant="outline" className="text-primary border-primary/20">
               {profileData.role === "ATTORNEY" || profileData.role === "LAWYER"
                 ? "Attorney"
                 : "Client"}
@@ -337,7 +337,7 @@ export default function ProfilePage() {
       <div className="flex justify-end">
         <Button
           onClick={handleSubmit}
-          className="bg-blue-700 hover:bg-blue-800"
+          className="bg-primary hover:bg-primary/90"
           disabled={saving}
         >
           {saving ? (

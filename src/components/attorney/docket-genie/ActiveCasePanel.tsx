@@ -115,10 +115,10 @@ export function ActiveCasePanel({
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
           onClick={e => e.stopPropagation()}
-          className="absolute right-0 top-0 bottom-0 w-full sm:w-[90%] md:w-[70%] lg:w-[50%] xl:w-[40%] bg-white shadow-2xl overflow-hidden flex flex-col"
+          className="absolute right-0 top-0 bottom-0 w-full sm:w-[90%] md:w-[70%] lg:w-[50%] xl:w-[40%] bg-background shadow-2xl overflow-hidden flex flex-col"
         >
           {/* Panel Header */}
-          <div className="bg-gradient-to-r from-blue-700 to-blue-800 text-white p-4 flex-shrink-0">
+          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4 flex-shrink-0">
             <div className="flex items-start justify-between gap-4 mb-3">
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-bold mb-1 truncate">
@@ -126,7 +126,7 @@ export function ActiveCasePanel({
                     docket?.caseInfo.caseTitle ||
                     "Case Details"}
                 </h2>
-                <p className="text-sm text-blue-100 font-mono">
+                <p className="text-sm text-primary-foreground/80 font-mono">
                   {caseDetails?.caseNumber || docket?.caseInfo.caseNumber}
                 </p>
               </div>
@@ -135,7 +135,7 @@ export function ActiveCasePanel({
                   size="sm"
                   variant="ghost"
                   onClick={() => setIsPinned(!isPinned)}
-                  className="text-white hover:bg-white/20"
+                  className="text-primary-foreground hover:bg-primary-foreground/20"
                   title={isPinned ? "Unpin panel" : "Pin panel"}
                 >
                   {isPinned ? (
@@ -148,7 +148,7 @@ export function ActiveCasePanel({
                   size="sm"
                   variant="ghost"
                   onClick={onClose}
-                  className="text-white hover:bg-white/20"
+                  className="text-primary-foreground hover:bg-primary-foreground/20"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -161,8 +161,8 @@ export function ActiveCasePanel({
                 <span
                   className={`px-2 py-1 rounded text-xs font-semibold ${
                     (caseDetails?.status || docket?.caseInfo.status) === "Open"
-                      ? "bg-green-500/20 text-green-100"
-                      : "bg-gray-500/20 text-gray-100"
+                      ? "bg-chart-1/20 text-chart-1"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {caseDetails?.status || docket?.caseInfo.status}
@@ -173,7 +173,7 @@ export function ActiveCasePanel({
                   size="sm"
                   variant="ghost"
                   onClick={() => window.open(caseDetails.caseLink, "_blank")}
-                  className="text-white hover:bg-white/20 ml-auto"
+                  className="text-primary-foreground hover:bg-primary-foreground/20 ml-auto"
                 >
                   <ExternalLink className="w-4 h-4 mr-1" />
                   <span className="hidden sm:inline">CM/ECF</span>
@@ -186,19 +186,19 @@ export function ActiveCasePanel({
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full gap-4">
-                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                <p className="text-gray-600">Loading case information...</p>
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-muted-foreground">Loading case information...</p>
               </div>
             ) : !caseDetails && !docket ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                  <FileText className="w-8 h-8 text-gray-400" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                  <FileText className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
                     No Case Selected
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     Select a case from search results to view details and
                     docket.
                   </p>
@@ -210,7 +210,7 @@ export function ActiveCasePanel({
                 onValueChange={v => setActiveTab(v as "details" | "docket")}
                 className="h-full flex flex-col"
               >
-                <div className="border-b border-gray-200 px-4 pt-2 flex-shrink-0 bg-white sticky top-0 z-10">
+                <div className="border-b border-border px-4 pt-2 flex-shrink-0 bg-background sticky top-0 z-10">
                   <TabsList className="grid w-full grid-cols-2 max-w-md">
                     <TabsTrigger
                       value="details"
@@ -236,7 +236,7 @@ export function ActiveCasePanel({
                     {caseDetails ? (
                       <CaseDetailsView caseDetails={caseDetails} />
                     ) : (
-                      <div className="text-center text-gray-600 py-8">
+                      <div className="text-center text-muted-foreground py-8">
                         No case details available
                       </div>
                     )}
@@ -250,32 +250,31 @@ export function ActiveCasePanel({
                       />
                     ) : docketLoading ? (
                       <div className="flex flex-col items-center justify-center py-8 gap-4">
-                        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                        <p className="text-gray-600">
+                        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                        <p className="text-muted-foreground">
                           Loading docket report...
                         </p>
                       </div>
                     ) : docketError ? (
                       <div className="flex flex-col items-center justify-center py-8 gap-4 text-center">
-                        <AlertCircle className="w-12 h-12 text-red-500" />
+                        <AlertCircle className="w-12 h-12 text-destructive" />
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          <h3 className="text-lg font-semibold text-foreground mb-2">
                             Error Loading Docket
                           </h3>
-                          <p className="text-gray-600 mb-4">{docketError}</p>
+                          <p className="text-muted-foreground mb-4">{docketError}</p>
                           <Button onClick={handleFetchDocket} variant="outline">
                             Try Again
                           </Button>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center text-gray-600 py-8">
-                        <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                      <div className="text-center text-muted-foreground py-8">
+                        <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                         <p className="mb-4">No docket data available</p>
                         {sessionToken && (
                           <Button
                             onClick={handleFetchDocket}
-                            className="bg-blue-600 hover:bg-blue-700"
                           >
                             <FileText className="w-4 h-4 mr-2" />
                             Load Docket Report
@@ -290,7 +289,7 @@ export function ActiveCasePanel({
           </div>
 
           {/* Panel Footer */}
-          <div className="border-t border-gray-200 p-3 bg-gray-50 text-xs text-gray-500 text-center flex-shrink-0">
+          <div className="border-t border-border p-3 bg-muted/50 text-xs text-muted-foreground text-center flex-shrink-0">
             {isPinned ? (
               <span>
                 📌 Panel is pinned. Click outside won&apos;t close it.
@@ -314,59 +313,59 @@ export function ActiveCasePanel({
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6"
+                className="bg-card rounded-xl shadow-2xl max-w-md w-full p-6"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">
+                    <h3 className="text-lg font-bold text-foreground">
                       PACER Fee Estimate
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       Review estimated costs before proceeding
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="bg-muted/50 rounded-lg p-4 mb-6">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">Case:</span>
+                    <span className="text-sm text-muted-foreground">Case:</span>
                     <span className="font-mono text-sm font-semibold">
                       {feeEstimate.caseNumber}
                     </span>
                   </div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">Court:</span>
+                    <span className="text-sm text-muted-foreground">Court:</span>
                     <span className="text-sm font-semibold">
                       {feeEstimate.court.toUpperCase()}
                     </span>
                   </div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                       Estimated Pages:
                     </span>
                     <span className="text-sm font-semibold">
                       {feeEstimate.breakdown.docketPages}
                     </span>
                   </div>
-                  <div className="border-t border-gray-200 pt-2 mt-2">
+                  <div className="border-t border-border pt-2 mt-2">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-foreground">
                         Estimated Fee:
                       </span>
-                      <span className="text-xl font-bold text-blue-600">
+                      <span className="text-xl font-bold text-primary">
                         ${feeEstimate.estimatedFee.toFixed(2)}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+                <div className="bg-chart-3/10 border border-chart-3/30 rounded-lg p-3 mb-6">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-amber-800">
+                    <AlertCircle className="w-5 h-5 text-chart-3 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-chart-3">
                       <p className="font-semibold mb-1">Important:</p>
                       <p>
                         This is an estimate. Actual fees may vary based on the
@@ -387,7 +386,7 @@ export function ActiveCasePanel({
                   </Button>
                   <Button
                     onClick={handleConfirmFee}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="flex-1"
                     disabled={docketLoading}
                   >
                     {docketLoading ? (

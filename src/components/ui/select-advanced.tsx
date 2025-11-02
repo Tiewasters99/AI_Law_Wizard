@@ -50,7 +50,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
         ref={ref}
         type="button"
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
         onClick={() => setOpen(!open)}
@@ -104,7 +104,7 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
         ref={ref}
         data-select
         className={cn(
-          "absolute z-50 min-w-[8rem] overflow-hidden rounded-md border bg-white p-1 shadow-lg",
+          "absolute z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground p-1 shadow-lg",
           className
         )}
         {...props}
@@ -136,8 +136,8 @@ const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
       <div
         ref={ref}
         className={cn(
-          "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-          selectedValue === value && "bg-gray-100",
+          "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+          selectedValue === value && "bg-accent",
           className
         )}
         onClick={handleClick}

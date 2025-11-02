@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { colors } from "@/lib/frontend/designSystem";
 import { Menu, X, LogIn, UserPlus } from "lucide-react";
 
 export function GuestHeader() {
@@ -32,6 +31,10 @@ export function GuestHeader() {
   );
   const handleNavigateAttorney = useCallback(
     () => router.push("/attorney-features"),
+    [router]
+  );
+  const handleNavigateClient = useCallback(
+    () => router.push("/client-features"),
     [router]
   );
   const handleNavigatePricing = useCallback(
@@ -68,6 +71,11 @@ export function GuestHeader() {
         type: "link" as const,
       },
       {
+        label: "For Clients",
+        action: handleNavigateClient,
+        type: "link" as const,
+      },
+      {
         label: "Miniverse™",
         action: handleNavigateMiniverse,
         type: "link" as const,
@@ -81,6 +89,7 @@ export function GuestHeader() {
     [
       handleNavigateHome,
       handleNavigateAttorney,
+      handleNavigateClient,
       handleNavigateMiniverse,
       handleNavigatePricing,
     ]
@@ -89,20 +98,14 @@ export function GuestHeader() {
   return (
     <>
       <motion.header
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled
+            ? "bg-background/95 backdrop-blur-md border-b border-border shadow-sm"
+            : "bg-transparent border-b border-transparent"
+        }`}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.3 }}
-        style={{
-          backgroundColor: isScrolled
-            ? "rgba(255, 255, 255, 0.95)"
-            : "transparent",
-          backdropFilter: isScrolled ? "blur(12px)" : "none",
-          borderBottom: isScrolled
-            ? `1px solid ${colors.secondary[200]}`
-            : "1px solid transparent",
-          boxShadow: isScrolled ? "0 1px 3px 0 rgba(0, 0, 0, 0.1)" : "none",
-        }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -112,7 +115,7 @@ export function GuestHeader() {
               className="flex items-center hover:opacity-80 transition-opacity"
             >
               <Image
-                src="/images/ai_law_wizard_logo_v1.png"
+                src="/images/ai_law_wizard_logo_v1.svg"
                 alt="AI Law Wizard"
                 width={1964}
                 height={468}
@@ -127,8 +130,7 @@ export function GuestHeader() {
                 <button
                   key={item.label}
                   onClick={item.action}
-                  className="text-sm font-medium transition-colors hover:text-blue-600"
-                  style={{ color: colors.text }}
+                  className="text-sm font-medium text-foreground transition-colors hover:text-primary"
                 >
                   {item.label}
                 </button>
@@ -137,19 +139,14 @@ export function GuestHeader() {
 
             {/* Desktop CTAs */}
             <div className="hidden md:flex items-center space-x-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNavigateLogin}
-                style={{ borderColor: colors.secondary[300] }}
-              >
+              <Button variant="outline" size="sm" onClick={handleNavigateLogin}>
                 <LogIn className="w-4 h-4 mr-2" />
                 Sign In
               </Button>
               <Button
                 size="sm"
                 onClick={handleNavigateRegister}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all"
+                className="shadow-md transition-all"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
                 Sign Up
@@ -159,8 +156,7 @@ export function GuestHeader() {
             {/* Mobile Menu Button */}
             <button
               onClick={handleToggleMobileMenu}
-              className="md:hidden p-2 rounded-lg transition-colors"
-              style={{ color: colors.text }}
+              className="md:hidden p-2 rounded-lg transition-colors text-foreground"
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
@@ -193,29 +189,18 @@ export function GuestHeader() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="fixed top-0 right-0 bottom-0 w-72 z-50 md:hidden"
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.98)",
-                backdropFilter: "blur(20px)",
-                boxShadow: "-4px 0 6px -1px rgba(0, 0, 0, 0.1)",
-              }}
+              className="fixed top-0 right-0 bottom-0 w-72 z-50 md:hidden bg-background/98 backdrop-blur-xl shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)]"
             >
               {/* Close Button */}
-              <div
-                className="flex items-center justify-between p-6 border-b"
-                style={{ borderColor: colors.secondary[200] }}
-              >
-                <span
-                  className="text-lg font-semibold"
-                  style={{ color: colors.text }}
-                >
+              <div className="flex items-center justify-between p-6 border-b border-border">
+                <span className="text-lg font-semibold text-foreground">
                   Menu
                 </span>
                 <button
                   onClick={handleCloseMobileMenu}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="p-2 rounded-lg hover:bg-muted transition-colors"
                 >
-                  <X className="w-5 h-5" style={{ color: colors.text }} />
+                  <X className="w-5 h-5 text-foreground" />
                 </button>
               </div>
 
@@ -228,8 +213,7 @@ export function GuestHeader() {
                       item.action();
                       handleCloseMobileMenu();
                     }}
-                    className="w-full text-left px-4 py-3 rounded-lg font-medium transition-colors hover:bg-gray-100"
-                    style={{ color: colors.text }}
+                    className="w-full text-left px-4 py-3 rounded-lg font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     {item.label}
                   </button>
@@ -237,10 +221,7 @@ export function GuestHeader() {
               </nav>
 
               {/* Mobile CTAs */}
-              <div
-                className="p-6 space-y-3 border-t"
-                style={{ borderColor: colors.secondary[200] }}
-              >
+              <div className="p-6 space-y-3 border-t border-border">
                 <Button
                   variant="outline"
                   className="w-full justify-center"
@@ -248,13 +229,12 @@ export function GuestHeader() {
                     handleNavigateLogin();
                     handleCloseMobileMenu();
                   }}
-                  style={{ borderColor: colors.secondary[300] }}
                 >
                   <LogIn className="w-4 h-4 mr-2" />
                   Sign In
                 </Button>
                 <Button
-                  className="w-full justify-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md"
+                  className="w-full justify-center shadow-md transition-all"
                   onClick={() => {
                     handleNavigateRegister();
                     handleCloseMobileMenu();

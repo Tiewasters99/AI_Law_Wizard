@@ -263,19 +263,19 @@ export default function ClientDashboard() {
   );
 
   return (
-    <div className="bg-white flex flex-col items-center px-4 pt-40">
+    <div className="bg-background flex flex-col items-center px-4 pt-40">
       <div className="w-full max-w-3xl mx-auto">
         {/* Main Heading */}
         <div className="text-center mb-4 sm:mb-6">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-gray-900 mb-2 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-foreground mb-2 leading-tight">
             What{" "}
-            <span className="text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text">
+            <span className="text-transparent bg-gradient-to-r from-primary to-chart-4 bg-clip-text">
               problem
             </span>{" "}
             can I help
             <br />
             you{" "}
-            <span className="text-transparent bg-gradient-to-r from-amber-500 to-yellow-500 bg-clip-text">
+            <span className="text-transparent bg-gradient-to-r from-chart-3 to-chart-5 bg-clip-text">
               solve
             </span>{" "}
             today?
@@ -288,7 +288,7 @@ export default function ClientDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
         >
-          <Card className="border border-gray-200 shadow-lg bg-white">
+          <Card className="border shadow-lg">
             <form onSubmit={handleSubmit} className="relative">
               <div className="p-2.5 sm:p-3">
                 <Textarea
@@ -298,15 +298,15 @@ export default function ClientDashboard() {
                   }
                   onKeyPress={handleKeyPress}
                   placeholder="Describe your issue, tell me your concerns, outline your questions."
-                  className="min-h-[80px] sm:min-h-[100px] border-none resize-none text-sm sm:text-base placeholder:italic placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
+                  className="min-h-[80px] sm:min-h-[100px] border-none resize-none text-sm sm:text-base placeholder:italic placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
                   disabled={isLoading}
                 />
               </div>
 
               {/* Bottom toolbar */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 sm:p-3 border-t border-gray-100 gap-2 sm:gap-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 sm:p-3 border-t border-border gap-2 sm:gap-0">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-                  <span className="text-xs sm:text-sm text-gray-500">
+                  <span className="text-xs sm:text-sm text-muted-foreground">
                     {uploadingFiles ? "Uploading files..." : "Upload files:"}
                   </span>
                   <div className="flex items-center gap-1">
@@ -314,7 +314,7 @@ export default function ClientDashboard() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 sm:p-2 h-auto"
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted p-1.5 sm:p-2 h-auto"
                       onClick={() => triggerFileInput("document")}
                       disabled={uploadingFiles}
                       title="Upload Document"
@@ -325,7 +325,7 @@ export default function ClientDashboard() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 sm:p-2 h-auto"
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted p-1.5 sm:p-2 h-auto"
                       onClick={() => triggerFileInput("image")}
                       disabled={uploadingFiles}
                       title="Upload Image"
@@ -336,7 +336,7 @@ export default function ClientDashboard() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 sm:p-2 h-auto"
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted p-1.5 sm:p-2 h-auto"
                       onClick={() => triggerFileInput("video")}
                       disabled={uploadingFiles}
                       title="Upload Video"
@@ -349,7 +349,7 @@ export default function ClientDashboard() {
                 <Button
                   type="submit"
                   disabled={!issue.trim() || isLoading}
-                  className="bg-gray-900 hover:bg-gray-800 text-white rounded-full p-2 h-auto min-w-[40px] disabled:opacity-50 w-full sm:w-auto"
+                  className="rounded-full p-2 h-auto min-w-[40px] disabled:opacity-50 w-full sm:w-auto"
                 >
                   <Send className="w-4 h-4 mr-2 sm:mr-0" />
                   <span className="sm:hidden">Send</span>
@@ -370,7 +370,7 @@ export default function ClientDashboard() {
 
         {/* Disclaimer */}
         <div className="text-center mt-4 sm:mt-6">
-          <p className="text-xs sm:text-sm text-gray-500 max-w-2xl mx-auto px-4">
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl mx-auto px-4">
             This AI provides general legal information only and does not
             constitute legal advice. For specific legal matters, consult with a
             qualified attorney.

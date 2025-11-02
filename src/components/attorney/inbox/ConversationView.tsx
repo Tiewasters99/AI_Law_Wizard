@@ -68,30 +68,22 @@ interface ConversationViewProps {
 const getUrgencyConfig = (urgency: string) => {
   const configs: Record<
     string,
-    { color: string; bgColor: string; borderColor: string; icon: any }
+    { className: string; icon: any }
   > = {
     LOW: {
-      color: "#059669",
-      bgColor: "#ecfdf5",
-      borderColor: "#a7f3d0",
+      className: "bg-chart-1/10 text-chart-1 border-chart-1/30",
       icon: Clock,
     },
     MEDIUM: {
-      color: "#d97706",
-      bgColor: "#fffbeb",
-      borderColor: "#fde68a",
+      className: "bg-accent/10 text-accent-foreground border-accent/30",
       icon: Clock,
     },
     HIGH: {
-      color: "#dc2626",
-      bgColor: "#fef2f2",
-      borderColor: "#fecaca",
+      className: "bg-destructive/10 text-destructive border-destructive/30",
       icon: AlertTriangle,
     },
     URGENT: {
-      color: "#7f1d1d",
-      bgColor: "#fee2e2",
-      borderColor: "#fca5a5",
+      className: "bg-destructive/20 text-destructive border-destructive/50",
       icon: AlertTriangle,
     },
   };
@@ -213,7 +205,7 @@ export function ConversationView({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -222,8 +214,8 @@ export function ConversationView({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-500" />
-          <p className="text-red-700">Failed to load conversation</p>
+          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-destructive" />
+          <p className="text-destructive">Failed to load conversation</p>
         </div>
       </div>
     );
@@ -235,9 +227,9 @@ export function ConversationView({
   const currentUserId = conversation.attorney.id;
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="flex-shrink-0 border-b border-slate-200 px-6 py-4 flex items-center space-x-3">
+      <div className="flex-shrink-0 border-b border-border px-6 py-4 flex items-center space-x-3">
         {onClose && (
           <Button
             variant="ghost"
@@ -250,7 +242,7 @@ export function ConversationView({
         )}
 
         <div className="flex items-center space-x-3 flex-1">
-          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
             {otherParty.image ? (
               <Image
                 src={otherParty.image}
@@ -260,20 +252,20 @@ export function ConversationView({
                 className="w-full h-full rounded-xl object-cover"
               />
             ) : (
-              <User className="w-6 h-6 text-blue-700" />
+              <User className="w-6 h-6 text-primary" />
             )}
           </div>
           <div>
-            <h3 className="font-bold text-lg text-slate-900">
+            <h3 className="font-bold text-lg text-foreground">
               {otherParty.name || "Anonymous User"}
             </h3>
-            <p className="text-sm text-slate-600">{profileName}</p>
+            <p className="text-sm text-muted-foreground">{profileName}</p>
           </div>
         </div>
 
         <Badge
           variant="outline"
-          className="bg-blue-50 text-blue-700 border-blue-200"
+          className="bg-primary/10 text-primary border-primary/30"
         >
           {conversation.consultationRequest.caseType}
         </Badge>
@@ -281,15 +273,15 @@ export function ConversationView({
 
       {/* Request Details */}
       {showRequestDetails && (
-        <div className="flex-shrink-0 border-b border-slate-200 px-6 py-4 bg-blue-50">
+        <div className="flex-shrink-0 border-b border-border px-6 py-4 bg-primary/5">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center space-x-2">
-              <Quote className="w-5 h-5 text-blue-700" />
+              <Quote className="w-5 h-5 text-primary" />
               <div>
-                <h4 className="font-bold text-sm text-slate-900">
+                <h4 className="font-bold text-sm text-foreground">
                   Client&apos;s Original Request
                 </h4>
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-muted-foreground">
                   Submitted on{" "}
                   {new Date(
                     conversation.consultationRequest.createdAt
@@ -299,9 +291,9 @@ export function ConversationView({
             </div>
             <button
               onClick={() => setShowRequestDetails(false)}
-              className="p-1 hover:bg-slate-200 rounded"
+              className="p-1 hover:bg-muted rounded"
             >
-              <X className="w-4 h-4 text-slate-600" />
+              <X className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
 
@@ -309,7 +301,7 @@ export function ConversationView({
             <div className="flex flex-wrap gap-2">
               <Badge
                 variant="outline"
-                className="bg-blue-50 text-blue-700 border-blue-200"
+                className="bg-primary/10 text-primary border-primary/30"
               >
                 {conversation.consultationRequest.caseType}
               </Badge>
@@ -321,11 +313,7 @@ export function ConversationView({
                 return (
                   <Badge
                     variant="outline"
-                    style={{
-                      backgroundColor: urgencyConfig.bgColor,
-                      color: urgencyConfig.color,
-                      borderColor: urgencyConfig.borderColor,
-                    }}
+                    className={urgencyConfig.className}
                   >
                     <UrgencyIcon className="w-3 h-3 mr-1" />
                     <span>{conversation.consultationRequest.urgency}</span>
@@ -334,14 +322,14 @@ export function ConversationView({
               })()}
               <Badge
                 variant="outline"
-                className="bg-slate-50 text-slate-700 border-slate-200"
+                className="bg-muted text-muted-foreground border-border"
               >
                 {conversation.consultationRequest.status.replace("_", " ")}
               </Badge>
             </div>
 
-            <div className="p-4 rounded-lg bg-white border-l-4 border-blue-500 border border-slate-200">
-              <p className="text-sm text-slate-700">
+            <div className="p-4 rounded-lg bg-card border-l-4 border-primary border border-border">
+              <p className="text-sm text-card-foreground">
                 {conversation.consultationRequest.description}
               </p>
             </div>
@@ -353,7 +341,7 @@ export function ConversationView({
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {conversation.messages.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-slate-600">
+            <p className="text-muted-foreground">
               No messages yet. Start the conversation!
             </p>
           </div>
@@ -367,11 +355,11 @@ export function ConversationView({
               className={`flex ${isSent ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[70%] rounded-lg p-3 ${isSent ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-900"}`}
+                className={`max-w-[70%] rounded-lg p-3 ${isSent ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
               >
                 <p className="text-sm">{msg.content}</p>
                 <p
-                  className={`text-xs mt-1 ${isSent ? "text-blue-100" : "text-slate-500"}`}
+                  className={`text-xs mt-1 ${isSent ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}
                 >
                   {new Date(msg.createdAt).toLocaleTimeString()}
                 </p>
@@ -383,9 +371,9 @@ export function ConversationView({
       </div>
 
       {/* Input Area */}
-      <div className="flex-shrink-0 border-t border-slate-200 p-4">
+      <div className="flex-shrink-0 border-t border-border p-4">
         {error && (
-          <div className="mb-2 p-2 bg-red-50 text-red-700 rounded text-sm">
+          <div className="mb-2 p-2 bg-destructive/10 text-destructive rounded text-sm">
             {error}
           </div>
         )}
@@ -401,7 +389,6 @@ export function ConversationView({
           <Button
             onClick={handleSendMessage}
             disabled={!message.trim() || sending}
-            className="bg-blue-700 hover:bg-blue-800"
           >
             {sending ? (
               <Loader2 className="w-4 h-4 animate-spin" />

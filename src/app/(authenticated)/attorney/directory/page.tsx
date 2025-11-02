@@ -95,14 +95,14 @@ export default function DirectoryPage() {
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex items-center space-x-4 mb-5">
-          <div className="w-14 h-14 rounded-xl bg-blue-700 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
             <Users className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">
+            <h1 className="text-3xl font-bold text-foreground">
               Client Directory
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-muted-foreground mt-1">
               Browse clients with consultation requests
             </p>
           </div>
@@ -110,7 +110,7 @@ export default function DirectoryPage() {
 
         {/* Search Bar */}
         <div className="relative max-w-md">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search by name, company, or industry..."
             value={searchQuery}
@@ -123,8 +123,8 @@ export default function DirectoryPage() {
       {/* Loading State */}
       {loading && (
         <div className="flex flex-col items-center justify-center py-24">
-          <Loader2 className="w-14 h-14 animate-spin mb-5 text-blue-600" />
-          <p className="text-lg font-medium text-slate-600">
+          <Loader2 className="w-14 h-14 animate-spin mb-5 text-primary" />
+          <p className="text-lg font-medium text-muted-foreground">
             Loading directory...
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function DirectoryPage() {
           <CardContent className="py-12 text-center">
             <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
             <h3 className="text-xl font-bold mb-2">Error Loading Directory</h3>
-            <p className="mb-6 text-slate-600">{error}</p>
+            <p className="mb-6 text-muted-foreground">{error}</p>
             <Button onClick={fetchClients}>Try Again</Button>
           </CardContent>
         </Card>
@@ -146,9 +146,9 @@ export default function DirectoryPage() {
       {!loading && !error && filteredClients.length === 0 && (
         <Card className="max-w-md mx-auto">
           <CardContent className="py-12 text-center">
-            <Users className="w-16 h-16 mx-auto mb-4 text-blue-500" />
+            <Users className="w-16 h-16 mx-auto mb-4 text-primary" />
             <h3 className="text-xl font-bold mb-2">No Clients Found</h3>
-            <p className="text-slate-600">
+            <p className="text-muted-foreground">
               {searchQuery
                 ? "No clients match your search."
                 : "There are no clients with consultation requests available at the moment."}
@@ -175,19 +175,19 @@ export default function DirectoryPage() {
               >
                 <Card className="hover:shadow-lg transition-all duration-200 overflow-hidden">
                   {/* Top Border */}
-                  <div className="h-1 bg-blue-700"></div>
+                  <div className="h-1 bg-primary"></div>
 
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2.5">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-blue-700" />
+                        <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
+                          <Users className="w-5 h-5 text-primary" />
                         </div>
                         <div>
                           <CardTitle className="text-sm font-bold">
                             {client.name || "Anonymous User"}
                           </CardTitle>
-                          <p className="text-xs text-slate-600">
+                          <p className="text-xs text-muted-foreground">
                             {client.customerProfile?.companyName ||
                               "Individual Client"}
                           </p>
@@ -199,16 +199,16 @@ export default function DirectoryPage() {
                   <CardContent className="space-y-2">
                     {/* Industry and Join Date */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center space-x-2 text-xs px-2.5 py-1.5 rounded-md bg-slate-50">
-                        <Clock className="w-3 h-3 text-slate-600" />
-                        <span className="font-medium text-slate-700">
+                      <div className="flex items-center space-x-2 text-xs px-2.5 py-1.5 rounded-md bg-muted">
+                        <Clock className="w-3 h-3 text-muted-foreground" />
+                        <span className="font-medium text-foreground">
                           Since {joinDate}
                         </span>
                       </div>
                       {client.customerProfile?.industry && (
-                        <div className="px-2.5 py-1.5 rounded-md bg-slate-50">
+                        <div className="px-2.5 py-1.5 rounded-md bg-muted">
                           <div className="flex items-center space-x-2">
-                            <Building className="w-3 h-3 text-slate-600" />
+                            <Building className="w-3 h-3 text-muted-foreground" />
                             <span className="text-xs font-medium">
                               {client.customerProfile.industry}
                             </span>
@@ -219,19 +219,19 @@ export default function DirectoryPage() {
 
                     {/* Needs */}
                     {client.customerProfile?.needs && (
-                      <p className="text-xs text-slate-700 line-clamp-2">
+                      <p className="text-xs text-foreground line-clamp-2">
                         {client.customerProfile.needs}
                       </p>
                     )}
 
                     {/* Contact Information */}
-                    <div className="pt-2 border-t border-slate-200 space-y-1.5">
+                    <div className="pt-2 border-t border-border space-y-1.5">
                       {client.email && (
                         <div className="flex items-center space-x-2 text-xs">
-                          <Mail className="w-3 h-3 text-blue-600" />
+                          <Mail className="w-3 h-3 text-primary" />
                           <a
                             href={`mailto:${client.email}`}
-                            className="truncate flex-1 font-medium hover:underline text-slate-700"
+                            className="truncate flex-1 font-medium hover:underline text-foreground"
                           >
                             {client.email}
                           </a>
@@ -239,10 +239,10 @@ export default function DirectoryPage() {
                       )}
                       {client.customerProfile?.phone && (
                         <div className="flex items-center space-x-2 text-xs">
-                          <Phone className="w-3 h-3 text-slate-600" />
+                          <Phone className="w-3 h-3 text-muted-foreground" />
                           <a
                             href={`tel:${client.customerProfile.phone}`}
-                            className="font-medium hover:underline text-slate-700"
+                            className="font-medium hover:underline text-foreground"
                           >
                             {client.customerProfile.phone}
                           </a>
@@ -253,7 +253,7 @@ export default function DirectoryPage() {
                     {/* Consultation Requests */}
                     {client.consultationRequests &&
                       client.consultationRequests.length > 0 && (
-                        <div className="pt-3 border-t border-slate-200">
+                        <div className="pt-3 border-t border-border">
                           <p className="text-xs font-semibold mb-2">
                             Consultation Requests (
                             {client.consultationRequests.length})
@@ -262,13 +262,13 @@ export default function DirectoryPage() {
                             <Badge
                               key={req.id}
                               variant="outline"
-                              className="w-full text-xs font-semibold px-3 py-2 mb-2 bg-blue-50 text-blue-700 border-blue-200"
+                              className="w-full text-xs font-semibold px-3 py-2 mb-2 bg-accent text-primary border-primary/20"
                             >
                               {req.caseType} • {req.status}
                             </Badge>
                           ))}
                           <Button
-                            className="w-full text-white shadow-sm bg-blue-700 hover:bg-blue-800"
+                            className="w-full text-primary-foreground shadow-sm bg-primary hover:bg-primary/90"
                             onClick={() => router.push("/attorney/inbox")}
                             size="sm"
                           >

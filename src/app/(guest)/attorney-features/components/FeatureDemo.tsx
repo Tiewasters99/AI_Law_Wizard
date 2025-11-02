@@ -130,14 +130,8 @@ export function FeatureDemo({ feature, onClose }: FeatureDemoProps) {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div
-                className="p-2 rounded-lg"
-                style={{
-                  background: "linear-gradient(to right, #2563eb, #1e40af)",
-                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                }}
-              >
-                <FileText className="w-5 h-5 text-white" />
+              <div className="p-2 rounded-lg bg-primary shadow-sm text-primary-foreground">
+                <FileText className="w-5 h-5" />
               </div>
               <div>
                 <h2

@@ -95,6 +95,7 @@ export default function AttorneyDirectoryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [tokenBalance, setTokenBalance] = useState(0);
 
   const specialties = [
     "All Specialties",
@@ -143,164 +144,93 @@ export default function AttorneyDirectoryPage() {
     { value: "urgent", label: "Urgent (Same day)", color: "text-red-600" },
   ];
 
-  // Mock data - in real app, this would come from API
+  // Fetch attorneys from API
   useEffect(() => {
-    const mockAttorneys: Attorney[] = [
-      {
-        id: "1",
-        name: "Sarah Johnson",
-        email: "sarah.johnson@lawfirm.com",
-        bio: "Experienced personal injury attorney with over 15 years of practice. Specializes in car accidents, slip and fall cases, and medical malpractice.",
-        specialties: ["Personal Injury", "Medical Malpractice"],
-        experience: 15,
-        location: "New York, NY",
-        rating: 4.9,
-        reviewCount: 127,
-        isVerified: true,
-        isAvailable: true,
-        responseTime: "2 hours",
-        consultationFee: 200,
-        education: ["Harvard Law School", "Yale University"],
-        certifications: ["Board Certified Personal Injury", "Trial Advocacy"],
-        languages: ["English", "Spanish"],
-        previousClients: 500,
-        successRate: 95,
-      },
-      {
-        id: "2",
-        name: "Michael Chen",
-        email: "michael.chen@businesslaw.com",
-        bio: "Corporate attorney specializing in business formation, contract negotiation, and regulatory compliance. Former Fortune 500 general counsel.",
-        specialties: ["Business Law", "Contract Law", "Corporate Law"],
-        experience: 12,
-        location: "Los Angeles, CA",
-        rating: 4.8,
-        reviewCount: 89,
-        isVerified: true,
-        isAvailable: true,
-        responseTime: "4 hours",
-        consultationFee: 300,
-        education: ["Stanford Law School", "UC Berkeley"],
-        certifications: ["Corporate Law Specialist", "M&A Expert"],
-        languages: ["English", "Mandarin"],
-        previousClients: 300,
-        successRate: 92,
-      },
-      {
-        id: "3",
-        name: "Emily Rodriguez",
-        email: "emily.rodriguez@familylaw.com",
-        bio: "Family law attorney with a compassionate approach to divorce, child custody, and adoption cases. Certified mediator.",
-        specialties: ["Family Law", "Divorce", "Child Custody"],
-        experience: 8,
-        location: "Chicago, IL",
-        rating: 4.7,
-        reviewCount: 156,
-        isVerified: true,
-        isAvailable: false,
-        responseTime: "1 day",
-        consultationFee: 150,
-        education: ["Northwestern Law School", "University of Chicago"],
-        certifications: ["Family Law Specialist", "Mediation Certified"],
-        languages: ["English", "Spanish"],
-        previousClients: 200,
-        successRate: 88,
-      },
-      {
-        id: "4",
-        name: "David Thompson",
-        email: "david.thompson@criminaldefense.com",
-        bio: "Criminal defense attorney with extensive trial experience. Former prosecutor with deep understanding of both sides of criminal law.",
-        specialties: ["Criminal Defense", "DUI", "White Collar Crime"],
-        experience: 20,
-        location: "Houston, TX",
-        rating: 4.9,
-        reviewCount: 203,
-        isVerified: true,
-        isAvailable: true,
-        responseTime: "1 hour",
-        consultationFee: 250,
-        education: ["University of Texas Law", "Rice University"],
-        certifications: ["Criminal Law Specialist", "Trial Advocacy"],
-        languages: ["English"],
-        previousClients: 800,
-        successRate: 96,
-      },
-      {
-        id: "5",
-        name: "Lisa Wang",
-        email: "lisa.wang@realestate.com",
-        bio: "Real estate attorney specializing in commercial transactions, property disputes, and zoning issues. Licensed in multiple states.",
-        specialties: ["Real Estate", "Commercial Law", "Property Disputes"],
-        experience: 10,
-        location: "San Francisco, CA",
-        rating: 4.6,
-        reviewCount: 94,
-        isVerified: true,
-        isAvailable: true,
-        responseTime: "6 hours",
-        consultationFee: 180,
-        education: ["UC Berkeley Law", "Stanford University"],
-        certifications: ["Real Estate Law Specialist"],
-        languages: ["English", "Mandarin", "Cantonese"],
-        previousClients: 150,
-        successRate: 90,
-      },
-    ];
+    const fetchAttorneys = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (searchQuery) params.append("search", searchQuery);
+        if (selectedSpecialty !== "all")
+          params.append("practiceArea", selectedSpecialty);
+        if (selectedLocation !== "all")
+          params.append("location", selectedLocation);
 
-    setAttorneys(mockAttorneys);
-    setFilteredAttorneys(mockAttorneys);
-    setIsLoading(false);
-  }, []);
+        const response = await fetch(
+          `/api/client/attorneys?${params.toString()}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch attorneys");
+        }
 
-  // Filter and search attorneys
-  useEffect(() => {
-    let filtered = attorneys;
+        const data = await response.json();
+        if (data.success) {
+          // Transform API data to match component interface
+          const transformedAttorneys: Attorney[] = data.attorneys.map(
+            (attorney: any) => ({
+              id: attorney.id,
+              name: attorney.name,
+              email: attorney.email,
+              bio: attorney.bio || "No bio available",
+              specialties: attorney.practiceAreas || [],
+              experience: attorney.yearsOfExperience || 0,
+              location: attorney.location || "Location not specified",
+              rating: attorney.rating || 0,
+              reviewCount: attorney.casesHandled || 0,
+              isVerified: true, // All attorneys in directory are verified
+              isAvailable: attorney.availability !== "unavailable",
+              responseTime:
+                attorney.availability === "available" ? "2 hours" : "1 day",
+              consultationFee: attorney.hourlyRate || 200,
+              avatar: attorney.image,
+              education: [], // Not available in current API
+              certifications: [], // Not available in current API
+              languages: ["English"], // Default
+              previousClients: attorney.casesHandled || 0,
+              successRate: 90, // Default success rate
+            })
+          );
 
-    // Search by name, bio, or specialties
-    if (searchQuery) {
-      filtered = filtered.filter(
-        attorney =>
-          attorney.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          attorney.bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          attorney.specialties.some(specialty =>
-            specialty.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-      );
-    }
-
-    // Filter by specialty
-    if (selectedSpecialty !== "all") {
-      filtered = filtered.filter(attorney =>
-        attorney.specialties.includes(selectedSpecialty)
-      );
-    }
-
-    // Filter by location
-    if (selectedLocation !== "all") {
-      filtered = filtered.filter(
-        attorney => attorney.location === selectedLocation
-      );
-    }
-
-    // Sort attorneys
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "rating":
-          return b.rating - a.rating;
-        case "experience":
-          return b.experience - a.experience;
-        case "responseTime":
-          return a.responseTime.localeCompare(b.responseTime);
-        case "fee":
-          return a.consultationFee - b.consultationFee;
-        default:
-          return 0;
+          setAttorneys(transformedAttorneys);
+          setFilteredAttorneys(transformedAttorneys);
+        } else {
+          throw new Error(data.error || "Failed to fetch attorneys");
+        }
+      } catch (error) {
+        console.error("Error fetching attorneys:", error);
+        setError("Failed to load attorneys. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
-    });
+    };
 
-    setFilteredAttorneys(filtered);
-  }, [attorneys, searchQuery, selectedSpecialty, selectedLocation, sortBy]);
+    fetchAttorneys();
+  }, [searchQuery, selectedSpecialty, selectedLocation]);
+
+  // Update filtered attorneys when attorneys change
+  useEffect(() => {
+    setFilteredAttorneys(attorneys);
+  }, [attorneys]);
+
+  // Fetch token balance
+  useEffect(() => {
+    const fetchTokenBalance = async () => {
+      try {
+        const response = await fetch("/api/client/tokens/balance");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setTokenBalance(data.balance);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching token balance:", error);
+      }
+    };
+
+    if (session?.user?.id) {
+      fetchTokenBalance();
+    }
+  }, [session?.user?.id]);
 
   const handleRequestConsultation = (attorney: Attorney) => {
     setSelectedAttorney(attorney);
@@ -332,47 +262,92 @@ export default function AttorneyDirectoryPage() {
       return;
     }
 
+    // Check token balance
+    if (tokenBalance < 10) {
+      setError(
+        "Insufficient token balance. You need at least 10 tokens to send a consultation request."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // Upload attachments to Vercel Blob (simplified for demo)
+      // Upload attachments first if any
       const attachmentUrls: string[] = [];
-      for (const file of requestData.attachments) {
-        // In real implementation, upload to Vercel Blob
-        const mockUrl = `https://blob.vercel-storage.com/attachments/${file.name}`;
-        attachmentUrls.push(mockUrl);
+      if (requestData.attachments.length > 0) {
+        const formData = new FormData();
+        requestData.attachments.forEach(file => {
+          formData.append("files", file);
+        });
+
+        const uploadResponse = await fetch("/api/client/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload attachments");
+        }
+
+        const uploadData = await uploadResponse.json();
+        if (uploadData.success) {
+          attachmentUrls.push(...uploadData.files.map((f: any) => f.url));
+        }
       }
 
-      // Create consultation request (API call would go here)
-      // In real implementation, this would call the API
-      const consultationRequest = {
-        id: Date.now().toString(),
-        attorneyId: requestData.attorneyId,
-        caseType: requestData.caseType,
-        urgency: requestData.urgency,
-        description: requestData.description,
-        attachments: attachmentUrls,
-        status: "pending",
-      };
-
-      setSuccess("Consultation request sent successfully!");
-      setShowRequestModal(false);
-      setRequestData({
-        attorneyId: "",
-        caseType: "",
-        urgency: "medium",
-        description: "",
-        attachments: [],
+      // Create consultation request
+      const response = await fetch("/api/client/consultation-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          attorneyId: requestData.attorneyId,
+          caseType: requestData.caseType,
+          urgency: requestData.urgency,
+          description: requestData.description.trim(),
+          attachmentUrls,
+        }),
       });
 
-      // Reset form after 3 seconds
-      setTimeout(() => {
-        setSuccess(null);
-      }, 3000);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "Failed to send consultation request"
+        );
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setSuccess("Consultation request sent successfully!");
+        setShowRequestModal(false);
+        setRequestData({
+          attorneyId: "",
+          caseType: "",
+          urgency: "medium",
+          description: "",
+          attachments: [],
+        });
+
+        // Update token balance
+        setTokenBalance(data.tokenBalance);
+
+        // Reset form after 3 seconds
+        setTimeout(() => {
+          setSuccess(null);
+        }, 3000);
+      } else {
+        throw new Error(data.error || "Failed to send consultation request");
+      }
     } catch (error) {
       console.error("Error submitting request:", error);
-      setError("Failed to send consultation request. Please try again.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to send consultation request. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -412,10 +387,22 @@ export default function AttorneyDirectoryPage() {
               </p>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-primary">
-                {filteredAttorneys.length}
+              <div className="flex items-center space-x-4">
+                <div className="text-right">
+                  <div className="text-sm font-medium text-gray-900">
+                    {tokenBalance} tokens
+                  </div>
+                  <div className="text-xs text-gray-500">Available</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-primary">
+                    {filteredAttorneys.length}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Attorneys Available
+                  </div>
+                </div>
               </div>
-              <div className="text-sm text-gray-500">Attorneys Available</div>
             </div>
           </div>
 
@@ -598,13 +585,15 @@ export default function AttorneyDirectoryPage() {
                   <div className="flex space-x-2">
                     <Button
                       onClick={() => handleRequestConsultation(attorney)}
-                      disabled={!attorney.isAvailable}
+                      disabled={!attorney.isAvailable || tokenBalance < 10}
                       className="flex-1"
                     >
                       <MessageSquare className="w-4 h-4 mr-2" />
-                      {attorney.isAvailable
-                        ? "Request Consultation"
-                        : "Not Available"}
+                      {!attorney.isAvailable
+                        ? "Not Available"
+                        : tokenBalance < 10
+                          ? "Need 10 tokens"
+                          : "Request Consultation"}
                     </Button>
                     <Button variant="outline" size="sm">
                       <ExternalLink className="w-4 h-4" />
@@ -646,6 +635,10 @@ export default function AttorneyDirectoryPage() {
             <DialogTitle>Request Consultation</DialogTitle>
             <DialogDescription>
               Send a consultation request to {selectedAttorney?.name}
+              <br />
+              <span className="text-sm font-medium text-orange-600">
+                Cost: 10 tokens (Current balance: {tokenBalance})
+              </span>
             </DialogDescription>
           </DialogHeader>
 

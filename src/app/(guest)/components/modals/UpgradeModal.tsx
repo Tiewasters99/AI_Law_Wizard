@@ -23,6 +23,7 @@ import {
   CheckCircle,
   Briefcase,
   Users,
+  Scale,
 } from "lucide-react";
 
 interface UpgradeModalProps {
@@ -95,8 +96,8 @@ export default function UpgradeModal({
             >
               <DialogHeader>
                 <div className="flex items-center justify-center mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center">
-                    <Zap className="w-8 h-8 text-white" />
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
+                    <Zap className="w-8 h-8 text-primary-foreground" />
                   </div>
                 </div>
                 <DialogTitle className="text-2xl text-center">
@@ -114,16 +115,16 @@ export default function UpgradeModal({
                   <CardContent className="pt-6">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-600">
+                        <span className="text-sm font-medium text-muted-foreground">
                           Current Usage
                         </span>
-                        <span className="text-lg font-bold text-gray-900">
+                        <span className="text-lg font-bold text-foreground">
                           {currentUsage.toLocaleString()} /{" "}
                           {limit.toLocaleString()}
                         </span>
                       </div>
                       <Progress value={percentage} className="h-2" />
-                      <p className="text-xs text-gray-500 text-center">
+                      <p className="text-xs text-muted-foreground text-center">
                         You&apos;ve reached your anonymous usage limit
                       </p>
                     </div>
@@ -132,15 +133,15 @@ export default function UpgradeModal({
 
                 {/* Benefits */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <h3 className="font-semibold text-foreground mb-3 flex items-center">
                     <Crown className="w-5 h-5 mr-2 text-yellow-500" />
                     What you get with a free account:
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     {BENEFITS.map((benefit, idx) => (
                       <div key={idx} className="flex items-start space-x-2">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-700">{benefit}</span>
+                        <CheckCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-foreground">{benefit}</span>
                       </div>
                     ))}
                   </div>
@@ -149,7 +150,7 @@ export default function UpgradeModal({
                 {/* CTA Button */}
                 <Button
                   onClick={handleContinue}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-6"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6"
                   size="lg"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
@@ -157,7 +158,7 @@ export default function UpgradeModal({
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
 
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-muted-foreground text-center">
                   No credit card required • Get 5,000 free tokens
                 </p>
               </div>
@@ -184,26 +185,21 @@ export default function UpgradeModal({
                 {/* Attorney Option */}
                 <Card
                   className={`cursor-pointer transition-all hover:shadow-lg ${
-                    selectedRole === "ATTORNEY" ? "ring-2 ring-blue-500" : ""
+                    selectedRole === "ATTORNEY" ? "ring-2 ring-primary" : ""
                   }`}
                   onClick={() => handleRoleSelect("ATTORNEY")}
                 >
                   <CardContent className="pt-6 text-center">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Image
-                        src="/images/logo_icon.png"
-                        alt="AI Wizard Logo"
-                        width={32}
-                        height={32}
-                      />
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Scale className="w-8 h-8 text-primary" />
                     </div>
                     <h3 className="font-bold text-lg mb-2">Attorney</h3>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Legal professional seeking advanced tools and features
                     </p>
                     <Badge
                       variant="outline"
-                      className="text-blue-600 border-blue-200"
+                      className="text-primary border-primary/20"
                     >
                       Professional Tools
                     </Badge>
@@ -213,21 +209,21 @@ export default function UpgradeModal({
                 {/* Customer Option */}
                 <Card
                   className={`cursor-pointer transition-all hover:shadow-lg ${
-                    selectedRole === "CUSTOMER" ? "ring-2 ring-purple-500" : ""
+                    selectedRole === "CUSTOMER" ? "ring-2 ring-primary" : ""
                   }`}
                   onClick={() => handleRoleSelect("CUSTOMER")}
                 >
                   <CardContent className="pt-6 text-center">
-                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Users className="w-8 h-8 text-purple-600" />
+                    <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-8 h-8 text-primary" />
                     </div>
                     <h3 className="font-bold text-lg mb-2">Client</h3>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Individual seeking legal guidance and document help
                     </p>
                     <Badge
                       variant="outline"
-                      className="text-purple-600 border-purple-200"
+                      className="text-primary border-primary/20"
                     >
                       Legal Assistance
                     </Badge>

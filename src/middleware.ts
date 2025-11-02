@@ -25,6 +25,24 @@ export default withAuth(
       return NextResponse.next();
     }
 
+    // Check public routes first
+    const publicRoutes = [
+      "/",
+      "/auth",
+      "/auth/login",
+      "/auth/register",
+      "/admin/login",
+      "/api/auth",
+      "/blog",
+      "/legal-research",
+      "/attorney-features",
+      "/client-features",
+    ];
+
+    if (publicRoutes.some(route => pathname.startsWith(route))) {
+      return NextResponse.next();
+    }
+
     // Check if the current path requires authentication
     const route = Object.keys(protectedRoutes).find(route =>
       pathname.startsWith(route)
@@ -71,11 +89,12 @@ export default withAuth(
           "/auth",
           "/auth/login",
           "/auth/register",
-          "/admin/login", // Add admin login to public routes
+          "/admin/login",
           "/api/auth",
           "/blog",
           "/legal-research",
           "/attorney-features",
+          "/client-features",
         ];
 
         if (publicRoutes.some(route => pathname.startsWith(route))) {

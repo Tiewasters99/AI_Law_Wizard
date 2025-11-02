@@ -139,18 +139,18 @@ export function AttorneySidebar({
       initial={false}
       animate={{ width: isCollapsed ? 72 : 280 }}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-      className="relative h-full flex flex-col border-r backdrop-blur-xl bg-gradient-to-b from-slate-50 to-slate-100 border-slate-200 shadow-sm"
+      className="relative h-full flex flex-col border-r border-sidebar-border bg-sidebar shadow-sm"
     >
       {/* Toggle Button */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full border shadow-md bg-white/90 border-slate-300 flex items-center justify-center transition-all hover:shadow-lg hover:scale-110"
+        className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full border shadow-md bg-background border-border flex items-center justify-center transition-all hover:shadow-lg hover:scale-110 hover:bg-muted"
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {isCollapsed ? (
-          <ChevronRight className="w-4 h-4 text-slate-600" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
         ) : (
-          <ChevronLeft className="w-4 h-4 text-slate-600" />
+          <ChevronLeft className="w-4 h-4 text-muted-foreground" />
         )}
       </button>
 
@@ -162,7 +162,7 @@ export function AttorneySidebar({
               {/* Section Header */}
               {!isCollapsed && (
                 <div className="px-3 mb-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     {section.label}
                   </h3>
                 </div>
@@ -182,15 +182,11 @@ export function AttorneySidebar({
                       onMouseEnter={() => handleMouseEnter(item.href)}
                       onMouseLeave={handleMouseLeave}
                       className={`relative flex items-center rounded-lg transition-all group ${
-                        !isActive && "hover:bg-slate-100"
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-primary"
+                          : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }`}
                       style={{
-                        backgroundColor: isActive
-                          ? "rgba(239, 246, 255, 0.8)"
-                          : "transparent",
-                        borderLeft: isActive
-                          ? "3px solid #1e40af"
-                          : "3px solid transparent",
                         padding: isCollapsed ? "12px" : "10px 12px",
                         justifyContent: isCollapsed ? "center" : "flex-start",
                       }}
@@ -198,8 +194,8 @@ export function AttorneySidebar({
                       <div
                         className={
                           isActive
-                            ? "text-blue-700 group-hover:text-blue-700"
-                            : "text-slate-600 group-hover:text-slate-900"
+                            ? "text-primary"
+                            : "text-sidebar-foreground group-hover:text-sidebar-accent-foreground"
                         }
                       >
                         <Icon className="w-5 h-5 flex-shrink-0" />
@@ -210,8 +206,8 @@ export function AttorneySidebar({
                           <span
                             className={`ml-3 text-sm font-medium ${
                               isActive
-                                ? "text-blue-900 font-semibold"
-                                : "text-slate-700 group-hover:text-slate-900"
+                                ? "text-primary font-semibold"
+                                : "text-sidebar-foreground group-hover:text-sidebar-accent-foreground"
                             }`}
                           >
                             {item.label}
@@ -230,7 +226,7 @@ export function AttorneySidebar({
 
                       {/* Collapsed Tooltip */}
                       {isCollapsed && hoveredItem === item.href && (
-                        <div className="absolute left-full ml-2 px-3 py-2 rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none bg-slate-900 text-white text-xs">
+                        <div className="absolute left-full ml-2 px-3 py-2 rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none bg-popover text-popover-foreground border border-border text-xs">
                           {item.label}
                           {showBadge && (
                             <Badge
@@ -253,15 +249,15 @@ export function AttorneySidebar({
 
       {/* Bottom Stats Widget */}
       {!isCollapsed && (
-        <div className="p-4 border-t border-slate-200">
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="p-3 rounded-lg bg-accent/50 border border-primary/20">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-blue-900">
+              <span className="text-xs font-medium text-primary">
                 Service Credits
               </span>
-              <Coins className="w-4 h-4 text-blue-700" />
+              <Coins className="w-4 h-4 text-primary" />
             </div>
-            <p className="text-lg font-bold text-blue-900">
+            <p className="text-lg font-bold text-foreground">
               {tokenLoading ? "Loading..." : currentTokens.toLocaleString()}
             </p>
           </div>
