@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { OneDriveFileInfo } from "@/types/onedrive";
+import { base64ToFile } from "@/lib/frontend/onedriveUtils";
 
 interface OneDriveSyncControlsProps {
   files: OneDriveFileInfo[];
@@ -51,35 +52,148 @@ export function OneDriveSyncControls({
   }, []);
 
   const handleBulkSync = useCallback(async () => {
-    if (selectedForSync.size === 0 || !onFileSync) return;
+    if (selectedForSync.size === 0) return;
 
     const filesToSync = files.filter(f => selectedForSync.has(f.id));
     setBatchProcessing(true);
     setBatchProgress({ processed: 0, total: filesToSync.length, current: "" });
     setBatchErrors([]);
 
+    const syncedFiles: any[] = [];
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: Array<{ fileName: string; error: string }> = [];
+
     try {
-      // Simulate batch processing
+      // Mark all files as syncing
+      filesToSync.forEach(file => {
+        setSyncingFiles(prev => new Set(prev).add(file.id));
+      });
+
+      // Process each file
       for (let i = 0; i < filesToSync.length; i++) {
         const file = filesToSync[i];
+
         setBatchProgress({
           processed: i,
           total: filesToSync.length,
           current: file.name,
         });
 
-        // Simulate processing delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Small delay to prevent overwhelming the API
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        let retryCount = 0;
+        const maxRetries = 3;
+        let fileSuccess = false;
+
+        while (retryCount < maxRetries && !fileSuccess) {
+          try {
+            // Download the file from OneDrive
+            const downloadResponse = await fetch("/api/attorney/onedrive", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ fileId: file.id }),
+            });
+
+            const downloadData = await downloadResponse.json();
+
+            if (!downloadData.success || !downloadData.file) {
+              throw new Error(
+                downloadData.error || "Failed to download file from OneDrive"
+              );
+            }
+
+            // Convert base64 to File object
+            const downloadedFile = base64ToFile(
+              downloadData.file.content,
+              downloadData.file.name,
+              downloadData.file.type
+            );
+
+            // Create FormData for the embedding API
+            const formData = new FormData();
+            formData.append("files", downloadedFile);
+            formData.append("oneDriveId", file.id);
+            formData.append("oneDriveLastModified", file.lastModified);
+
+            // Upload to embedding system
+            const uploadResponse = await fetch("/api/attorney/embedding", {
+              method: "POST",
+              body: formData,
+            });
+
+            const uploadData = await uploadResponse.json();
+
+            if (!uploadResponse.ok || !uploadData.success) {
+              throw new Error(
+                uploadData.error || "Failed to upload file to embedding system"
+              );
+            }
+
+            // Check for failed files
+            if (uploadData.failedFiles && uploadData.failedFiles.length > 0) {
+              const failedFile = uploadData.failedFiles[0];
+              throw new Error(`File processing failed: ${failedFile.error}`);
+            }
+
+            syncedFiles.push({ name: file.name, id: file.id });
+            successCount++;
+            fileSuccess = true;
+          } catch (error) {
+            retryCount++;
+            console.error(
+              `Error syncing file ${file.name} (attempt ${retryCount}):`,
+              error
+            );
+
+            if (retryCount >= maxRetries) {
+              errorCount++;
+              errors.push({
+                fileName: file.name,
+                error: error instanceof Error ? error.message : "Unknown error",
+              });
+            } else {
+              // Wait before retry
+              await new Promise(resolve =>
+                setTimeout(resolve, 1000 * retryCount)
+              );
+            }
+          }
+        }
+
+        setSyncingFiles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(file.id);
+          return newSet;
+        });
       }
 
-      // Call the sync handler
-      onFileSync(filesToSync);
+      setBatchErrors(errors);
 
+      // Show final results
+      if (errorCount > 0) {
+        toast.error(
+          `Bulk sync complete: ${successCount} successful, ${errorCount} failed`
+        );
+      } else {
+        toast.success(`Successfully synced ${successCount} files`);
+      }
+
+      // Clear selection after sync
       setSelectedForSync(new Set());
-      toast.success(`${filesToSync.length} files synced successfully`);
+
+      // Call the callback if provided
+      if (onFileSync && syncedFiles.length > 0) {
+        onFileSync(syncedFiles);
+      }
     } catch (error) {
-      console.error("Bulk sync error:", error);
-      toast.error("Failed to sync files");
+      console.error("Error in bulk sync:", error);
+      toast.error("Failed to complete bulk sync");
     } finally {
       setBatchProcessing(false);
       setBatchProgress({ processed: 0, total: 0, current: "" });

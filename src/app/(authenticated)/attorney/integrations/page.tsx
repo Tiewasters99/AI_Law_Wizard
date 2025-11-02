@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { OneDriveInterface } from "@/components/attorney/integrations/OneDriveInterface";
 import { useOneDriveAuth } from "@/hooks/useOneDriveAuth";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Integration {
   id: string;
@@ -89,6 +90,25 @@ const cardVariants = {
   },
 };
 
+// Utility functions - moved outside component for performance
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function IntegrationsPage() {
   const router = useRouter();
   const { isAuthenticated: isOneDriveConnected } = useOneDriveAuth();
@@ -108,6 +128,9 @@ export default function IntegrationsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize] = useState(10);
+
+  // Debounced search term - triggers API call after user stops typing
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   // Define available integrations with dynamic status
   const integrations: Integration[] = [
@@ -147,7 +170,10 @@ export default function IntegrationsPage() {
   ];
 
   const fetchSyncedFiles = useCallback(
-    async (page: number = currentPage, search: string = searchTerm) => {
+    async (
+      page: number = currentPage,
+      search: string = debouncedSearchTerm
+    ) => {
       setIsLoadingFiles(true);
       try {
         const params = new URLSearchParams({
@@ -174,7 +200,7 @@ export default function IntegrationsPage() {
         setIsLoadingFiles(false);
       }
     },
-    [currentPage, searchTerm, pageSize]
+    [currentPage, debouncedSearchTerm, pageSize]
   );
 
   // Fetch synced files when component mounts
@@ -182,81 +208,231 @@ export default function IntegrationsPage() {
     fetchSyncedFiles();
   }, [fetchSyncedFiles]);
 
-  const handleFileSync = async (files: any[]) => {
-    setRecentSyncCount(files.length);
-    toast.success(
-      `${files.length} file(s) have been synced and are ready for analysis.`
-    );
-    fetchSyncedFiles();
-    if (activeView === "browse-files") {
-      toast.success("You can continue browsing or view synced files");
-    } else {
-      setActiveView("synced-files");
-    }
-  };
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
+
+  const handleFileSync = useCallback(
+    async (files: any[]) => {
+      setRecentSyncCount(files.length);
+      toast.success(
+        `${files.length} file(s) have been synced and are ready for analysis.`
+      );
+      fetchSyncedFiles();
+      if (activeView === "browse-files") {
+        toast.success("You can continue browsing or view synced files");
+      } else {
+        setActiveView("synced-files");
+      }
+    },
+    [fetchSyncedFiles, activeView]
+  );
 
   // Handle manual file upload
-  const handleManualUpload = async (selectedFiles: FileList | null) => {
-    if (!selectedFiles || selectedFiles.length === 0) return;
+  const handleManualUpload = useCallback(
+    async (selectedFiles: FileList | null) => {
+      if (!selectedFiles || selectedFiles.length === 0) return;
 
-    const uploadedFiles = [];
+      const uploadedFiles = [];
 
-    for (const file of Array.from(selectedFiles)) {
-      try {
-        const formData = new FormData();
-        formData.append("files", file);
+      for (const file of Array.from(selectedFiles)) {
+        try {
+          const formData = new FormData();
+          formData.append("files", file);
 
-        const response = await fetch("/api/attorney/embedding", {
-          method: "POST",
-          body: formData,
-        });
+          const response = await fetch("/api/attorney/embedding", {
+            method: "POST",
+            body: formData,
+          });
 
-        if (!response.ok) {
-          throw new Error("Failed to upload file");
+          if (!response.ok) {
+            throw new Error("Failed to upload file");
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.files && data.files.length > 0) {
+            uploadedFiles.push(data.files[0]);
+          }
+        } catch (error) {
+          console.error("Error uploading file:", error);
+          toast.error(`Failed to upload "${file.name}"`);
         }
-
-        const data = await response.json();
-
-        if (data.success && data.files && data.files.length > 0) {
-          uploadedFiles.push(data.files[0]);
-        }
-      } catch (error) {
-        console.error("Error uploading file:", error);
-        toast.error(`Failed to upload "${file.name}"`);
       }
-    }
 
-    if (uploadedFiles.length > 0) {
-      handleFileSync(uploadedFiles);
-    }
-  };
+      if (uploadedFiles.length > 0) {
+        handleFileSync(uploadedFiles);
+      }
+    },
+    [handleFileSync]
+  );
 
-  const handleStartAnalysis = () => {
+  const handleStartAnalysis = useCallback(() => {
     if (totalCount === 0) {
       toast.error("Please sync some files first before starting analysis.");
       return;
     }
 
     router.push("/attorney/wizard");
-  };
+  }, [totalCount, router]);
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
+  const handleDownloadFile = useCallback(async (file: SyncedFile) => {
+    try {
+      console.log(
+        `Starting download for file: ${file.originalName} (ID: ${file.id})`
+      );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+      const response = await fetch(
+        `/api/attorney/files/download?fileId=${file.id}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Download API error:", errorData);
+        throw new Error(
+          errorData.error || `Download failed with status ${response.status}`
+        );
+      }
+
+      // Check if response is a redirect (local files)
+      if (response.redirected) {
+        // Browser handles redirect automatically, just show success
+        toast.success(`Download started for ${file.originalName}`);
+        return;
+      }
+
+      // Check if response is actually a file (not JSON error)
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Server returned error response");
+      }
+
+      // For OneDrive files, the response will contain the OneDrive ID
+      const data = await response.json();
+      if (data.oneDriveId) {
+        // Construct OneDrive download URL
+        const oneDriveUrl = `https://onedrive.live.com/?id=${encodeURIComponent(
+          data.oneDriveId
+        )}`;
+        window.open(oneDriveUrl, "_blank");
+        toast.success(`Opening ${file.originalName} in OneDrive`);
+        return;
+      }
+
+      // Get the filename from the response headers or use the original name
+      const contentDisposition = response.headers.get("content-disposition");
+      let filename = file.originalName;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      console.log(`Downloading file: ${filename}`);
+
+      // Create blob and download
+      const blob = await response.blob();
+      console.log(`Blob created with size: ${blob.size} bytes`);
+
+      if (blob.size === 0) {
+        throw new Error("Downloaded file is empty");
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success(`Download started for ${file.originalName}`);
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to download file"
+      );
+    }
+  }, []);
+
+  const handleOpenFile = useCallback(async (file: SyncedFile) => {
+    try {
+      // For OneDrive files, open in OneDrive
+      if (file.isOneDriveFile && file.oneDriveId) {
+        const oneDriveUrl = `https://onedrive.live.com/edit.aspx?resid=${file.oneDriveId}`;
+        window.open(oneDriveUrl, "_blank");
+        toast.success(`Opening ${file.originalName} in OneDrive`);
+        return;
+      }
+
+      // For local files, try to download and open
+      const response = await fetch(
+        `/api/attorney/files/download?fileId=${file.id}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `HTTP ${response.status}: Failed to fetch file`
+        );
+      }
+
+      // If it's a redirect, the browser will handle it
+      if (response.redirected) {
+        window.open(response.url, "_blank");
+        return;
+      }
+
+      // Check if response is JSON (error response)
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "File not available");
+      }
+
+      // Otherwise, create a blob and open it
+      const blob = await response.blob();
+
+      // Check if blob is empty or very small (likely an error)
+      if (blob.size === 0) {
+        throw new Error("File is empty or not accessible");
+      }
+
+      const url = window.URL.createObjectURL(blob);
+
+      // Try to open the file in a new tab
+      const newWindow = window.open(url, "_blank");
+      if (!newWindow) {
+        // If popup was blocked, fall back to download
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = file.originalName;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Clean up the URL after a delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+
+      toast.success(`Opening ${file.originalName}`);
+    } catch (error) {
+      console.error("Error opening file:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "File is not accessible. Try downloading it instead."
+      );
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
@@ -892,6 +1068,10 @@ export default function IntegrationsPage() {
                                 whileTap={{ scale: 0.95 }}
                               >
                                 <Button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    handleDownloadFile(file);
+                                  }}
                                   variant="outline"
                                   size="sm"
                                   className="bg-blue-50 hover:bg-blue-100 border-blue-200 hover:border-blue-300 text-blue-700 hover:text-blue-800 shadow-sm hover:shadow-md h-8 px-3 transition-all duration-200"
@@ -909,6 +1089,10 @@ export default function IntegrationsPage() {
                                 whileTap={{ scale: 0.95 }}
                               >
                                 <Button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    handleOpenFile(file);
+                                  }}
                                   variant="outline"
                                   size="sm"
                                   className="bg-green-50 hover:bg-green-100 border-green-200 hover:border-green-300 text-green-700 hover:text-green-800 shadow-sm hover:shadow-md h-8 px-3 transition-all duration-200"

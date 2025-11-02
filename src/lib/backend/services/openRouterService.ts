@@ -213,6 +213,72 @@ export class OpenRouterService {
         return 1000;
     }
   }
+
+  // Generate embeddings using OpenRouter
+  async generateEmbedding(text: string): Promise<number[]> {
+    return (await this.generateEmbeddings([text]))[0];
+  }
+
+  async generateEmbeddings(texts: string[]): Promise<number[][]> {
+    try {
+      // Validate inputs
+      if (!texts || texts.length === 0) {
+        throw new Error("No texts provided for embedding");
+      }
+
+      // Batch size limit (OpenRouter supports up to 100 items)
+      const BATCH_SIZE = 100;
+      const results: number[][] = [];
+
+      // Process in batches
+      for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+        const batch = texts.slice(i, i + BATCH_SIZE);
+
+        const response = await fetch(`${this.baseUrl}/embeddings`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer":
+              process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+            "X-Title": "AI Law Wizard",
+          },
+          body: JSON.stringify({
+            model: "text-embedding-3-small",
+            input: batch.length === 1 ? batch[0] : batch,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            `OpenRouter embedding error: ${response.status} - ${errorData.error?.message || "Unknown error"}`
+          );
+        }
+
+        const data = await response.json();
+
+        // Validate response structure
+        if (!data.data || !Array.isArray(data.data)) {
+          throw new Error("Invalid embedding response structure");
+        }
+
+        // Extract embeddings from response
+        const embeddings = data.data.map((item: any) => item.embedding);
+        results.push(...embeddings);
+
+        // Small delay between batches to respect rate limits
+        if (i + BATCH_SIZE < texts.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error("OpenRouter embedding error:", error);
+      throw error;
+    }
+  }
 }
 
 // Singleton instance
