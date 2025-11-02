@@ -100,7 +100,7 @@ export function GuestHeader() {
       <motion.header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? "bg-background/95 backdrop-blur-md border-b border-border shadow-sm"
+            ? "bg-background backdrop-blur-md border-b border-border shadow-sm"
             : "bg-transparent border-b border-transparent"
         }`}
         initial={{ y: -100 }}
@@ -125,12 +125,12 @@ export function GuestHeader() {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
+            <nav className="hidden md:flex items-center space-x-2">
               {navItems.map(item => (
                 <button
                   key={item.label}
                   onClick={item.action}
-                  className="text-sm font-medium text-foreground transition-colors hover:text-primary"
+                  className="relative text-sm font-medium text-foreground transition-all duration-200 px-3 py-2 rounded-lg hover:bg-primary/10 hover:text-primary"
                 >
                   {item.label}
                 </button>
