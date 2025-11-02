@@ -185,7 +185,11 @@ export async function createConsultationRequest(data: {
       clientId: data.clientId,
       attorneyId: data.attorneyId,
       caseType: data.caseType,
-      urgency: (data.urgency.toUpperCase() as "LOW" | "MEDIUM" | "HIGH" | "URGENT"),
+      urgency: data.urgency.toUpperCase() as
+        | "LOW"
+        | "MEDIUM"
+        | "HIGH"
+        | "URGENT",
       description: data.description.trim(),
       documents: data.documents || [],
       status: "PENDING",

@@ -177,9 +177,7 @@ export {
 } from "./services/attorney/wallet/walletService";
 export * from "./services/attorney/onedrive/onedriveAuthService";
 export * from "./services/attorney/onedrive/onedriveService";
-export {
-  createPaymentIntent as createPaymentIntentService,
-} from "./services/attorney/stripe/stripePaymentService";
+export { createPaymentIntent as createPaymentIntentService } from "./services/attorney/stripe/stripePaymentService";
 export * from "./services/attorney/stripe/stripeWebhookService";
 export * from "./services/attorney/documentAnalysis/documentAnalysisService";
 export * from "./services/attorney/legalResearch/legalResearchService";
@@ -224,9 +222,7 @@ export {
   updatePackage as updateAdminPackage,
   deletePackage as deleteAdminPackage,
 } from "./services/admin/pricing/packageManagementService";
-export {
-  getRolePricing as getAdminRolePricing,
-} from "./services/admin/pricing/rolePricingService";
+export { getRolePricing as getAdminRolePricing } from "./services/admin/pricing/rolePricingService";
 export {
   updateRolePricing as updateAdminRolePricing,
   deleteRolePricing as deleteAdminRolePricing,
