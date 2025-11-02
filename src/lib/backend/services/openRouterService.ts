@@ -202,7 +202,7 @@ export class OpenRouterService {
   ): number {
     switch (tier) {
       case "demo":
-        return 500;
+        return 2000;
       case "basic":
         return 2000;
       case "premium":

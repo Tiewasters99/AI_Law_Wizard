@@ -119,7 +119,7 @@ export default function ChatConsultation({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
         >
-          <Card className="border shadow-lg">
+          <Card className="border shadow-lg overflow-hidden">
             <form onSubmit={handleSubmit} className="relative">
               <div className="p-2.5 sm:p-3">
                 <Textarea
@@ -129,7 +129,7 @@ export default function ChatConsultation({
                   }
                   onKeyPress={handleKeyPress}
                   placeholder="Describe your issue, tell me your concerns, outline your questions."
-                  className="min-h-[80px] sm:min-h-[100px] border-none resize-none text-sm sm:text-base placeholder:italic placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
+                  className="min-h-[80px] sm:min-h-[100px] border-none resize-none text-sm sm:text-base placeholder:italic placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 px-2"
                   disabled={isLoading}
                 />
               </div>

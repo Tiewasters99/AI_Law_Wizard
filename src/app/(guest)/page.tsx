@@ -187,11 +187,21 @@ export default function GuestHomePage() {
             );
           }
 
-          if (!responseData.success || !responseData.content) {
+          debugger;
+          // Handle different response formats - check for both 'result' and 'content'
+          const markdownContent =
+            responseData.result ||
+            responseData.content ||
+            responseData.choices?.[0]?.message?.content;
+
+          if (!responseData.success || !markdownContent) {
             throw new Error("No content received from the AI.");
           }
 
-          const markdownContent = responseData.content;
+          // Store sessionId if provided
+          if (responseData.sessionId) {
+            localStorage.setItem("legalChatSessionId", responseData.sessionId);
+          }
 
           await Consultation.update(consultation.id, {
             analysis: { markdown: markdownContent } as any,

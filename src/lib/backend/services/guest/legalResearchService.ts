@@ -1,83 +1,137 @@
 // Service for guest legal research functionality
 
-import { openRouterService } from "../../services/openRouterService";
+import {
+  invokeLegalResearch,
+  streamLegalResearch,
+} from "../../services/langchain/legalResearchChain";
+import {
+  getHistory,
+  saveMessage,
+  generateSessionId,
+  sessionExists,
+} from "../../repositories/guest/guestSessionRepository";
 import { DemoProcessingResponse } from "@/types/api";
-
-const DEMO_RESEARCH_PROMPT = `You are a demo legal research assistant. Provide helpful but limited legal research information.
-
-**Demo Limitations:**
-- Provide general legal information only
-- Focus on well-known legal concepts
-- Do not provide specific case law citations
-- Always recommend professional legal research
-
-**Your approach:**
-- Match the user's question style: answer simple questions simply, complex questions with detail
-- If the user asks a simple question, give a brief, direct answer
-- If the user asks for detailed research, provide more comprehensive information
-- Use markdown formatting appropriately (not for simple questions)
-- Keep responses concise and to the point
-- Only expand with examples or details when the query warrants it
-
-**Response Guidelines:**
-- Simple question → Simple answer (1-2 sentences is fine)
-- General question → Brief explanation (1-2 paragraphs max)
-- Complex question → Detailed answer with structure
-- No unnecessary formatting for simple answers
-- Use markdown only when it adds clarity (lists, headers for longer answers)
-- Always include a brief disclaimer
-
-Remember: This is a demo version. For comprehensive legal research, users need to upgrade to a professional account.`;
 
 export interface GuestLegalResearchRequest {
   query: string;
+  sessionId?: string;
   jurisdiction?: string;
   caseType?: string;
 }
 
 /**
- * Perform guest legal research with rate limiting considerations
+ * Perform guest legal research with conversation memory using LangChain
  */
 export async function performGuestLegalResearch(
   request: GuestLegalResearchRequest
-): Promise<DemoProcessingResponse> {
-  // Build research query
-  const researchQuery = `Research Query: ${request.query}
-${request.jurisdiction ? `Jurisdiction: ${request.jurisdiction}` : ""}
-${request.caseType ? `Case Type: ${request.caseType}` : ""}
+): Promise<DemoProcessingResponse & { sessionId: string }> {
+  // Get or create session ID
+  let sessionId = request.sessionId || generateSessionId();
 
-Please provide general legal research guidance for this query.`;
-
-  // Use OpenRouter for demo research
-  const response = await openRouterService.chat({
-    model: openRouterService.getModelForTier("demo"),
-    messages: [
-      { role: "system", content: DEMO_RESEARCH_PROMPT },
-      { role: "user", content: researchQuery },
-    ],
-    max_tokens: openRouterService.getMaxTokensForTier("demo"),
-    temperature: 0.3,
-  });
-
-  const result =
-    response.choices[0]?.message?.content || "No research results generated";
-
-  if (!result || result.trim() === "") {
-    throw new Error("Empty response from AI model");
+  // If sessionId was provided but doesn't exist, create new one
+  if (request.sessionId && !sessionExists(request.sessionId)) {
+    sessionId = generateSessionId();
   }
 
-  return {
-    success: true,
-    result,
-    isDemo: true,
-    limitations: [
-      "Limited to general legal concepts",
-      "No case law database access",
-      "No statute research",
-      "Basic research guidance only",
-    ],
-    upgradeMessage:
-      "Upgrade to access comprehensive legal databases, case law research, and advanced search capabilities",
-  };
+  // Build research query with optional context
+  let researchQuery = request.query;
+  if (request.jurisdiction || request.caseType) {
+    const contextParts: string[] = [];
+    if (request.jurisdiction) {
+      contextParts.push(`Jurisdiction: ${request.jurisdiction}`);
+    }
+    if (request.caseType) {
+      contextParts.push(`Case Type: ${request.caseType}`);
+    }
+    if (contextParts.length > 0) {
+      researchQuery = `${researchQuery}\n\nContext: ${contextParts.join(", ")}`;
+    }
+  }
+
+  try {
+    // Get conversation history (without current query)
+    const history = getHistory(sessionId);
+
+    // Invoke LangChain with history and query
+    // Note: invokeLegalResearch will add the user query internally
+    const result = await invokeLegalResearch(history, researchQuery);
+
+    // Save both messages to history after successful invocation
+    saveMessage(sessionId, "user", researchQuery);
+    saveMessage(sessionId, "assistant", result);
+
+    return {
+      success: true,
+      result,
+      isDemo: true,
+      sessionId,
+      limitations: [
+        "Limited to general legal concepts",
+        "No case law database access",
+        "No statute research",
+        "Basic research guidance only",
+      ],
+      upgradeMessage:
+        "Upgrade to access comprehensive legal databases, case law research, and advanced search capabilities",
+    };
+  } catch (error) {
+    console.error("Legal research service error:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to perform legal research");
+  }
 }
 
+/**
+ * Stream guest legal research with conversation memory using LangChain
+ * Returns an async generator that yields content chunks
+ */
+export async function* streamGuestLegalResearch(
+  request: GuestLegalResearchRequest
+): AsyncGenerator<string, { sessionId: string; fullResult: string }, unknown> {
+  // Get or create session ID
+  let sessionId = request.sessionId || generateSessionId();
+
+  // If sessionId was provided but doesn't exist, create new one
+  if (request.sessionId && !sessionExists(request.sessionId)) {
+    sessionId = generateSessionId();
+  }
+
+  // Build research query with optional context
+  let researchQuery = request.query;
+  if (request.jurisdiction || request.caseType) {
+    const contextParts: string[] = [];
+    if (request.jurisdiction) {
+      contextParts.push(`Jurisdiction: ${request.jurisdiction}`);
+    }
+    if (request.caseType) {
+      contextParts.push(`Case Type: ${request.caseType}`);
+    }
+    if (contextParts.length > 0) {
+      researchQuery = `${researchQuery}\n\nContext: ${contextParts.join(", ")}`;
+    }
+  }
+
+  try {
+    // Get conversation history (without current query)
+    const history = getHistory(sessionId);
+
+    // Stream from LangChain
+    let fullResult = "";
+    for await (const chunk of streamLegalResearch(history, researchQuery)) {
+      fullResult += chunk;
+      yield chunk;
+    }
+
+    // Save both messages to history after successful streaming
+    saveMessage(sessionId, "user", researchQuery);
+    saveMessage(sessionId, "assistant", fullResult);
+
+    return { sessionId, fullResult };
+  } catch (error) {
+    console.error("Legal research streaming service error:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to stream legal research");
+  }
+}
