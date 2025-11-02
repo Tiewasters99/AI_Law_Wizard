@@ -94,7 +94,10 @@ export async function getEntitiesWithValidation(id: string) {
 
 ```typescript
 // src/lib/backend/services/[domain]/[entity]Service.ts
-import { findEntityById, findAllEntities } from "../../../repositories/[domain]/[entity]Repository";
+import {
+  findEntityById,
+  findAllEntities,
+} from "../../../repositories/[domain]/[entity]Repository";
 import { NotFoundError, ValidationError } from "../../../utils/errors";
 
 // ✅ Good: Business logic and validation
@@ -124,7 +127,10 @@ export async function getEntityBadly(id: string) {
 // src/lib/backend/controllers/[domain]/[entity]Controller.ts
 import { NextRequest } from "next/server";
 import { requireAuth } from "../../../utils/[role]Auth";
-import { getEntity, listEntities } from "../../../services/[domain]/[entity]Service";
+import {
+  getEntity,
+  listEntities,
+} from "../../../services/[domain]/[entity]Service";
 import { successResponse, errorResponse } from "../../../utils/response";
 
 // ✅ Good: Auth, delegation to service, standardized responses
@@ -152,7 +158,8 @@ export async function handleListEntities(request: NextRequest) {
 // ❌ Bad: Business logic in controller
 export async function handleGetEntityBadly(request: NextRequest, id: string) {
   const entity = await prisma.entity.findUnique({ where: { id } });
-  if (!entity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!entity)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ entity });
 }
 ```
@@ -182,7 +189,8 @@ export async function GET(
 // ❌ Bad: Logic in route handler
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const data = await prisma.entity.findMany();
   return NextResponse.json({ data });
 }
@@ -194,7 +202,11 @@ export async function GET(request: NextRequest) {
 
 ```typescript
 // ✅ Good: Throw custom errors in service layer
-import { ValidationError, NotFoundError, ConflictError } from "../../../utils/errors";
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+} from "../../../utils/errors";
 
 export async function updateEntity(id: string, data: any) {
   if (!data.name) throw new ValidationError("Name is required");
@@ -271,10 +283,10 @@ src/
 
 ```typescript
 // Controllers: Use auth utilities
-import { requireAuth } from "../../../utils/adminAuth";        // For admin
+import { requireAuth } from "../../../utils/adminAuth"; // For admin
 import { requireAdminAuth } from "@/lib/admin/apiProtection"; // Alternative admin
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/backend/auth";              // For regular users
+import { authOptions } from "@/lib/backend/auth"; // For regular users
 ```
 
 ### Rate Limiting
@@ -283,7 +295,12 @@ import { authOptions } from "@/lib/backend/auth";              // For regular us
 // Controllers: Apply rate limiting
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/backend";
 
-const rateLimit = checkRateLimit(request, session.user.id, session.user.role, true);
+const rateLimit = checkRateLimit(
+  request,
+  session.user.id,
+  session.user.role,
+  true
+);
 if (!rateLimit.allowed) {
   return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
 }
@@ -366,18 +383,19 @@ When implementing any backend feature:
 // In route.ts - TOO MUCH in one place
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (session.user.role !== "CUSTOMER") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  
+
   const data = await prisma.entity.findMany({
     where: { userId: session.user.id },
     include: { related: true },
     orderBy: { createdAt: "desc" },
   });
-  
+
   return NextResponse.json({ success: true, data });
 }
 ```
