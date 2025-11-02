@@ -1,60 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+// Attorney Token Packages API Route
+// Delegates to controller for handling
+
+import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/backend/auth";
-import { prisma } from "@/lib/backend/prisma";
+import {
+  handleGetTokenPackages,
+  handleCreateTokenPackage,
+} from "@/lib/backend/controllers/attorney/tokenPackages/tokenPackagesController";
 
 export async function GET() {
-  try {
-    const packages = await prisma.tokenPackage.findMany({
-      where: { isActive: true },
-      orderBy: { priceInCents: "asc" },
-    });
-
-    return NextResponse.json({ packages });
-  } catch (error) {
-    console.error("Error fetching token packages:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch token packages" },
-      { status: 500 }
-    );
-  }
+  return handleGetTokenPackages();
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.role || session.user.role !== "ATTORNEY") {
-      return NextResponse.json(
-        { error: "Attorney access required" },
-        { status: 403 }
-      );
-    }
-
-    const { name, tokens, priceInCents, description } = await req.json();
-
-    if (!name || !tokens || !priceInCents) {
-      return NextResponse.json(
-        { error: "Name, tokens, and price are required" },
-        { status: 400 }
-      );
-    }
-
-    const tokenPackage = await prisma.tokenPackage.create({
-      data: {
-        name,
-        tokens,
-        priceInCents,
-        description,
-      },
-    });
-
-    return NextResponse.json({ package: tokenPackage });
-  } catch (error) {
-    console.error("Error creating token package:", error);
-    return NextResponse.json(
-      { error: "Failed to create token package" },
-      { status: 500 }
-    );
-  }
+  const session = await getServerSession(authOptions);
+  return handleCreateTokenPackage(req, session?.user?.id || "");
 }

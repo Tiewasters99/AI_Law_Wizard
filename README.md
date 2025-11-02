@@ -76,6 +76,7 @@ NEXTAUTH_SECRET=supersecretstring
    - Set `AZURE_AD_TENANT_ID` to your tenant ID (or "common" for multi-tenant)
 
 **To get your Grok API key:**
+
 1. Visit [https://console.x.ai/](https://console.x.ai/)
 2. Sign up or log in to your account
 3. Navigate to API keys section
@@ -93,12 +94,14 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Features
 
 ### AI-Powered Legal Consultation
+
 - **Real-time Chat**: Chat with AI assistant for legal guidance
 - **Document Analysis**: Upload and analyze legal documents
 - **Legal Insights**: Get AI-powered legal insights and recommendations
 - **Smart Recommendations**: Intelligent suggestions based on your legal situation
 
 ### OneDrive Integration
+
 - **File Browsing**: Navigate through OneDrive folders
 - **File Search**: Search for files across OneDrive
 - **File Download**: Download files directly from OneDrive
@@ -107,34 +110,41 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - **File Actions**: Download, share, and manage files
 
 ### User Interface
+
 - **Modern Design**: Clean, responsive interface
 - **Chat Interface**: Real-time chat with AI assistant
 - **Consultation Forms**: Streamlined legal consultation process
 - **Results Display**: Clear presentation of analysis results
 
 ### Authentication
+
 - **Microsoft Authentication**: Secure login with Microsoft accounts
 - **Session Management**: Persistent user sessions
 - **User Profiles**: User profile management
 
 ## API Integration
 
-The application uses the Grok API for AI-powered legal consultation:
+The application uses a layered architecture (Controller → Service → Repository) for API endpoints.
 
-### Chat API
-- **Endpoint**: `/api/chat`
-- **Method**: POST
-- **Purpose**: Real-time chat with AI assistant
+**📚 For complete API documentation, see [API_ARCHITECTURE.md](./API_ARCHITECTURE.md)**  
+**⚡ For quick reference, see [API_QUICK_REFERENCE.md](./API_QUICK_REFERENCE.md)**
 
-### Legal Analysis API
-- **Endpoint**: `/api/legal-analysis`
-- **Method**: POST
-- **Purpose**: AI-powered legal document analysis
+### API Organization
 
-### OneDrive API
-- **Endpoint**: `/api/integrations`
-- **Methods**: GET, POST
-- **Purpose**: OneDrive file management and access
+The APIs are organized by user roles:
+
+- **Client APIs** (`/api/client/`): Customer functionality
+- **Attorney APIs** (`/api/attorney/`): Legal professional features
+- **Admin APIs** (`/api/admin/`): System administration
+- **Guest/Demo APIs** (`/api/guest/`, `/api/demo/`): Public demos
+- **Auth APIs** (`/api/auth/`): Authentication
+
+### Key Integration Services
+
+- **OpenRouter API**: AI model access for legal research
+- **Stripe API**: Payment processing
+- **OneDrive API**: File management
+- **NextAuth**: Session management
 
 ## Project Structure
 
@@ -169,12 +179,14 @@ AI-wizard/
 ## Development
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - npm or yarn
 - Microsoft Azure AD application
 - Grok API key
 
 ### Local Development
+
 1. Clone the repository
 2. Install dependencies: `npm install`
 3. Set up environment variables
@@ -182,6 +194,7 @@ AI-wizard/
 5. Open [http://localhost:3000](http://localhost:3000)
 
 ### Building for Production
+
 ```bash
 npm run build
 npm start
