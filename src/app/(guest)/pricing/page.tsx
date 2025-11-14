@@ -78,7 +78,14 @@ export default function PricingPage() {
       if (!packagesResponse.ok) {
         throw new Error("Failed to fetch pricing packages");
       }
-      const packages = await packagesResponse.json();
+      const responseData = await packagesResponse.json();
+      
+      // Extract packages array from response (API returns { packages: [...] })
+      const packages = Array.isArray(responseData.packages) 
+        ? responseData.packages 
+        : Array.isArray(responseData) 
+        ? responseData 
+        : [];
 
       // Define feature lists for each role
       const attorneyFeatures = [
