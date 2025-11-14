@@ -68,6 +68,42 @@ export const TokenPurchase = ({
     return () => observer.disconnect();
   }, []);
 
+  // Static packages fallback (same as client side)
+  const staticPackages: TokenPackage[] = [
+    {
+      id: "starter",
+      name: "Starter Pack",
+      tokens: 100,
+      priceInCents: 999,
+      description: "Perfect for getting started with basic legal assistance",
+      isActive: true,
+    },
+    {
+      id: "professional",
+      name: "Professional Pack",
+      tokens: 500,
+      priceInCents: 3999,
+      description: "Most popular choice for regular legal needs",
+      isActive: true,
+    },
+    {
+      id: "business",
+      name: "Business Pack",
+      tokens: 1000,
+      priceInCents: 6999,
+      description: "Ideal for businesses with high legal document volume",
+      isActive: true,
+    },
+    {
+      id: "enterprise",
+      name: "Enterprise Pack",
+      tokens: 2500,
+      priceInCents: 14999,
+      description: "For large organizations with extensive legal needs",
+      isActive: true,
+    },
+  ];
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,10 +111,19 @@ export const TokenPurchase = ({
         fetchTokenPackages(),
         fetchWallet(),
       ]);
-      setPackages(packagesData);
+      // Use API packages if available, otherwise use static fallback
+      setPackages(packagesData.length > 0 ? packagesData : staticPackages);
       setWallet(walletData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data");
+      // On error, use static packages as fallback
+      console.error("Failed to load packages from API, using static fallback:", err);
+      setPackages(staticPackages);
+      try {
+        const walletData = await fetchWallet();
+        setWallet(walletData);
+      } catch (walletErr) {
+        setError(err instanceof Error ? err.message : "Failed to load data");
+      }
     } finally {
       setLoading(false);
     }
