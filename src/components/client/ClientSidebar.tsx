@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
+import { AlertCircle } from "lucide-react";
 import {
   Search,
   FileCheck,
@@ -63,12 +65,6 @@ const clientNavigation: Record<string, NavigationSection> = {
         icon: Search,
         badge: null,
       },
-      {
-        label: "My Requests",
-        href: "/client/inbox",
-        icon: FileCheck,
-        badge: "pending",
-      },
     ],
   },
   aiTools: {
@@ -81,7 +77,12 @@ const clientNavigation: Record<string, NavigationSection> = {
         href: "/client/grand-wizard",
         icon: Crown,
       },
-      { label: "Chat History", href: "/client/legal-chat", icon: History },
+      {
+        label: "Document Assistant",
+        href: "/client/document-assistant",
+        icon: FileText,
+      },
+      { label: "Chat History", href: "/client/chat-history", icon: History },
     ],
   },
   mySpace: {
@@ -122,9 +123,74 @@ export function ClientSidebar({
   pendingRequestsCount = 0,
 }: ClientSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session } = useSession();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const { counts } = useNotifications();
+  const [hasViewedMessagesPage, setHasViewedMessagesPage] = useState(false);
+  const { counts, error: notificationError } = useNotifications();
   const { balance: currentTokens, loading: tokenLoading } = useTokenBalance();
+
+  // Ensure counts always has default values to prevent UI breakage
+  const safeCounts = useMemo(
+    () => ({
+      notifications: counts?.notifications ?? 0,
+      messages: counts?.messages ?? 0,
+      pendingRequests: counts?.pendingRequests ?? 0,
+      total: counts?.total ?? 0,
+    }),
+    [counts]
+  );
+
+  // Determine if balance is low (less than 10 credits)
+  const isLowBalance = useMemo(() => currentTokens < 10, [currentTokens]);
+
+  const handleCreditsClick = useCallback(() => {
+    router.push("/client/tokens");
+  }, [router]);
+
+  // Check if messages page has been viewed
+  useEffect(() => {
+    if (session?.user?.id) {
+      const viewedKey = `messages-page-viewed-${session.user.id}`;
+      const checkViewed = () => {
+        const viewed = localStorage.getItem(viewedKey) === "true";
+        setHasViewedMessagesPage(viewed);
+      };
+
+      // Check initially
+      checkViewed();
+
+      // Listen for storage changes (when messages page marks itself as viewed)
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === viewedKey) {
+          checkViewed();
+        }
+      };
+
+      window.addEventListener("storage", handleStorageChange);
+
+      // Also listen for custom event for same-tab updates
+      const handleCustomStorageChange = (e: Event) => {
+        const customEvent = e as CustomEvent;
+        if (customEvent.detail?.key === viewedKey) {
+          checkViewed();
+        }
+      };
+
+      window.addEventListener(
+        "localStorageChange",
+        handleCustomStorageChange as EventListener
+      );
+
+      return () => {
+        window.removeEventListener("storage", handleStorageChange);
+        window.removeEventListener(
+          "localStorageChange",
+          handleCustomStorageChange as EventListener
+        );
+      };
+    }
+  }, [session?.user?.id]);
 
   const handleMouseEnter = useCallback((href: string) => {
     setHoveredItem(href);
@@ -174,12 +240,15 @@ export function ClientSidebar({
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
                   const showBadge =
-                    (item.badge === "unread" && counts.messages > 0) ||
-                    (item.badge === "pending" && counts.pendingRequests > 0);
+                    (item.badge === "unread" &&
+                      safeCounts.messages > 0 &&
+                      !hasViewedMessagesPage) ||
+                    (item.badge === "pending" &&
+                      safeCounts.pendingRequests > 0);
                   const badgeCount =
                     item.badge === "unread"
-                      ? counts.messages
-                      : counts.pendingRequests;
+                      ? safeCounts.messages
+                      : safeCounts.pendingRequests;
 
                   return (
                     <Link
@@ -256,17 +325,36 @@ export function ClientSidebar({
       {/* Bottom Stats Widget */}
       {!isCollapsed && (
         <div className="p-4 border-t border-sidebar-border">
-          <div className="p-3 rounded-lg bg-accent/50 border border-primary/20">
+          <button
+            onClick={handleCreditsClick}
+            className="w-full p-3 rounded-lg bg-accent/50 border border-primary/20 hover:bg-accent/70 transition-colors cursor-pointer text-left"
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-primary">
                 My Credits
               </span>
-              <Coins className="w-4 h-4 text-primary" />
+              <div className="flex items-center gap-2">
+                {isLowBalance && (
+                  <AlertCircle className="w-4 h-4 text-destructive" />
+                )}
+                <Coins className="w-4 h-4 text-primary" />
+              </div>
             </div>
-            <p className="text-lg font-bold text-foreground">
-              {tokenLoading ? "..." : currentTokens.toLocaleString()}
-            </p>
-          </div>
+            <div className="flex items-center justify-between">
+              <p
+                className={`text-lg font-bold ${
+                  isLowBalance ? "text-destructive" : "text-foreground"
+                }`}
+              >
+                {tokenLoading ? "..." : currentTokens.toLocaleString()}
+              </p>
+              {isLowBalance && (
+                <span className="text-xs text-destructive font-medium">
+                  Low
+                </span>
+              )}
+            </div>
+          </button>
         </div>
       )}
     </motion.div>

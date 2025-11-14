@@ -6,13 +6,23 @@ export interface AttorneySearchFilters {
   search?: string;
   practiceArea?: string;
   location?: string;
+  page?: number;
+  limit?: number;
 }
 
 /**
  * List attorneys available for clients
  */
 export async function listAttorneys(filters: AttorneySearchFilters = {}) {
-  const attorneys = await findAttorneysWithProfiles();
+  const page = filters.page || 1;
+  const limit = filters.limit || 20;
+  const skip = (page - 1) * limit;
+
+  // Get paginated attorneys from database
+  const { attorneys, total, hasMore } = await findAttorneysWithProfiles(
+    skip,
+    limit
+  );
 
   // Apply search filter
   let filtered = attorneys;
@@ -65,7 +75,9 @@ export async function listAttorneys(filters: AttorneySearchFilters = {}) {
 
   return {
     attorneys: formatted,
-    total: formatted.length,
+    total,
+    page,
+    limit,
+    hasMore: hasMore && filtered.length === limit,
   };
 }
-

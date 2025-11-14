@@ -66,14 +66,36 @@ export async function upsertLawyerProfile(
 /**
  * Find attorneys with their profiles (for client directory)
  */
-export async function findAttorneysWithProfiles() {
-  return await prisma.user.findMany({
-    where: {
-      role: "ATTORNEY",
-      profileComplete: true,
-    },
-    include: {
-      lawyerProfile: true,
-    },
-  });
+export async function findAttorneysWithProfiles(
+  skip: number = 0,
+  take: number = 20
+) {
+  const [attorneys, total] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        role: "ATTORNEY",
+        profileComplete: true,
+      },
+      include: {
+        lawyerProfile: true,
+      },
+      skip,
+      take,
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.user.count({
+      where: {
+        role: "ATTORNEY",
+        profileComplete: true,
+      },
+    }),
+  ]);
+
+  return {
+    attorneys,
+    total,
+    hasMore: skip + take < total,
+  };
 }

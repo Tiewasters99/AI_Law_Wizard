@@ -51,7 +51,7 @@ export default function WizardPage() {
 
   return (
     <div className="bg-white h-full overflow-hidden">
-      <DocumentAnalysisInterface />
+      <DocumentAnalysisInterface model="openai/gpt-4o-mini" />
     </div>
   );
 }

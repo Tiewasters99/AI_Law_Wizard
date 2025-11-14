@@ -62,6 +62,7 @@ export interface ProcessedFileInfo {
 interface ProcessingRequest {
   userPrompt: string;
   searchQuery?: string;
+  model?: string;
 }
 
 interface ProcessingState {
@@ -154,6 +155,9 @@ export const useDocumentProcessingStore = create<ProcessingState>()(
               userPrompt: request.userPrompt.trim(),
               ...(request.searchQuery?.trim() && {
                 searchQuery: request.searchQuery.trim(),
+              }),
+              ...(request.model && {
+                model: request.model,
               }),
             }),
           });

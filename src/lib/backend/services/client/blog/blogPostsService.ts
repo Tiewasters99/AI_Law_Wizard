@@ -1,6 +1,7 @@
 // Service for client blog posts functionality
 
-import { findAllBlogs } from "../../../repositories/attorney/blogRepository";
+import { findAllBlogs, findBlogById } from "../../../repositories/attorney/blogRepository";
+import { NotFoundError } from "../../../utils/errors";
 
 export interface BlogFilterOptions {
   category?: string;
@@ -53,6 +54,35 @@ export async function getPublishedBlogPosts(
   return {
     blogs: formatted,
     total: formatted.length,
+  };
+}
+
+/**
+ * Get a single published blog post by ID
+ */
+export async function getPublishedBlogPostById(id: string) {
+  const blog = await findBlogById(id);
+
+  if (!blog) {
+    throw new NotFoundError("Blog post");
+  }
+
+  if (!blog.published) {
+    throw new NotFoundError("Blog post");
+  }
+
+  // Format response
+  return {
+    id: blog.id,
+    title: blog.title,
+    content: blog.content,
+    author: blog.author,
+    category: blog.category,
+    tags: blog.tags,
+    readTime: blog.readTime,
+    views: blog.views,
+    createdAt: blog.createdAt,
+    updatedAt: blog.updatedAt,
   };
 }
 

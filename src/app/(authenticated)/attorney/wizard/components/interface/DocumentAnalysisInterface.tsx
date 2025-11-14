@@ -23,11 +23,12 @@ import { animationVariants } from "../../utils/constants";
 interface DocumentAnalysisInterfaceProps {
   onComplete?: (result: string, generatedFile: string) => void;
   onBeforeStart?: () => Promise<boolean> | boolean;
+  model?: string;
 }
 
 export const DocumentAnalysisInterface: React.FC<
   DocumentAnalysisInterfaceProps
-> = ({ onComplete, onBeforeStart }) => {
+> = ({ onComplete, onBeforeStart, model }) => {
   // Zustand stores
   const {
     isProcessing,
@@ -152,8 +153,11 @@ export const DocumentAnalysisInterface: React.FC<
     toast.info("Starting Analysis - Processing your request...");
 
     // Start processing
-    await startProcessing({ userPrompt: userPrompt.trim() });
-  }, [isProcessing, userPrompt, onBeforeStart, clearState, startProcessing]);
+    await startProcessing({ 
+      userPrompt: userPrompt.trim(),
+      ...(model && { model }),
+    });
+  }, [isProcessing, userPrompt, model, onBeforeStart, clearState, startProcessing]);
 
   // Handle new analysis
   const handleNewAnalysis = useCallback(() => {
@@ -288,7 +292,7 @@ export const DocumentAnalysisInterface: React.FC<
       >
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <AnalysisHeader />
+            <AnalysisHeader model={model} />
             <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
         </div>

@@ -11,12 +11,16 @@ export async function handleOneDriveCallback(request: NextRequest) {
   const code = searchParams.get("code");
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
+  const state = searchParams.get("state");
 
-  const result = await handleOneDriveOAuthCallback({
-    code,
-    error,
-    errorDescription,
-  });
+  const result = await handleOneDriveOAuthCallback(
+    {
+      code,
+      error,
+      errorDescription,
+    },
+    state
+  );
 
   // Create redirect response
   const redirectResponse = NextResponse.redirect(result.redirectUrl);

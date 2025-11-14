@@ -4,9 +4,13 @@ import { prisma } from "../../../prisma";
 
 /**
  * Handle payment success event
+ * This webhook is role-agnostic and works for both ATTORNEY and CUSTOMER roles
  */
 export async function handlePaymentSuccess(paymentIntent: any) {
-  console.log("Processing payment success for:", paymentIntent.id);
+  const role = paymentIntent.metadata?.role || "unknown";
+  console.log(
+    `Processing payment success for: ${paymentIntent.id} (Role: ${role})`
+  );
 
   const purchase = await prisma.purchase.findUnique({
     where: { stripePaymentIntent: paymentIntent.id },
@@ -21,7 +25,9 @@ export async function handlePaymentSuccess(paymentIntent: any) {
   console.log("Found purchase:", {
     id: purchase.id,
     userId: purchase.userId,
+    userRole: purchase.user.role,
     tokensAwarded: purchase.tokensAwarded,
+    role: role,
   });
 
   if (purchase.status === "COMPLETED") {
@@ -71,7 +77,7 @@ export async function handlePaymentSuccess(paymentIntent: any) {
   });
 
   console.log(
-    `Payment completed: ${paymentIntent.id}, ${purchase.tokensAwarded} tokens awarded`
+    `Payment completed: ${paymentIntent.id}, ${purchase.tokensAwarded} tokens awarded to user ${purchase.userId} (Role: ${purchase.user.role})`
   );
 }
 

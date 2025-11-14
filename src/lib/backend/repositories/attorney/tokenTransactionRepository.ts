@@ -8,6 +8,7 @@ export interface TokenTransaction {
   userId: string;
   type: string;
   amount: number;
+  feature: string | null;
   description: string | null;
   reference: string | null;
   metadata: any;
@@ -62,6 +63,7 @@ export async function getTokenTransactionsByUserId(
     userId: tx.userId,
     type: tx.type,
     amount: tx.amount,
+    feature: tx.feature,
     description: tx.description,
     reference: tx.reference,
     metadata: tx.metadata,

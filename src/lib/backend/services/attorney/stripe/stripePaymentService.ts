@@ -3,30 +3,41 @@
 import { stripe } from "../../../stripeServer";
 import { findPackageByIdWithRolePricing } from "../../../repositories/pricing/tokenPackageRepository";
 import { createPurchase } from "../../../repositories/attorney/purchaseRepository";
-import { NotFoundError } from "../../../utils/errors";
+import { NotFoundError, ValidationError } from "../../../utils/errors";
+import type { Role } from "@prisma/client";
 
 /**
  * Create payment intent for token package purchase
  */
 export async function createPaymentIntent(
   userId: string,
-  packageId: string
+  packageId: string,
+  role: Role
 ) {
-  // Get the token package
-  const tokenPackage = await findPackageByIdWithRolePricing(packageId);
+  // Get the token package with role-specific pricing
+  const tokenPackage = await findPackageByIdWithRolePricing(packageId, role);
 
   if (!tokenPackage || !tokenPackage.isActive) {
     throw new NotFoundError("Invalid or inactive package");
   }
 
+  // Get role-specific price, fallback to base price if role pricing not found
+  const rolePricing = tokenPackage.RolePricing.find(
+    (rp) => rp.role === role && rp.isActive
+  );
+  const priceInCents = rolePricing
+    ? rolePricing.priceInCents
+    : tokenPackage.priceInCents;
+
   // Create payment intent
   const paymentIntent = await stripe.paymentIntents.create({
-    amount: tokenPackage.priceInCents,
+    amount: priceInCents,
     currency: "usd",
     metadata: {
       userId,
       packageId: tokenPackage.id,
       tokens: tokenPackage.tokens.toString(),
+      role: role,
     },
     description: `${tokenPackage.name} - ${tokenPackage.tokens} tokens`,
   });
@@ -37,7 +48,7 @@ export async function createPaymentIntent(
     packageId: tokenPackage.id,
     stripePaymentIntent: paymentIntent.id,
     tokensAwarded: tokenPackage.tokens,
-    amountPaid: tokenPackage.priceInCents,
+    amountPaid: priceInCents,
   });
 
   return {

@@ -122,6 +122,7 @@ export {
 export * from "./controllers/client/tokens/tokenBalanceController";
 export * from "./controllers/client/tokens/tokenTransactionsController";
 export * from "./controllers/client/tokens/tokenUsageController";
+export * from "./controllers/client/stripe/stripePaymentController";
 export * from "./controllers/client/upload/uploadController";
 
 // Controllers - Admin
@@ -202,6 +203,7 @@ export * from "./services/client/profile/profileService";
 export * from "./services/client/tokens/tokenBalanceService";
 export * from "./services/client/tokens/tokenTransactionsService";
 export * from "./services/client/tokens/tokenUsageService";
+export * from "./services/client/stripe/stripePaymentService";
 export * from "./services/client/upload/uploadService";
 
 // Services - Admin

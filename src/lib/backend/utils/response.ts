@@ -11,7 +11,13 @@ export function successResponse<T>(
   status: number = 200,
   options?: { headers?: HeadersInit }
 ): NextResponse {
-  return NextResponse.json(data, { status, headers: options?.headers });
+  // Wrap data in an object with success: true for consistent API responses
+  const responseData =
+    typeof data === "object" && data !== null && !Array.isArray(data)
+      ? { success: true, ...data }
+      : { success: true, data };
+
+  return NextResponse.json(responseData, { status, headers: options?.headers });
 }
 
 /**
@@ -91,4 +97,3 @@ export function notFoundErrorResponse(
     { status: 404 }
   );
 }
-

@@ -31,24 +31,33 @@ export interface OAuthResult {
  * Handle OAuth callback and exchange code for tokens
  */
 export async function handleOneDriveOAuthCallback(
-  params: OAuthCallbackParams
+  params: OAuthCallbackParams,
+  state?: string | null
 ): Promise<OAuthResult> {
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const successUrl = `${baseUrl}/attorney/integrations?success=true`;
+  
+  // Determine redirect URL based on state (role)
+  const isClient = state === "client";
+  const successUrl = isClient
+    ? `${baseUrl}/client/integrations?success=true`
+    : `${baseUrl}/attorney/integrations?success=true`;
+  const errorUrl = isClient
+    ? `${baseUrl}/client/integrations?error=`
+    : `${baseUrl}/attorney/integrations?error=`;
 
   // Handle OAuth errors
   if (params.error) {
     const errorMessage = params.errorDescription || params.error;
     return {
-      redirectUrl: `${baseUrl}/attorney/integrations?error=${encodeURIComponent(errorMessage)}`,
+      redirectUrl: `${errorUrl}${encodeURIComponent(errorMessage)}`,
     };
   }
 
   // Handle missing authorization code
   if (!params.code) {
     return {
-      redirectUrl: `${baseUrl}/attorney/integrations?error=${encodeURIComponent("No authorization code received")}`,
+      redirectUrl: `${errorUrl}${encodeURIComponent("No authorization code received")}`,
     };
   }
 
@@ -61,7 +70,7 @@ export async function handleOneDriveOAuthCallback(
 
   if (!clientId || !clientSecret) {
     return {
-      redirectUrl: `${baseUrl}/attorney/integrations?error=${encodeURIComponent("Azure configuration missing")}`,
+      redirectUrl: `${errorUrl}${encodeURIComponent("Azure configuration missing")}`,
     };
   }
 
@@ -98,7 +107,7 @@ export async function handleOneDriveOAuthCallback(
         code: params.code ? "present" : "missing",
       });
       return {
-        redirectUrl: `${baseUrl}/attorney/integrations?error=${encodeURIComponent(`Token exchange failed: ${response.status} - ${error}`)}`,
+        redirectUrl: `${errorUrl}${encodeURIComponent(`Token exchange failed: ${response.status} - ${error}`)}`,
       };
     }
 
@@ -151,7 +160,7 @@ export async function handleOneDriveOAuthCallback(
     const errorMessage =
       error instanceof Error ? error.message : "Authentication failed";
     return {
-      redirectUrl: `${baseUrl}/attorney/integrations?error=${encodeURIComponent(errorMessage)}`,
+      redirectUrl: `${errorUrl}${encodeURIComponent(errorMessage)}`,
     };
   }
 }

@@ -31,6 +31,10 @@ export interface CreateDocumentQueryData {
   toolsUsed?: string[];
   filesProcessed?: any;
   userId?: string | null;
+  documentSessionId?: string | null;
+  followUpQuestion?: boolean;
+  parentQueryId?: string | null;
+  conversationContext?: any;
 }
 
 export interface DocumentQueryWhere {
@@ -60,6 +64,10 @@ export async function createDocumentQuery(
       toolsUsed: data.toolsUsed ?? [],
       filesProcessed: data.filesProcessed,
       userId: data.userId,
+      documentSessionId: data.documentSessionId || null,
+      followUpQuestion: data.followUpQuestion || false,
+      parentQueryId: data.parentQueryId || null,
+      conversationContext: data.conversationContext || null,
     },
   });
 }

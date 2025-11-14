@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { OneDriveFileInfo } from "@/types/onedrive";
 
-export function useOneDriveFiles(isAuthenticated: boolean) {
+export function useOneDriveFiles(
+  isAuthenticated: boolean,
+  role: "attorney" | "client" = "attorney"
+) {
   const [files, setFiles] = useState<OneDriveFileInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentFolder, setCurrentFolder] = useState("root");
@@ -24,9 +27,11 @@ export function useOneDriveFiles(isAuthenticated: boolean) {
         params.append("pageSize", "100");
         params.append("orderBy", "name");
 
-        const response = await fetch(
-          `/api/attorney/onedrive?${params.toString()}`
-        );
+        const endpoint = role === "client"
+          ? `/api/client/onedrive?${params.toString()}`
+          : `/api/attorney/onedrive?${params.toString()}`;
+
+        const response = await fetch(endpoint);
         const data = await response.json();
 
         if (!response.ok) {
@@ -43,7 +48,7 @@ export function useOneDriveFiles(isAuthenticated: boolean) {
         setLoading(false);
       }
     },
-    [isAuthenticated, currentFolder, searchTerm]
+    [isAuthenticated, currentFolder, searchTerm, role]
   );
 
   // Navigate to folder

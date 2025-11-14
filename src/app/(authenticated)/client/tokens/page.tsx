@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
+import { Elements } from "@stripe/react-stripe-js";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
 import {
   Zap,
   Crown,
@@ -28,6 +30,16 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  getStripe,
+  fetchTokenPackages,
+  createPaymentIntent,
+  TokenPackage as StripeTokenPackage,
+  formatPrice,
+  UserRole,
+} from "@/lib/backend/stripeService";
+import { PaymentForm } from "@/components/attorney/tokens/PaymentForm";
+import { getPrimaryColorHex } from "@/lib/frontend/themeUtils";
 
 interface TokenPackage {
   id: string;
@@ -69,19 +81,73 @@ interface UsageStats {
 
 export default function TokensPage() {
   const { data: session } = useSession();
-  const [tokenUsage, setTokenUsage] = useState({ used: 0, limit: 0 });
+  const { balance, refetch: refetchBalance } = useTokenBalance();
   const [transactions, setTransactions] = useState<TokenTransaction[]>([]);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<TokenPackage | null>(
+  const [selectedPackage, setSelectedPackage] = useState<StripeTokenPackage | null>(
     null
   );
   const [activeTab, setActiveTab] = useState("packages");
+  const [stripePackages, setStripePackages] = useState<StripeTokenPackage[]>([]);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [primaryColorHex, setPrimaryColorHex] = useState("#2563eb");
 
-  const tokenPackages: TokenPackage[] = [
+  // Load real token packages from API
+  useEffect(() => {
+    const loadPackages = async () => {
+      try {
+        const packages = await fetchTokenPackages("CUSTOMER" as UserRole);
+        setStripePackages(packages);
+      } catch (error) {
+        console.error("Failed to load token packages:", error);
+        setError("Failed to load token packages");
+      }
+    };
+    if (session?.user) {
+      loadPackages();
+    }
+  }, [session?.user]);
+
+  useEffect(() => {
+    // Get primary color from theme on mount and theme changes
+    setPrimaryColorHex(getPrimaryColorHex());
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(() => {
+      setPrimaryColorHex(getPrimaryColorHex());
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+
+  // Convert Stripe packages to display format
+  const tokenPackages: TokenPackage[] = stripePackages.length > 0
+    ? stripePackages.map((pkg, index) => ({
+        id: pkg.id,
+        name: pkg.name,
+        tokens: pkg.tokens,
+        price: pkg.priceInCents / 100,
+        popular: index === 1, // Mark second package as popular
+        features: [
+          `${pkg.tokens} tokens`,
+          "All legal chat access",
+          "Document analysis",
+          "Legal research",
+        ],
+        description: pkg.description || `${pkg.tokens} tokens for legal services`,
+      }))
+    : [
     {
       id: "starter",
       name: "Starter Pack",
@@ -107,7 +173,7 @@ export default function TokensPage() {
         "500 tokens",
         "All chat tiers access",
         "Document analysis (5 tokens each)",
-        "Wizard chat access",
+        "Legal Chat access",
         "Priority support",
         "Advanced features",
       ],
@@ -159,7 +225,7 @@ export default function TokensPage() {
       description: "AI-powered document queries",
     },
     {
-      name: "Wizard Chat",
+      name: "Legal Chat",
       cost: 2,
       description: "Premium AI with enhanced capabilities",
     },
@@ -176,110 +242,120 @@ export default function TokensPage() {
     },
   ];
 
-  useEffect(() => {
-    const fetchTokenData = async () => {
-      try {
-        // Fetch token balance
-        const balanceResponse = await fetch("/api/client/tokens/balance");
-        if (balanceResponse.ok) {
-          const balanceData = await balanceResponse.json();
-          setTokenUsage({
-            used: balanceData.totalConsumed || 0,
-            limit: balanceData.balance + (balanceData.totalConsumed || 0),
-          });
-        }
-
-        // Fetch transactions
-        const transactionsResponse = await fetch(
-          "/api/client/tokens/transactions"
-        );
-        if (transactionsResponse.ok) {
-          const transactionsData = await transactionsResponse.json();
-          const formattedTransactions: TokenTransaction[] =
-            transactionsData.transactions.map((t: any) => ({
-              id: t.id,
-              type:
-                t.type === "PURCHASE"
-                  ? "purchase"
-                  : t.type === "CONSUMPTION"
+  const fetchTokenData = useCallback(async () => {
+    try {
+      // Fetch transactions
+      const transactionsResponse = await fetch(
+        "/api/client/tokens/transactions"
+      );
+      if (transactionsResponse.ok) {
+        const transactionsData = await transactionsResponse.json();
+        const formattedTransactions: TokenTransaction[] =
+          transactionsData.transactions.map((t: any) => ({
+            id: t.id,
+            type:
+              t.type === "PURCHASE"
+                ? "purchase"
+                : t.type === "CONSUMPTION"
                   ? "usage"
                   : t.type === "REFUND"
-                  ? "refund"
-                  : "grant",
-              amount: t.amount,
-              description: t.description || "Transaction",
-              timestamp: new Date(t.createdAt),
-              status: "completed",
-              feature: t.metadata?.feature,
-              packageName: t.metadata?.packageName,
-            }));
-          setTransactions(formattedTransactions);
-        }
-
-        // Fetch usage statistics
-        const usageResponse = await fetch("/api/client/tokens/usage");
-        if (usageResponse.ok) {
-          const usageData = await usageResponse.json();
-          setUsageStats({
-            totalUsed: usageData.totalConsumed || 0,
-            totalPurchased: usageData.totalPurchased || 0,
-            currentBalance: usageData.balance || 0,
-            usageByFeature: usageData.byFeature || [],
-            dailyUsage: [],
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching token data:", error);
-        setError("Failed to load token data");
-      } finally {
-        setIsLoading(false);
+                    ? "refund"
+                    : "grant",
+            amount: t.amount,
+            description: t.description || "Transaction",
+            timestamp: new Date(t.createdAt),
+            status: "completed",
+            feature: t.feature || undefined,
+            packageName: t.metadata?.packageName,
+          }));
+        setTransactions(formattedTransactions);
       }
-    };
 
+      // Fetch usage statistics
+      const usageResponse = await fetch("/api/client/tokens/usage");
+      if (usageResponse.ok) {
+        const usageData = await usageResponse.json();
+        setUsageStats({
+          totalUsed: usageData.totalUsed || 0,
+          totalPurchased: usageData.totalPurchased || 0,
+          currentBalance: balance,
+          usageByFeature: usageData.breakdown || [],
+          dailyUsage: [],
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching token data:", error);
+      setError("Failed to load token data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [balance]);
+
+  useEffect(() => {
     if (session?.user?.id) {
       fetchTokenData();
     } else {
       setIsLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, fetchTokenData]);
 
-  const handlePurchasePackage = async (pkg: TokenPackage) => {
-    setSelectedPackage(pkg);
-    setIsProcessing(true);
-    setError(null);
+  const handlePurchasePackage = useCallback(
+    async (pkg: TokenPackage) => {
+      // Find the corresponding Stripe package
+      const stripePkg = stripePackages.find(sp => sp.id === pkg.id);
+      if (!stripePkg) {
+        setError("Package not found");
+        return;
+      }
 
-    try {
-      // In real app, this would integrate with Stripe
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate payment processing
+      setSelectedPackage(stripePkg);
+      setPaymentLoading(true);
+      setError(null);
 
-      // Simulate successful purchase
-      const newTransaction: TokenTransaction = {
-        id: Date.now().toString(),
-        type: "purchase",
-        amount: pkg.tokens,
-        description: `${pkg.name} - ${pkg.tokens} tokens`,
-        timestamp: new Date(),
-        status: "completed",
-        packageName: pkg.name,
-      };
+      try {
+        // Create payment intent with CUSTOMER role
+        const { clientSecret } = await createPaymentIntent(
+          stripePkg.id,
+          "CUSTOMER" as UserRole
+        );
+        setPaymentClientSecret(clientSecret);
+        setShowPaymentForm(true);
+      } catch (error) {
+        console.error("Error initializing payment:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to initialize payment. Please try again."
+        );
+        setTimeout(() => setError(null), 5000);
+      } finally {
+        setPaymentLoading(false);
+      }
+    },
+    [stripePackages]
+  );
 
-      setTransactions(prev => [newTransaction, ...prev]);
-
-      // Update token balance
-      const newBalance = tokenUsage.limit + pkg.tokens;
-      setTokenUsage(prev => ({ ...prev, limit: newBalance }));
-
-      setSuccess(`Successfully purchased ${pkg.tokens} tokens!`);
-      setTimeout(() => setSuccess(null), 5000);
-    } catch (error) {
-      console.error("Error purchasing package:", error);
-      setError("Failed to process payment. Please try again.");
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setIsProcessing(false);
+  const handlePaymentSuccess = useCallback(
+    async (tokens: number) => {
+      setShowPaymentForm(false);
       setSelectedPackage(null);
-    }
-  };
+      setPaymentClientSecret(null);
+
+      // Refetch balance and transactions
+      await refetchBalance();
+      await fetchTokenData();
+
+      setSuccess(`Successfully purchased ${tokens} tokens!`);
+      setTimeout(() => setSuccess(null), 5000);
+    },
+    [refetchBalance, fetchTokenData]
+  );
+
+  const handleCancelPayment = useCallback(() => {
+    setShowPaymentForm(false);
+    setSelectedPackage(null);
+    setPaymentClientSecret(null);
+  }, []);
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -311,7 +387,7 @@ export default function TokensPage() {
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = useCallback((date: Date) => {
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "short",
@@ -319,7 +395,43 @@ export default function TokensPage() {
       hour: "2-digit",
       minute: "2-digit",
     }).format(date);
-  };
+  }, []);
+
+  // Memoize computed values
+  const totalTokens = useMemo(() => {
+    if (!usageStats) return 0;
+    return usageStats.totalPurchased;
+  }, [usageStats]);
+
+  const totalUsed = useMemo(() => {
+    if (!usageStats) return 0;
+    return usageStats.totalUsed;
+  }, [usageStats]);
+
+  const availableTokens = useMemo(() => {
+    return balance;
+  }, [balance]);
+
+  const groupedTransactions = useMemo(() => {
+    return transactions.reduce(
+      (acc, tx) => {
+        const feature = tx.feature || "Other";
+        if (!acc[feature]) {
+          acc[feature] = [];
+        }
+        acc[feature].push(tx);
+        return acc;
+      },
+      {} as Record<string, TokenTransaction[]>
+    );
+  }, [transactions]);
+
+  const formattedTransactions = useMemo(() => {
+    return transactions.map(tx => ({
+      ...tx,
+      formattedDate: formatDate(tx.timestamp),
+    }));
+  }, [transactions, formatDate]);
 
   if (isLoading) {
     return (
@@ -333,51 +445,55 @@ export default function TokensPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
+      <div className="bg-card border-b border-border px-4 sm:px-6 py-4 sm:py-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                 Token Management
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
                 Manage your AI credits and purchase additional tokens
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-primary">
-                {tokenUsage.limit - tokenUsage.used}
+            <div className="text-left sm:text-right">
+              <div className="text-2xl sm:text-3xl font-bold text-primary">
+                {availableTokens.toLocaleString()}
               </div>
-              <div className="text-sm text-gray-500">Tokens Available</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                Credits Available
+              </div>
             </div>
           </div>
 
           {/* Token Usage Bar */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Usage Progress
-              </span>
-              <span className="text-sm text-gray-500">
-                {tokenUsage.used} / {tokenUsage.limit} used
-              </span>
+          {usageStats && totalTokens > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-foreground">
+                  Usage Progress
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {totalUsed} / {totalTokens} used
+                </span>
+              </div>
+              <Progress
+                value={(totalUsed / totalTokens) * 100}
+                className="h-3"
+              />
             </div>
-            <Progress
-              value={(tokenUsage.used / tokenUsage.limit) * 100}
-              className="h-3"
-            />
-          </div>
+          )}
         </div>
       </div>
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+            <AlertDescription className="text-sm sm:text-base text-green-800">
               {success}
             </AlertDescription>
           </Alert>
@@ -385,32 +501,116 @@ export default function TokensPage() {
       )}
 
       {error && (
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="text-sm sm:text-base">
+              {error}
+            </AlertDescription>
           </Alert>
         </div>
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
-          className="space-y-6"
+          className="space-y-4 sm:space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="packages">Buy Tokens</TabsTrigger>
-            <TabsTrigger value="usage">Usage Stats</TabsTrigger>
-            <TabsTrigger value="transactions">Transaction History</TabsTrigger>
-            <TabsTrigger value="features">Feature Costs</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsTrigger
+              value="packages"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Buy Tokens
+            </TabsTrigger>
+            <TabsTrigger
+              value="usage"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Usage Stats
+            </TabsTrigger>
+            <TabsTrigger
+              value="transactions"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Transactions
+            </TabsTrigger>
+            <TabsTrigger
+              value="features"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Feature Costs
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="packages" className="space-y-6">
+          <TabsContent value="packages" className="space-y-4 sm:space-y-6">
+            {/* Payment Form */}
+            {showPaymentForm && selectedPackage && paymentClientSecret && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold">Complete Purchase</h3>
+                  <Button variant="outline" onClick={handleCancelPayment}>
+                    Cancel
+                  </Button>
+                </div>
+
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-foreground">
+                          {selectedPackage.name}
+                        </h4>
+                        <p className="text-primary">{selectedPackage.tokens} tokens</p>
+                        {selectedPackage.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {selectedPackage.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-foreground">
+                          {formatPrice(selectedPackage.priceInCents)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatPrice(
+                            selectedPackage.priceInCents / selectedPackage.tokens
+                          )}{" "}
+                          per token
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Elements
+                  stripe={getStripe()}
+                  options={{
+                    clientSecret: paymentClientSecret,
+                    appearance: {
+                      theme: "stripe",
+                      variables: {
+                        colorPrimary: primaryColorHex,
+                      },
+                    },
+                  }}
+                >
+                  <PaymentForm
+                    package={selectedPackage}
+                    onSuccess={handlePaymentSuccess}
+                    onCancel={handleCancelPayment}
+                    clientSecret={paymentClientSecret}
+                  />
+                </Elements>
+              </div>
+            )}
+
             {/* Token Packages */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {tokenPackages.map(pkg => (
+            {!showPaymentForm && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                {tokenPackages.map(pkg => (
                 <motion.div
                   key={pkg.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -483,13 +683,13 @@ export default function TokensPage() {
                       <Button
                         className="w-full"
                         onClick={() => handlePurchasePackage(pkg)}
-                        disabled={isProcessing}
+                        disabled={paymentLoading}
                         variant={pkg.popular ? "default" : "outline"}
                       >
-                        {isProcessing && selectedPackage?.id === pkg.id ? (
+                        {paymentLoading && selectedPackage?.id === pkg.id ? (
                           <>
                             <Clock className="w-4 h-4 mr-2 animate-spin" />
-                            Processing...
+                            Loading...
                           </>
                         ) : (
                           <>
@@ -501,29 +701,44 @@ export default function TokensPage() {
                     </CardContent>
                   </Card>
                 </motion.div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Payment Security */}
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
-                  <Shield className="w-5 h-5" />
-                  <span>Secure payment processing by Stripe</span>
-                  <Separator orientation="vertical" className="h-4" />
-                  <span>SSL encrypted</span>
-                  <Separator orientation="vertical" className="h-4" />
-                  <span>30-day money-back guarantee</span>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span>Secure payment processing by Stripe</span>
+                  </div>
+                  <Separator
+                    orientation="vertical"
+                    className="hidden sm:block h-4"
+                  />
+                  <span className="hidden sm:inline">SSL encrypted</span>
+                  <Separator
+                    orientation="vertical"
+                    className="hidden sm:block h-4"
+                  />
+                  <span className="hidden sm:inline">
+                    30-day money-back guarantee
+                  </span>
+                  <div className="sm:hidden text-center">
+                    <div>SSL encrypted</div>
+                    <div>30-day money-back guarantee</div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="usage" className="space-y-6">
+          <TabsContent value="usage" className="space-y-4 sm:space-y-6">
             {usageStats && (
               <>
                 {/* Usage Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-center space-x-3">
@@ -585,22 +800,46 @@ export default function TokensPage() {
                     <CardTitle>Usage by Feature</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {usageStats.usageByFeature.map((item, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-gray-900">
-                              {item.feature}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {item.tokens} tokens ({item.percentage.toFixed(1)}
-                              %)
-                            </span>
-                          </div>
-                          <Progress value={item.percentage} className="h-2" />
-                        </div>
-                      ))}
-                    </div>
+                    {usageStats.usageByFeature.length > 0 ? (
+                      <div className="space-y-4">
+                        {usageStats.usageByFeature.map((item, index) => {
+                          const featureName =
+                            item.feature === "document-assistant"
+                              ? "Document Assistant"
+                              : item.feature === "wizard"
+                                ? "Legal Chat"
+                                : item.feature === "grand-wizard"
+                                  ? "Grand Wizard"
+                                  : item.feature === "consultation-request"
+                                    ? "Consultation Requests"
+                                    : item.feature;
+                          return (
+                            <div key={index} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-medium text-foreground">
+                                    {featureName}
+                                  </span>
+                                  {item.count !== undefined && (
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      ({item.count} {item.count === 1 ? "use" : "uses"})
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {item.tokens} credits ({item.percentage.toFixed(1)}%)
+                                </span>
+                              </div>
+                              <Progress value={item.percentage} className="h-2" />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No usage data available yet</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </>
@@ -614,50 +853,60 @@ export default function TokensPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {transactions.map(transaction => (
-                    <motion.div
-                      key={transaction.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        {getTransactionIcon(transaction.type)}
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {transaction.description}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {formatDate(transaction.timestamp)}
+                  {formattedTransactions.map(transaction => {
+                    const featureName =
+                      transaction.feature === "document-assistant"
+                        ? "Document Assistant"
+                        : transaction.feature === "wizard"
+                          ? "Legal Chat"
+                          : transaction.feature === "grand-wizard"
+                            ? "Grand Wizard"
+                            : transaction.feature === "consultation-request"
+                              ? "Consultation Request"
+                              : transaction.feature;
+                    return (
+                      <motion.div
+                        key={transaction.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border border-border rounded-lg gap-3 sm:gap-0"
+                      >
+                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                          {getTransactionIcon(transaction.type)}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-foreground text-sm sm:text-base truncate">
+                              {transaction.description}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="text-xs sm:text-sm text-muted-foreground">
+                                {transaction.formattedDate}
+                              </div>
+                              {transaction.feature && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {featureName}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div
-                          className={`font-semibold ${
-                            transaction.amount > 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {transaction.amount > 0 ? "+" : ""}
-                          {transaction.amount} tokens
+                        <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-0 sm:flex-col sm:items-end">
+                          <div
+                            className={`font-semibold text-sm sm:text-base ${
+                              transaction.amount > 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {transaction.amount > 0 ? "+" : ""}
+                            {Math.abs(transaction.amount)} credits
+                          </div>
+                          <Badge variant="outline" className="text-xs sm:text-sm">
+                            {transaction.status}
+                          </Badge>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            transaction.status === "completed"
-                              ? "text-green-600 border-green-200"
-                              : transaction.status === "pending"
-                              ? "text-yellow-600 border-yellow-200"
-                              : "text-red-600 border-red-200"
-                          }
-                        >
-                          {transaction.status}
-                        </Badge>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
 
                   {transactions.length === 0 && (
                     <div className="text-center py-8">

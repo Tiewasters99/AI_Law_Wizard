@@ -15,11 +15,11 @@ export async function handleProcessDocuments(
 ): Promise<Response> {
   try {
     const body: ProcessingRequest = await request.json();
-    const { userPrompt } = body;
+    const { userPrompt, model } = body;
 
     validateNonEmptyString(userPrompt, "User prompt");
 
-    const result = await processDocuments(body, userId);
+    const result = await processDocuments(body, userId, model);
 
     if (result.success) {
       return successResponse(result);

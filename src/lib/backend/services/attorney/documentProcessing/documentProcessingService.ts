@@ -1,12 +1,15 @@
 // Service for document processing functionality
 
 import { createDocumentQuery } from "../../../repositories/attorney/documentQueryRepository";
+import { findUserById } from "../../../repositories/common/userRepository";
+import { getUserNamespace } from "../../../config/pineconeConfig";
 import { openRouterService } from "../../openRouterService";
 import type { ProcessingRequest, ProcessingResponse } from "@/types/api";
 
 const MODELS = {
   GPT4O_MINI: "openai/gpt-4o-mini",
   GROK_4_LATEST: "x-ai/grok-4-latest",
+  GEMINI_2_5_PRO: "google/gemini-2.5-pro",
 } as const;
 
 /**
@@ -51,9 +54,20 @@ async function detectResponseMode(
 }
 
 /**
- * Search for relevant files (mock implementation - would integrate with Pinecone)
+ * Search for relevant files using Pinecone vector search
+ * Note: This should use user-specific namespace when implemented
  */
-async function searchRelevantFiles(query: string): Promise<any> {
+async function searchRelevantFiles(
+  query: string,
+  userId?: string,
+  namespace?: string
+): Promise<any> {
+  // TODO: Implement vector search with namespace support
+  // When implementing:
+  // 1. Generate query embedding from the query string
+  // 2. Use queryPineconeNamespace(namespace, queryVector, options)
+  // 3. Return relevant file chunks with metadata
+  
   // This is a placeholder - in production would integrate with vector search
   return {
     success: true,
@@ -67,14 +81,18 @@ async function searchRelevantFiles(query: string): Promise<any> {
  */
 export async function processDocuments(
   request: ProcessingRequest,
-  userId?: string
+  userId?: string,
+  model?: string
 ): Promise<ProcessingResponse> {
   const startTime = Date.now();
+
+  // Determine which model to use
+  const selectedModel = model || MODELS.GPT4O_MINI;
 
   // Handle free tier with direct file content
   if (request.skipVectorSearch && request.fileContent) {
     const response = await openRouterService.chat({
-      model: MODELS.GPT4O_MINI,
+      model: selectedModel,
       messages: [
         {
           role: "system",
@@ -110,19 +128,32 @@ Provide a detailed analysis in markdown format.`,
 
   // Regular processing with vector search
   const responseMode = await detectResponseMode(request.userPrompt);
+  
+  // Get user namespace if userId is provided
+  let namespace: string | undefined;
+  if (userId) {
+    const user = await findUserById(userId);
+    if (user) {
+      namespace = getUserNamespace(userId, user.email);
+    }
+  }
+  
   const fileSearchResult = await searchRelevantFiles(
-    request.searchQuery || request.userPrompt
+    request.searchQuery || request.userPrompt,
+    userId,
+    namespace
   );
 
   if (!fileSearchResult.success || !fileSearchResult.files?.length) {
     throw new Error("No relevant files found for the query");
   }
 
-  const model =
-    responseMode === "question_answering" ? MODELS.GPT4O_MINI : MODELS.GROK_4_LATEST;
+  // Use provided model or default based on response mode
+  const finalModel = selectedModel || 
+    (responseMode === "question_answering" ? MODELS.GPT4O_MINI : MODELS.GROK_4_LATEST);
 
   const response = await openRouterService.chat({
-    model,
+    model: finalModel,
     messages: [
       {
         role: "system",

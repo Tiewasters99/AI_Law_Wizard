@@ -62,7 +62,7 @@ export const PaymentForm = ({
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `${window.location.origin}/attorney/tokens?payment=success`,
+        return_url: `${window.location.origin}${window.location.pathname}?payment=success`,
       },
       redirect: "if_required", // Only redirect if additional authentication is needed
     });

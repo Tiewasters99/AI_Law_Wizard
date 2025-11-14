@@ -5,6 +5,7 @@ import { verifyClientAccess } from "../../../utils/clientAuth";
 import {
   createClientConsultationRequest,
   listClientConsultationRequests,
+  markRequestAsViewed,
 } from "../../../services/client/consultationRequests/consultationRequestsService";
 import { successResponse, errorResponse } from "../../../utils/response";
 import {
@@ -95,5 +96,24 @@ export async function handleListConsultationRequests(
     return successResponse(result);
   } catch (error) {
     return errorResponse(error, "Failed to fetch consultation requests");
+  }
+}
+
+/**
+ * Handle POST request - Mark consultation request as viewed
+ */
+export async function handleMarkRequestAsViewed(
+  request: NextRequest,
+  requestId: string,
+  userId: string
+): Promise<Response> {
+  try {
+    await verifyClientAccess(userId);
+
+    const result = await markRequestAsViewed(requestId, userId);
+
+    return successResponse(result);
+  } catch (error) {
+    return errorResponse(error, "Failed to mark request as viewed");
   }
 }

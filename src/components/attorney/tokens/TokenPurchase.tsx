@@ -258,7 +258,7 @@ export const TokenPurchase = ({
                 </div>
                 <div>
                   <p className="text-primary-foreground/80 text-sm">Available Tokens</p>
-                  <p className="text-2xl font-bold">{wallet.tokens}</p>
+                  <p className="text-2xl font-bold">{wallet.balance ?? wallet.tokens ?? 0}</p>
                 </div>
               </div>
               <div className="text-right">

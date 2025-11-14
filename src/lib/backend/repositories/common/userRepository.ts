@@ -84,6 +84,20 @@ export async function findUserByEmail(email: string) {
   });
 }
 
+/**
+ * Find user by ID
+ */
+export async function findUserById(userId: string) {
+  return await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+    },
+  });
+}
+
 export interface CreateUserData {
   email: string;
   password: string;

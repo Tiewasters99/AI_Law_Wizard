@@ -23,23 +23,29 @@ export async function getTokenUsageStats(clientId: string) {
   // Get all consumption transactions for feature breakdown
   const transactions = await getTokenTransactionsByUserId(clientId);
 
-  // Aggregate by feature
-  const featureUsage: Record<string, number> = {};
+  // Aggregate by feature using the feature field
+  const featureUsage: Record<string, { tokens: number; count: number }> = {};
   transactions
     .filter(tx => tx.type === "CONSUMPTION")
     .forEach(transaction => {
-      const metadata = transaction.metadata as any;
-      const feature = metadata?.feature || "Other";
-      featureUsage[feature] =
-        (featureUsage[feature] || 0) + Math.abs(transaction.amount);
+      const feature = transaction.feature || "Other";
+      if (!featureUsage[feature]) {
+        featureUsage[feature] = { tokens: 0, count: 0 };
+      }
+      featureUsage[feature].tokens += Math.abs(transaction.amount);
+      featureUsage[feature].count += 1;
     });
 
   // Convert to array with percentages
-  const breakdown = Object.entries(featureUsage).map(([feature, tokens]) => ({
+  const breakdown = Object.entries(featureUsage).map(([feature, data]) => ({
     feature,
-    tokens,
-    percentage: totalUsed > 0 ? Math.round((tokens / totalUsed) * 100) : 0,
+    tokens: data.tokens,
+    count: data.count,
+    percentage: totalUsed > 0 ? Math.round((data.tokens / totalUsed) * 100) : 0,
   }));
+
+  // Sort by tokens descending
+  breakdown.sort((a, b) => b.tokens - a.tokens);
 
   return {
     totalPurchased: totalPurchased || 0,

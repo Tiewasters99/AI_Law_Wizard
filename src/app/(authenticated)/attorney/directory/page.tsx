@@ -159,7 +159,7 @@ export default function DirectoryPage() {
 
       {/* Client Cards Grid */}
       {!loading && !error && filteredClients.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto pb-4">
           {filteredClients.map((client, index) => {
             const joinDate = new Date(client.createdAt).toLocaleDateString(
               "en-US",

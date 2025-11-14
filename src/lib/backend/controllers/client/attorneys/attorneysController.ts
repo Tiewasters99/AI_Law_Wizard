@@ -19,11 +19,15 @@ export async function handleListAttorneys(
     const search = searchParams.get("search");
     const practiceArea = searchParams.get("practiceArea");
     const location = searchParams.get("location");
+    const page = searchParams.get("page");
+    const limit = searchParams.get("limit");
 
     const result = await listAttorneys({
       search: search || undefined,
       practiceArea: practiceArea || undefined,
       location: location || undefined,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
     });
 
     return successResponse(result);
@@ -31,4 +35,3 @@ export async function handleListAttorneys(
     return errorResponse(error, "Failed to fetch attorneys");
   }
 }
-

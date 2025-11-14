@@ -19,6 +19,7 @@ export interface EmbeddingJob {
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  userId: string | null;
   isOneDriveFile: boolean;
   oneDriveId: string | null;
   oneDriveLastModified: string | null;
@@ -30,6 +31,7 @@ export interface CreateEmbeddingJobData {
   fileType: string;
   fileSize: number;
   filePath: string;
+  userId?: string;
   isOneDriveFile?: boolean;
   oneDriveId?: string;
   oneDriveLastModified?: string;
@@ -55,6 +57,7 @@ export async function createEmbeddingJob(
       fileType: data.fileType,
       fileSize: data.fileSize,
       filePath: data.filePath,
+      userId: data.userId || null,
       isOneDriveFile: data.isOneDriveFile || false,
       oneDriveId: data.oneDriveId,
       oneDriveLastModified: data.oneDriveLastModified,

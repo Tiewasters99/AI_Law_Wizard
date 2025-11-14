@@ -22,7 +22,52 @@ export function ClientTopBar() {
   const { data: session } = useSession();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [hasViewedMessagesPage, setHasViewedMessagesPage] = useState(false);
   const { counts, loading } = useNotifications();
+
+  // Check if messages page has been viewed
+  useEffect(() => {
+    if (session?.user?.id) {
+      const viewedKey = `messages-page-viewed-${session.user.id}`;
+      const checkViewed = () => {
+        const viewed = localStorage.getItem(viewedKey) === "true";
+        setHasViewedMessagesPage(viewed);
+      };
+
+      // Check initially
+      checkViewed();
+
+      // Listen for storage changes (when messages page marks itself as viewed)
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === viewedKey) {
+          checkViewed();
+        }
+      };
+
+      window.addEventListener("storage", handleStorageChange);
+
+      // Also listen for custom event for same-tab updates
+      const handleCustomStorageChange = (e: Event) => {
+        const customEvent = e as CustomEvent;
+        if (customEvent.detail?.key === viewedKey) {
+          checkViewed();
+        }
+      };
+
+      window.addEventListener(
+        "localStorageChange",
+        handleCustomStorageChange as EventListener
+      );
+
+      return () => {
+        window.removeEventListener("storage", handleStorageChange);
+        window.removeEventListener(
+          "localStorageChange",
+          handleCustomStorageChange as EventListener
+        );
+      };
+    }
+  }, [session?.user?.id]);
 
   const handleSignOut = useCallback(() => {
     signOut({ callbackUrl: "/" });
@@ -62,32 +107,7 @@ export function ClientTopBar() {
 
       {/* Right Side Actions */}
       <div className="flex items-center space-x-2 sm:space-x-3">
-        {/* Help Center Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="hidden md:flex items-center space-x-2 border-border hover:bg-muted"
-        >
-          <HelpCircle className="w-4 h-4 text-foreground" />
-          <span className="text-sm font-medium text-foreground">
-            Help Center
-          </span>
-        </Button>
 
-        {/* Quick Action - Find Attorney */}
-        <Button
-          asChild
-          size="sm"
-          className="hidden lg:flex bg-primary hover:bg-primary/90 text-primary-foreground"
-        >
-          <Link
-            href="/client/directory"
-            className="flex items-center space-x-2"
-          >
-            <Search className="w-4 h-4" />
-            <span className="text-sm font-medium">Find Attorney</span>
-          </Link>
-        </Button>
 
         {/* Notification Bell */}
         <Button
@@ -98,12 +118,12 @@ export function ClientTopBar() {
         >
           <Link href="/client/inbox">
             <Bell className="w-4 h-4 text-foreground" />
-            {counts.total > 0 && (
+            {counts.messages > 0 && !hasViewedMessagesPage && (
               <Badge
                 variant="destructive"
                 className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs"
               >
-                {counts.total > 9 ? "9+" : counts.total}
+                {counts.messages > 9 ? "9+" : counts.messages}
               </Badge>
             )}
           </Link>

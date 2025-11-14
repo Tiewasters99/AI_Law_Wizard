@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -38,7 +39,7 @@ interface BlogPost {
   likes: number;
   comments: number;
   tags: string[];
-  category: string;
+  category: string | null;
   featured: boolean;
   imageUrl?: string;
 }
@@ -52,14 +53,15 @@ interface BlogCategory {
 
 export default function BlogPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
-  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [activeTab, setActiveTab] = useState("all");
 
   const categories_data: BlogCategory[] = useMemo(
@@ -116,134 +118,89 @@ export default function BlogPage() {
     []
   );
 
-  // Mock data - in real app, this would come from API
-  useEffect(() => {
-    const mockPosts: BlogPost[] = [
-      {
-        id: "1",
-        title:
-          "Understanding Contract Termination Clauses: A Comprehensive Guide",
-        excerpt:
-          "Learn about the different types of termination clauses in contracts and how they can protect your business interests.",
-        content:
-          "Contract termination clauses are crucial elements that define the circumstances under which a contract can be ended...",
-        author: {
-          id: "attorney-1",
-          name: "Sarah Johnson",
-          title: "Senior Partner",
-          experience: 15,
-        },
-        publishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        readTime: 8,
-        views: 1247,
-        likes: 89,
-        comments: 23,
-        tags: ["contracts", "business", "legal-advice"],
-        category: "contract-law",
-        featured: true,
-      },
-      {
-        id: "2",
-        title: "Recent Changes in Employment Law: What Employers Need to Know",
-        excerpt:
-          "Stay updated with the latest changes in employment legislation and their impact on your business operations.",
-        content:
-          "The employment law landscape is constantly evolving, with new regulations and court decisions shaping the way businesses operate...",
-        author: {
-          id: "attorney-2",
-          name: "Michael Chen",
-          title: "Employment Law Specialist",
-          experience: 12,
-        },
-        publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        readTime: 12,
-        views: 892,
-        likes: 67,
-        comments: 18,
-        tags: ["employment", "hr", "compliance"],
-        category: "employment",
-        featured: false,
-      },
-      {
-        id: "3",
-        title: "Divorce Mediation vs. Litigation: Choosing the Right Path",
-        excerpt:
-          "Explore the pros and cons of mediation versus litigation in divorce proceedings to make an informed decision.",
-        content:
-          "When facing a divorce, one of the most important decisions you'll make is how to proceed with the legal process...",
-        author: {
-          id: "attorney-3",
-          name: "Emily Rodriguez",
-          title: "Family Law Attorney",
-          experience: 8,
-        },
-        publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        readTime: 6,
-        views: 1563,
-        likes: 112,
-        comments: 31,
-        tags: ["divorce", "mediation", "family-law"],
-        category: "family-law",
-        featured: true,
-      },
-      {
-        id: "4",
-        title: "Real Estate Due Diligence: A Step-by-Step Checklist",
-        excerpt:
-          "Ensure you're fully prepared for your real estate transaction with this comprehensive due diligence checklist.",
-        content:
-          "Real estate transactions involve significant financial investments, making due diligence a critical step...",
-        author: {
-          id: "attorney-4",
-          name: "David Thompson",
-          title: "Real Estate Attorney",
-          experience: 20,
-        },
-        publishedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-        readTime: 10,
-        views: 743,
-        likes: 45,
-        comments: 12,
-        tags: ["real-estate", "due-diligence", "checklist"],
-        category: "real-estate",
-        featured: false,
-      },
-      {
-        id: "5",
-        title: "Criminal Defense Strategies: Building a Strong Case",
-        excerpt:
-          "Learn about effective criminal defense strategies and how experienced attorneys approach different types of cases.",
-        content:
-          "Criminal defense requires a strategic approach that considers the unique circumstances of each case...",
-        author: {
-          id: "attorney-5",
-          name: "Lisa Wang",
-          title: "Criminal Defense Attorney",
-          experience: 10,
-        },
-        publishedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-        readTime: 15,
-        views: 2103,
-        likes: 156,
-        comments: 42,
-        tags: ["criminal-defense", "legal-strategy", "court"],
-        category: "criminal-law",
-        featured: true,
-      },
-    ];
+  // Helper function to transform API response to BlogPost format
+  const transformBlogData = (blogs: any[]): BlogPost[] => {
+    return blogs.map((blog: any) => {
+      // Generate excerpt from content (first 150 characters)
+      const excerpt = blog.content
+        ? blog.content.substring(0, 150).trim() +
+          (blog.content.length > 150 ? "..." : "")
+        : "";
 
-    setPosts(mockPosts);
-    setFilteredPosts(mockPosts);
-    setCategories(
-      categories_data.map(cat => ({
-        ...cat,
-        count:
-          cat.id === "all"
-            ? mockPosts.length
-            : mockPosts.filter(p => p.category === cat.id).length,
-      }))
-    );
-    setIsLoading(false);
+      // Convert author string to author object
+      const authorName = blog.author || "Attorney";
+
+      return {
+        id: blog.id,
+        title: blog.title,
+        excerpt,
+        content: blog.content,
+        author: {
+          id: blog.id, // Use blog id as author id fallback
+          name: authorName,
+          avatar: undefined,
+          title: "Attorney", // Default title
+          experience: 0, // Default experience
+        },
+        publishedAt: new Date(blog.createdAt),
+        readTime: blog.readTime || Math.ceil((blog.content?.length || 0) / 200), // Estimate: 200 chars per minute
+        views: blog.views || 0,
+        likes: 0, // Default value
+        comments: 0, // Default value
+        tags: blog.tags || [],
+        category: blog.category || null,
+        featured: false, // Default value
+        imageUrl: undefined,
+      };
+    });
+  };
+
+  // Fetch blog posts from API
+  useEffect(() => {
+    const fetchBlogPosts = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/client/blog/posts");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch blog posts");
+        }
+
+        const data = await response.json();
+
+        // Transform API response to match UI expectations
+        const transformedPosts = transformBlogData(data.blogs || []);
+
+        setPosts(transformedPosts);
+        setFilteredPosts(transformedPosts);
+
+        // Update category counts dynamically
+        setCategories(
+          categories_data.map(cat => ({
+            ...cat,
+            count:
+              cat.id === "all"
+                ? transformedPosts.length
+                : transformedPosts.filter(p => p.category === cat.id).length,
+          }))
+        );
+      } catch (error) {
+        console.error("Error fetching blog posts:", error);
+        setError("Failed to load blog posts. Please try again later.");
+        setPosts([]);
+        setFilteredPosts([]);
+        setCategories(
+          categories_data.map(cat => ({
+            ...cat,
+            count: 0,
+          }))
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBlogPosts();
   }, [categories_data]);
 
   // Filter and search posts
@@ -313,37 +270,89 @@ export default function BlogPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading blog posts...</p>
+          <p className="text-muted-foreground">Loading blog posts...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            Error Loading Blog Posts
+          </h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button
+            onClick={async () => {
+              setError(null);
+              setIsLoading(true);
+              try {
+                const response = await fetch("/api/client/blog/posts");
+                if (!response.ok) {
+                  throw new Error("Failed to fetch blog posts");
+                }
+                const data = await response.json();
+                const transformedPosts = transformBlogData(data.blogs || []);
+
+                setPosts(transformedPosts);
+                setFilteredPosts(transformedPosts);
+                setCategories(
+                  categories_data.map(cat => ({
+                    ...cat,
+                    count:
+                      cat.id === "all"
+                        ? transformedPosts.length
+                        : transformedPosts.filter(p => p.category === cat.id)
+                            .length,
+                  }))
+                );
+              } catch (err) {
+                setError("Failed to load blog posts. Please try again later.");
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            variant="outline"
+          >
+            Try Again
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
+      <div className="bg-card border-b border-border px-4 sm:px-6 py-4 sm:py-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Legal Blog</h1>
-              <p className="text-gray-600 mt-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                Legal Blog
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
                 Expert insights and legal guidance from our attorney community
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-primary">
+            <div className="text-left sm:text-right">
+              <div className="text-xl sm:text-2xl font-bold text-primary">
                 {filteredPosts.length}
               </div>
-              <div className="text-sm text-gray-500">Articles Available</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                Articles Available
+              </div>
             </div>
           </div>
 
           {/* Search and Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
@@ -357,7 +366,7 @@ export default function BlogPage() {
             <select
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {categories.map(category => (
                 <option key={category.id} value={category.id}>
@@ -369,7 +378,7 @@ export default function BlogPage() {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -382,18 +391,28 @@ export default function BlogPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
-          className="space-y-6"
+          className="space-y-4 sm:space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="all">All Posts</TabsTrigger>
-            <TabsTrigger value="featured">Featured</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-auto">
+            <TabsTrigger
+              value="all"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              All Posts
+            </TabsTrigger>
+            <TabsTrigger
+              value="featured"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Featured
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="space-y-6">
+          <TabsContent value="all" className="space-y-4 sm:space-y-6">
             {/* Category Filter */}
             <div className="flex flex-wrap gap-2">
               {categories.map(category => (
@@ -404,7 +423,7 @@ export default function BlogPage() {
                   }
                   size="sm"
                   onClick={() => setSelectedCategory(category.id)}
-                  className="text-xs"
+                  className="text-xs sm:text-sm h-8 sm:h-9"
                 >
                   {category.name}
                   {category.count > 0 && (
@@ -417,26 +436,30 @@ export default function BlogPage() {
             </div>
 
             {/* Blog Posts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredPosts.map(post => (
                 <motion.div
                   key={post.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer"
-                  onClick={() => setSelectedPost(post)}
+                  onClick={() => router.push(`/client/blog/${post.id}`)}
                 >
                   <Card className="h-full">
                     <CardHeader className="pb-4">
                       <div className="flex items-start justify-between mb-2">
-                        <Badge
-                          variant="outline"
-                          className={
-                            categories.find(c => c.id === post.category)?.color
-                          }
-                        >
-                          {categories.find(c => c.id === post.category)?.name}
-                        </Badge>
+                        {post.category && (
+                          <Badge
+                            variant="outline"
+                            className={
+                              categories.find(c => c.id === post.category)
+                                ?.color
+                            }
+                          >
+                            {categories.find(c => c.id === post.category)
+                              ?.name || post.category}
+                          </Badge>
+                        )}
                         {post.featured && (
                           <Badge
                             variant="secondary"
@@ -529,6 +552,10 @@ export default function BlogPage() {
                           variant="ghost"
                           size="sm"
                           className="text-primary"
+                          onClick={e => {
+                            e.stopPropagation();
+                            router.push(`/client/blog/${post.id}`);
+                          }}
                         >
                           Read More
                           <ArrowRight className="w-4 h-4 ml-1" />
@@ -572,20 +599,23 @@ export default function BlogPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer"
-                    onClick={() => setSelectedPost(post)}
+                    onClick={() => router.push(`/client/blog/${post.id}`)}
                   >
                     <Card className="h-full">
                       <CardHeader className="pb-4">
                         <div className="flex items-start justify-between mb-2">
-                          <Badge
-                            variant="outline"
-                            className={
-                              categories.find(c => c.id === post.category)
-                                ?.color
-                            }
-                          >
-                            {categories.find(c => c.id === post.category)?.name}
-                          </Badge>
+                          {post.category && (
+                            <Badge
+                              variant="outline"
+                              className={
+                                categories.find(c => c.id === post.category)
+                                  ?.color
+                              }
+                            >
+                              {categories.find(c => c.id === post.category)
+                                ?.name || post.category}
+                            </Badge>
+                          )}
                           <Badge
                             variant="secondary"
                             className="bg-yellow-100 text-yellow-800"
@@ -653,6 +683,10 @@ export default function BlogPage() {
                             variant="ghost"
                             size="sm"
                             className="text-primary"
+                            onClick={e => {
+                              e.stopPropagation();
+                              router.push(`/client/blog/${post.id}`);
+                            }}
                           >
                             Read More
                             <ArrowRight className="w-4 h-4 ml-1" />

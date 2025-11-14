@@ -46,22 +46,23 @@ interface Attorney {
   id: string;
   name: string;
   email: string;
-  bio: string;
+  bio: string | null;
   specialties: string[];
-  experience: number;
-  location: string;
-  rating: number;
-  reviewCount: number;
+  experience: number | null;
+  location: string | null;
+  rating: number | null;
+  reviewCount: number | null;
   isVerified: boolean;
   isAvailable: boolean;
   responseTime: string;
-  consultationFee: number;
-  avatar?: string;
+  consultationFee: number | null;
+  avatar?: string | null;
   education: string[];
   certifications: string[];
   languages: string[];
   previousClients: number;
   successRate: number;
+  barNumber: string | null;
 }
 
 interface ConsultationRequestData {
@@ -77,6 +78,10 @@ export default function AttorneyDirectoryPage() {
   const [attorneys, setAttorneys] = useState<Attorney[]>([]);
   const [filteredAttorneys, setFilteredAttorneys] = useState<Attorney[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLocalEnv, setIsLocalEnv] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
@@ -96,6 +101,7 @@ export default function AttorneyDirectoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [tokenBalance, setTokenBalance] = useState(0);
+  const observerTarget = React.useRef<HTMLDivElement>(null);
 
   const specialties = [
     "All Specialties",
@@ -144,16 +150,48 @@ export default function AttorneyDirectoryPage() {
     { value: "urgent", label: "Urgent (Same day)", color: "text-red-600" },
   ];
 
+  // Transform API data to component interface
+  const transformAttorney = (attorney: any): Attorney => ({
+    id: attorney.id,
+    name: attorney.name || "",
+    email: attorney.email || "",
+    bio: attorney.bio || null,
+    specialties: attorney.practiceAreas || [],
+    experience: attorney.yearsOfExperience || null,
+    location: attorney.location || null,
+    rating: attorney.rating || null,
+    reviewCount: attorney.casesHandled || null,
+    isVerified: true,
+    isAvailable: attorney.availability !== "unavailable",
+    responseTime: "",
+    consultationFee: attorney.hourlyRate || null,
+    avatar: attorney.image || null,
+    education: [],
+    certifications: [],
+    languages: [],
+    previousClients: 0,
+    successRate: 0,
+    barNumber: attorney.barNumber || null,
+  });
+
   // Fetch attorneys from API
-  useEffect(() => {
-    const fetchAttorneys = async () => {
+  const fetchAttorneys = useCallback(
+    async (page: number = 1, append: boolean = false) => {
       try {
+        if (append) {
+          setIsLoadingMore(true);
+        } else {
+          setIsLoading(true);
+        }
+
         const params = new URLSearchParams();
         if (searchQuery) params.append("search", searchQuery);
         if (selectedSpecialty !== "all")
           params.append("practiceArea", selectedSpecialty);
         if (selectedLocation !== "all")
           params.append("location", selectedLocation);
+        params.append("page", page.toString());
+        params.append("limit", "20");
 
         const response = await fetch(
           `/api/client/attorneys?${params.toString()}`
@@ -165,33 +203,19 @@ export default function AttorneyDirectoryPage() {
         const data = await response.json();
         if (data.success) {
           // Transform API data to match component interface
-          const transformedAttorneys: Attorney[] = data.attorneys.map(
-            (attorney: any) => ({
-              id: attorney.id,
-              name: attorney.name,
-              email: attorney.email,
-              bio: attorney.bio || "No bio available",
-              specialties: attorney.practiceAreas || [],
-              experience: attorney.yearsOfExperience || 0,
-              location: attorney.location || "Location not specified",
-              rating: attorney.rating || 0,
-              reviewCount: attorney.casesHandled || 0,
-              isVerified: true, // All attorneys in directory are verified
-              isAvailable: attorney.availability !== "unavailable",
-              responseTime:
-                attorney.availability === "available" ? "2 hours" : "1 day",
-              consultationFee: attorney.hourlyRate || 200,
-              avatar: attorney.image,
-              education: [], // Not available in current API
-              certifications: [], // Not available in current API
-              languages: ["English"], // Default
-              previousClients: attorney.casesHandled || 0,
-              successRate: 90, // Default success rate
-            })
-          );
+          const transformedAttorneys: Attorney[] =
+            data.attorneys.map(transformAttorney);
 
-          setAttorneys(transformedAttorneys);
-          setFilteredAttorneys(transformedAttorneys);
+          if (append) {
+            setAttorneys(prev => [...prev, ...transformedAttorneys]);
+            setFilteredAttorneys(prev => [...prev, ...transformedAttorneys]);
+          } else {
+            setAttorneys(transformedAttorneys);
+            setFilteredAttorneys(transformedAttorneys);
+          }
+
+          setHasMore(data.hasMore || false);
+          setCurrentPage(page);
         } else {
           throw new Error(data.error || "Failed to fetch attorneys");
         }
@@ -200,16 +224,103 @@ export default function AttorneyDirectoryPage() {
         setError("Failed to load attorneys. Please try again.");
       } finally {
         setIsLoading(false);
+        setIsLoadingMore(false);
       }
-    };
+    },
+    [searchQuery, selectedSpecialty, selectedLocation]
+  );
 
-    fetchAttorneys();
+  // Check if we're in local environment
+  useEffect(() => {
+    setIsLocalEnv(
+      typeof window !== "undefined" &&
+        (process.env.ENV === "LOCAL" ||
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1" ||
+          process.env.NODE_ENV === "development")
+    );
+  }, []);
+
+  // Initial fetch and refetch on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setHasMore(true);
+    fetchAttorneys(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedSpecialty, selectedLocation]);
 
-  // Update filtered attorneys when attorneys change
+  // Infinite scroll observer
   useEffect(() => {
-    setFilteredAttorneys(attorneys);
-  }, [attorneys]);
+    const currentTarget = observerTarget.current;
+    if (!currentTarget) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const isIntersecting = entries[0]?.isIntersecting;
+
+        if (
+          isIntersecting &&
+          hasMore &&
+          !isLoadingMore &&
+          !isLoading &&
+          filteredAttorneys.length > 0
+        ) {
+          fetchAttorneys(currentPage + 1, true);
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "200px", // Trigger 200px before the element comes into view
+      }
+    );
+
+    observer.observe(currentTarget);
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [
+    hasMore,
+    isLoadingMore,
+    isLoading,
+    currentPage,
+    fetchAttorneys,
+    filteredAttorneys.length,
+  ]);
+
+  // Apply client-side sorting when sortBy changes
+  useEffect(() => {
+    let sorted = [...attorneys];
+
+    switch (sortBy) {
+      case "rating":
+        sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        break;
+      case "experience":
+        sorted.sort((a, b) => (b.experience || 0) - (a.experience || 0));
+        break;
+      case "responseTime":
+        sorted.sort((a, b) => {
+          const aTime = parseInt(a.responseTime) || 999;
+          const bTime = parseInt(b.responseTime) || 999;
+          return aTime - bTime;
+        });
+        break;
+      case "fee":
+        sorted.sort(
+          (a, b) => (a.consultationFee || 0) - (b.consultationFee || 0)
+        );
+        break;
+      default:
+        break;
+    }
+
+    setFilteredAttorneys(sorted);
+  }, [attorneys, sortBy]);
 
   // Fetch token balance
   useEffect(() => {
@@ -363,51 +474,49 @@ export default function AttorneyDirectoryPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading attorneys...</p>
+          <p className="text-muted-foreground">Loading attorneys...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
+      <div className="bg-card border-b border-border px-4 sm:px-6 py-4 sm:py-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                 Find an Attorney
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
                 Connect with qualified legal professionals in your area
               </p>
             </div>
-            <div className="text-right">
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
-                    {tokenBalance} tokens
-                  </div>
-                  <div className="text-xs text-gray-500">Available</div>
+            <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto">
+              <div className="text-left sm:text-right">
+                <div className="text-xs sm:text-sm font-medium text-foreground">
+                  {tokenBalance} tokens
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-primary">
-                    {filteredAttorneys.length}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Attorneys Available
-                  </div>
+                <div className="text-xs text-muted-foreground">Available</div>
+              </div>
+              <div className="text-left sm:text-right">
+                <div className="text-xl sm:text-2xl font-bold text-primary">
+                  {filteredAttorneys.length}
+                </div>
+                <div className="text-xs sm:text-sm text-muted-foreground">
+                  Attorneys Available
                 </div>
               </div>
             </div>
           </div>
 
           {/* Search and Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
@@ -421,7 +530,7 @@ export default function AttorneyDirectoryPage() {
             <select
               value={selectedSpecialty}
               onChange={e => setSelectedSpecialty(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {specialties.map(specialty => (
                 <option key={specialty} value={specialty}>
@@ -433,7 +542,7 @@ export default function AttorneyDirectoryPage() {
             <select
               value={selectedLocation}
               onChange={e => setSelectedLocation(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {locations.map(location => (
                 <option key={location} value={location}>
@@ -445,7 +554,7 @@ export default function AttorneyDirectoryPage() {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="rating">Highest Rated</option>
               <option value="experience">Most Experienced</option>
@@ -458,10 +567,10 @@ export default function AttorneyDirectoryPage() {
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+            <AlertDescription className="text-sm sm:text-base text-green-800">
               {success}
             </AlertDescription>
           </Alert>
@@ -469,143 +578,189 @@ export default function AttorneyDirectoryPage() {
       )}
 
       {error && (
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="text-sm sm:text-base">
+              {error}
+            </AlertDescription>
           </Alert>
         </div>
       )}
 
       {/* Attorney List */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredAttorneys.map(attorney => (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-8 max-h-[calc(100vh-300px)] overflow-y-auto">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"
+          id="attorney-grid"
+        >
+          {filteredAttorneys.map((attorney, index) => (
             <motion.div
-              key={attorney.id}
+              key={`${attorney.id}-${index}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
+              transition={{ delay: (index % 20) * 0.05 }}
             >
               <Card className="h-full">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
-                        {attorney.name
-                          .split(" ")
-                          .map(n => n[0])
-                          .join("")}
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold text-gray-900">
-                            {attorney.name}
-                          </h3>
-                          {attorney.isVerified && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-green-100 text-green-700"
-                            >
-                              <Shield className="w-3 h-3 mr-1" />
-                              Verified
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm text-gray-500">
-                          <MapPin className="w-3 h-3" />
-                          <span>{attorney.location}</span>
-                        </div>
-                      </div>
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold text-base">
+                      {attorney.name
+                        .split(" ")
+                        .map(n => n[0])
+                        .join("")
+                        .toUpperCase()}
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="font-semibold">{attorney.rating}</span>
-                        <span className="text-sm text-gray-500">
-                          ({attorney.reviewCount})
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {attorney.experience} years exp
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-gray-600 line-clamp-3">
-                    {attorney.bio}
-                  </p>
-
-                  <div className="flex flex-wrap gap-1">
-                    {attorney.specialties.slice(0, 3).map(specialty => (
-                      <Badge
-                        key={specialty}
-                        variant="outline"
-                        className="text-xs"
-                      >
-                        {specialty}
-                      </Badge>
-                    ))}
-                    {attorney.specialties.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{attorney.specialties.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-gray-500">Response Time</div>
-                      <div className="font-medium">{attorney.responseTime}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500">Consultation Fee</div>
-                      <div className="font-medium">
-                        ${attorney.consultationFee}/hr
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <Users className="w-4 h-4" />
-                      <span>{attorney.previousClients} clients</span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-gray-500">Success Rate: </span>
-                      <span className="font-medium text-green-600">
-                        {attorney.successRate}%
-                      </span>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground text-base">
+                        {attorney.name || "N/A"}
+                      </h3>
                     </div>
                   </div>
 
                   <Separator />
 
-                  <div className="flex space-x-2">
-                    <Button
-                      onClick={() => handleRequestConsultation(attorney)}
-                      disabled={!attorney.isAvailable || tokenBalance < 10}
-                      className="flex-1"
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      {!attorney.isAvailable
-                        ? "Not Available"
-                        : tokenBalance < 10
-                          ? "Need 10 tokens"
-                          : "Request Consultation"}
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">
+                        Specialty
+                      </div>
+                      {attorney.specialties &&
+                      attorney.specialties.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {attorney.specialties.map(specialty => (
+                            <Badge
+                              key={specialty}
+                              variant="outline"
+                              className="text-xs"
+                            >
+                              {specialty}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">N/A</div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Location
+                        </div>
+                        <div className="text-sm text-foreground">
+                          {attorney.location || "N/A"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Experience
+                        </div>
+                        <div className="text-sm text-foreground">
+                          {attorney.experience
+                            ? `${attorney.experience} years`
+                            : "N/A"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Bar Number
+                        </div>
+                        <div className="text-sm text-foreground">
+                          {attorney.barNumber || "N/A"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Rating
+                        </div>
+                        <div className="text-sm text-foreground">
+                          {attorney.rating !== null
+                            ? `${attorney.rating}${attorney.reviewCount ? ` (${attorney.reviewCount})` : ""}`
+                            : "N/A"}
+                        </div>
+                      </div>
+
+                      <div className="col-span-2">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Hourly Rate
+                        </div>
+                        <div className="text-sm text-foreground">
+                          {attorney.consultationFee
+                            ? `$${attorney.consultationFee}/hr`
+                            : "N/A"}
+                        </div>
+                      </div>
+
+                      {isLocalEnv && (
+                        <div className="col-span-2">
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Email
+                          </div>
+                          <div className="text-sm text-foreground">
+                            {attorney.email || "N/A"}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {attorney.bio && (
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Bio
+                        </div>
+                        <div className="text-sm text-foreground line-clamp-2">
+                          {attorney.bio}
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  <Separator />
+
+                  <Button
+                    onClick={() => handleRequestConsultation(attorney)}
+                    disabled={!attorney.isAvailable || tokenBalance < 10}
+                    className="w-full"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    {!attorney.isAvailable
+                      ? "Not Available"
+                      : tokenBalance < 10
+                        ? "Need 10 tokens"
+                        : "Request Consultation"}
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
 
-        {filteredAttorneys.length === 0 && (
+        {/* Loading indicator for infinite scroll */}
+        {isLoadingMore && (
+          <div className="col-span-full flex justify-center py-8">
+            <div className="flex items-center space-x-2 text-gray-600">
+              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <span>Loading more attorneys...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Intersection observer target - placed after grid for infinite scroll */}
+        {/* Always render the target element so observer can attach to it */}
+        <div
+          ref={observerTarget}
+          className={`h-20 w-full flex items-center justify-center ${!hasMore || filteredAttorneys.length === 0 ? "hidden" : ""}`}
+          aria-hidden="true"
+        >
+          {hasMore && filteredAttorneys.length > 0 && (
+            <div className="text-sm text-gray-400">Scroll for more...</div>
+          )}
+        </div>
+
+        {filteredAttorneys.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -630,28 +785,32 @@ export default function AttorneyDirectoryPage() {
 
       {/* Consultation Request Modal */}
       <Dialog open={showRequestModal} onOpenChange={setShowRequestModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Request Consultation</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">
+              Request Consultation
+            </DialogTitle>
+            <DialogDescription className="text-sm sm:text-base">
               Send a consultation request to {selectedAttorney?.name}
               <br />
-              <span className="text-sm font-medium text-orange-600">
+              <span className="text-xs sm:text-sm font-medium text-orange-600">
                 Cost: 10 tokens (Current balance: {tokenBalance})
               </span>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="caseType">Case Type *</Label>
+                <Label htmlFor="caseType" className="text-sm sm:text-base">
+                  Case Type *
+                </Label>
                 <select
                   value={requestData.caseType}
                   onChange={e =>
                     setRequestData({ ...requestData, caseType: e.target.value })
                   }
-                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
                 >
                   <option value="">Select case type</option>
                   {caseTypes.map(type => (
@@ -663,13 +822,15 @@ export default function AttorneyDirectoryPage() {
               </div>
 
               <div>
-                <Label htmlFor="urgency">Urgency Level *</Label>
+                <Label htmlFor="urgency" className="text-sm sm:text-base">
+                  Urgency Level *
+                </Label>
                 <select
                   value={requestData.urgency}
                   onChange={e =>
                     setRequestData({ ...requestData, urgency: e.target.value })
                   }
-                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
                 >
                   <option value="">Select urgency</option>
                   {urgencyLevels.map(level => (
@@ -682,7 +843,9 @@ export default function AttorneyDirectoryPage() {
             </div>
 
             <div>
-              <Label htmlFor="description">Case Description *</Label>
+              <Label htmlFor="description" className="text-sm sm:text-base">
+                Case Description *
+              </Label>
               <Textarea
                 id="description"
                 placeholder="Please describe your legal issue in detail..."
@@ -693,7 +856,7 @@ export default function AttorneyDirectoryPage() {
                     description: e.target.value,
                   })
                 }
-                className="min-h-[120px]"
+                className="min-h-[120px] text-sm sm:text-base mt-1"
               />
             </div>
 
@@ -713,12 +876,14 @@ export default function AttorneyDirectoryPage() {
                     {requestData.attachments.map((file, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                        className="flex items-center justify-between p-2 sm:p-3 bg-muted rounded-lg border border-border transition-all duration-200 hover:bg-muted/80"
                       >
-                        <div className="flex items-center space-x-2">
-                          <FileText className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm">{file.name}</span>
-                          <span className="text-xs text-gray-500">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                          <span className="text-sm sm:text-base text-foreground font-medium truncate">
+                            {file.name}
+                          </span>
+                          <span className="text-xs sm:text-sm text-muted-foreground flex-shrink-0">
                             ({formatFileSize(file.size)})
                           </span>
                         </div>
@@ -726,6 +891,8 @@ export default function AttorneyDirectoryPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => removeAttachment(index)}
+                          className="flex-shrink-0 ml-2 h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Remove ${file.name}`}
                         >
                           <X className="w-4 h-4" />
                         </Button>

@@ -161,7 +161,9 @@ export default function ClientLayout({
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-hidden">{children}</main>
+        <main className="flex-1 overflow-hidden overflow-y-auto">
+          <div className="h-full">{children}</div>
+        </main>
       </div>
     </div>
   );

@@ -14,6 +14,8 @@ import {
   findEmbeddingJobByOneDriveId,
   type CreateEmbeddingJobData,
 } from "../../../repositories/attorney/embeddingJobRepository";
+import { findUserById } from "../../../repositories/common/userRepository";
+import { getUserNamespace } from "../../../config/pineconeConfig";
 import { ValidationError } from "../../../utils/errors";
 import { JobStatus } from "@prisma/client";
 
@@ -47,6 +49,7 @@ export interface ProcessedFile {
  */
 export async function processFileUpload(
   file: File,
+  userId: string,
   oneDriveMetadata?: OneDriveMetadata
 ): Promise<ProcessedFile> {
   try {
@@ -111,6 +114,7 @@ export async function processFileUpload(
       fileType: file.type,
       fileSize: file.size,
       filePath: url,
+      userId,
       isOneDriveFile,
       oneDriveId: oneDriveMetadata?.oneDriveId,
       oneDriveLastModified: oneDriveMetadata?.oneDriveLastModified,
@@ -150,11 +154,19 @@ export async function processFileUpload(
       throw new Error("No chunks created from file content");
     }
 
-    // Generate embeddings and store in Pinecone
+    // Get user email and generate namespace
+    const user = await findUserById(userId);
+    if (!user) {
+      throw new ValidationError("User not found");
+    }
+    const namespace = getUserNamespace(userId, user.email);
+
+    // Generate embeddings and store in Pinecone with user namespace
     const successfulChunks = await processEmbeddingsForChunks(
       chunks,
       job.id,
-      fileName
+      fileName,
+      namespace
     );
 
     // Update job progress
@@ -208,11 +220,15 @@ export async function processFileUpload(
  */
 export async function processBatchFiles(
   files: File[],
+  userId: string,
   oneDriveMetadata?: OneDriveMetadata
 ): Promise<{
   successfulFiles: ProcessedFile[];
   failedFiles: Array<{ fileName: string; error: string }>;
 }> {
+  if (!userId) {
+    throw new ValidationError("User ID is required");
+  }
   // Validate batch size
   if (files.length > MAX_FILES) {
     throw new ValidationError(
@@ -247,7 +263,7 @@ export async function processBatchFiles(
 
     // Process batch in parallel
     const results = await Promise.allSettled(
-      batch.map(file => processFileUpload(file, oneDriveMetadata))
+      batch.map(file => processFileUpload(file, userId, oneDriveMetadata))
     );
 
     // Collect results

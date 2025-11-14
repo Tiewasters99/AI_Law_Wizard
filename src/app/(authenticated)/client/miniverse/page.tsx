@@ -121,22 +121,22 @@ export default function MiniversePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-6 sm:py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="flex items-center justify-center mb-4">
-              <Globe className="w-12 h-12 mr-3" />
-              <h1 className="text-4xl md:text-5xl font-bold">
+            <div className="flex flex-col sm:flex-row items-center justify-center mb-3 sm:mb-4 gap-2 sm:gap-3">
+              <Globe className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12" />
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-center sm:text-left">
                 Attorney Miniverse™
               </h1>
             </div>
-            <p className="text-center text-xl text-blue-100">
+            <p className="text-center text-sm sm:text-base md:text-lg lg:text-xl text-blue-100 px-4">
               Explore attorney profiles in 3D, read their articles, and connect
               instantly
             </p>
@@ -145,9 +145,9 @@ export default function MiniversePage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-card border-b sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -164,7 +164,7 @@ export default function MiniversePage() {
             <select
               value={selectedPracticeArea}
               onChange={e => setSelectedPracticeArea(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-input rounded-lg px-3 py-2 bg-background text-foreground text-sm sm:text-base focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="all">All Practice Areas</option>
               {practiceAreas.map(area => (
@@ -199,8 +199,10 @@ export default function MiniversePage() {
           {(searchQuery ||
             selectedPracticeArea !== "all" ||
             selectedLocation) && (
-            <div className="flex items-center gap-2 mt-3">
-              <span className="text-sm text-gray-600">Active filters:</span>
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                Active filters:
+              </span>
               {searchQuery && (
                 <Badge variant="secondary" className="flex items-center gap-1">
                   Search: {searchQuery}
@@ -234,21 +236,21 @@ export default function MiniversePage() {
       </div>
 
       {/* Attorney Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-gray-600">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between">
+          <p className="text-sm sm:text-base text-muted-foreground">
             {filteredAttorneys.length}{" "}
             {filteredAttorneys.length === 1 ? "attorney" : "attorneys"} found
           </p>
         </div>
 
         {filteredAttorneys.length === 0 ? (
-          <Card className="p-12 text-center">
-            <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          <Card className="p-6 sm:p-8 md:p-12 text-center">
+            <Globe className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">
               No attorneys found
             </h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-sm sm:text-base text-muted-foreground mb-4">
               Try adjusting your search or filters
             </p>
             <Button
@@ -257,12 +259,13 @@ export default function MiniversePage() {
                 setSelectedPracticeArea("all");
                 setSelectedLocation("");
               }}
+              className="h-10 sm:h-9"
             >
               Clear Filters
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredAttorneys.map((attorney, index) => (
               <motion.div
                 key={attorney.id}
@@ -282,10 +285,10 @@ export default function MiniversePage() {
                   </div>
 
                   {/* Attorney Info */}
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     {/* Avatar and Name */}
-                    <div className="flex items-start mb-4">
-                      <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mr-4 flex-shrink-0">
+                    <div className="flex items-start mb-3 sm:mb-4">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-muted flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
                         {attorney.image ? (
                           <Image
                             src={attorney.image}
@@ -295,43 +298,45 @@ export default function MiniversePage() {
                             className="w-full h-full rounded-full object-cover"
                           />
                         ) : (
-                          <span className="text-2xl font-bold text-gray-500">
+                          <span className="text-lg sm:text-2xl font-bold text-muted-foreground">
                             {attorney.name?.charAt(0) || "A"}
                           </span>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-bold text-foreground mb-1 truncate">
                           {attorney.name || "Attorney"}
                         </h3>
                         {attorney.location && (
-                          <div className="flex items-center text-sm text-gray-500">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            {attorney.location}
+                          <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">
+                              {attorney.location}
+                            </span>
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Rating and Experience */}
-                    <div className="flex items-center gap-4 mb-4">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
                       {attorney.rating && (
                         <div className="flex items-center">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
-                          <span className="text-sm font-medium">
+                          <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 fill-current mr-1" />
+                          <span className="text-xs sm:text-sm font-medium">
                             {attorney.rating.toFixed(1)}
                           </span>
                         </div>
                       )}
                       {attorney.yearsOfExperience && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Briefcase className="w-4 h-4 mr-1" />
+                        <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                          <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                           {attorney.yearsOfExperience} years
                         </div>
                       )}
                       {attorney.casesHandled && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <FileText className="w-4 h-4 mr-1" />
+                        <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                          <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                           {attorney.casesHandled} cases
                         </div>
                       )}
@@ -339,7 +344,7 @@ export default function MiniversePage() {
 
                     {/* Bio */}
                     {attorney.bio && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">
                         {attorney.bio}
                       </p>
                     )}

@@ -41,14 +41,15 @@ export default function ClientDashboard() {
         // Get existing sessionId from localStorage if available
         const existingSessionId = localStorage.getItem("legalChatSessionId");
 
-        const response = await fetch("/api/legal-analysis", {
+        const response = await fetch("/api/client/legal-research", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            userIssue: userIssue,
-            sessionId: existingSessionId, // Include sessionId for context
+            query: userIssue,
+            stream: true,
+            model: "openai/gpt-4o-mini",
           }),
         });
 
@@ -57,110 +58,66 @@ export default function ClientDashboard() {
           throw new Error(`API Error: ${response.status} - ${errorData}`);
         }
 
-        // Check if response is streaming
-        const contentType = response.headers.get("content-type");
-        if (contentType?.includes("text/event-stream")) {
-          // Handle streaming response
-          let markdownContent = "";
-          let responseStructure: string[] = [];
+        // Handle streaming response
+        let markdownContent = "";
 
-          // Create initial assistant message with empty content
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: "",
-            role: "assistant",
-            timestamp: new Date(),
-          };
+        // Create initial assistant message with empty content
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: "",
+          role: "assistant",
+          timestamp: new Date(),
+        };
 
-          // Store initial messages and navigate to chat page immediately
-          localStorage.setItem(
-            "legalChatMessages",
-            JSON.stringify([userMessage, assistantMessage])
-          );
-          router.push("/client/legal-chat");
+        // Store initial messages and navigate to chat page immediately
+        localStorage.setItem(
+          "legalChatMessages",
+          JSON.stringify([userMessage, assistantMessage])
+        );
+        router.push("/client/wizard");
 
-          // Process the stream
-          const reader = response.body?.getReader();
-          const decoder = new TextDecoder();
+        // Process the stream
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
 
-          if (reader) {
-            try {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
 
-                const chunk = decoder.decode(value);
-                const lines = chunk.split("\n");
+              const chunk = decoder.decode(value);
+              const lines = chunk.split("\n");
 
-                for (const line of lines) {
-                  if (line.startsWith("data: ")) {
-                    const data = JSON.parse(line.slice(6));
+              for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                  const data = JSON.parse(line.slice(6));
 
-                    if (data.type === "metadata") {
-                      responseStructure = data.responseStructure;
-                    } else if (data.type === "content") {
-                      markdownContent += data.content;
-                      // Update localStorage with accumulated content
-                      const updatedAssistantMessage = {
-                        ...assistantMessage,
-                        content: markdownContent,
-                      };
-                      localStorage.setItem(
-                        "legalChatMessages",
-                        JSON.stringify([userMessage, updatedAssistantMessage])
-                      );
-                      // Trigger a custom event to update the chat page
-                      window.dispatchEvent(new CustomEvent("chat-update"));
-                    } else if (data.type === "done") {
-                      // Streaming complete - capture sessionId
-                      if (data.sessionId) {
-                        localStorage.setItem(
-                          "legalChatSessionId",
-                          data.sessionId
-                        );
-                        console.log(
-                          "Session ID captured in Home:",
-                          data.sessionId
-                        );
-                      }
-                    } else if (data.type === "error") {
-                      throw new Error(data.error);
-                    }
+                  if (data.type === "content") {
+                    markdownContent += data.content;
+                    // Update localStorage with accumulated content
+                    const updatedAssistantMessage = {
+                      ...assistantMessage,
+                      content: markdownContent,
+                    };
+                    localStorage.setItem(
+                      "legalChatMessages",
+                      JSON.stringify([userMessage, updatedAssistantMessage])
+                    );
+                    // Trigger a custom event to update the chat page
+                    window.dispatchEvent(new CustomEvent("chat-update"));
+                  } else if (data.type === "done") {
+                    // Streaming complete
+                    console.log("Streaming complete");
+                  } else if (data.type === "error") {
+                    throw new Error(data.error);
                   }
                 }
               }
-            } finally {
-              reader.releaseLock();
             }
+          } finally {
+            reader.releaseLock();
           }
-        } else {
-          // Fallback to JSON response for non-streaming responses
-          const responseData = await response.json();
-
-          if (responseData.error) {
-            throw new Error(
-              responseData.error || "The backend function call failed."
-            );
-          }
-
-          if (!responseData.success || !responseData.content) {
-            throw new Error("No content received from the AI.");
-          }
-
-          const markdownContent = responseData.content;
-
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: markdownContent,
-            role: "assistant",
-            timestamp: new Date(),
-          };
-
-          localStorage.setItem(
-            "legalChatMessages",
-            JSON.stringify([userMessage, assistantMessage])
-          );
-          router.push("/client/legal-chat");
         }
       } catch (error) {
         console.error("Error processing consultation:", error);
@@ -179,7 +136,7 @@ export default function ClientDashboard() {
           "legalChatMessages",
           JSON.stringify([userMessage, errorMessage])
         );
-        router.push("/client/legal-chat");
+        router.push("/client/wizard");
       } finally {
         setIsLoading(false);
       }
@@ -263,8 +220,8 @@ export default function ClientDashboard() {
   );
 
   return (
-    <div className="bg-background flex flex-col items-center px-4 pt-40">
-      <div className="w-full max-w-3xl mx-auto">
+    <div className="bg-background flex flex-col items-center pt-8 sm:pt-16 md:pt-24 lg:pt-40">
+      <div className="w-full max-w-3xl mx-auto px-4 sm:px-6">
         {/* Main Heading */}
         <div className="text-center mb-4 sm:mb-6">
           <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-foreground mb-2 leading-tight">
@@ -370,7 +327,7 @@ export default function ClientDashboard() {
 
         {/* Disclaimer */}
         <div className="text-center mt-4 sm:mt-6">
-          <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl mx-auto px-4">
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl mx-auto">
             This AI provides general legal information only and does not
             constitute legal advice. For specific legal matters, consult with a
             qualified attorney.

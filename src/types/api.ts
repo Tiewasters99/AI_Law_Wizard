@@ -6,6 +6,10 @@ export interface ProcessingRequest {
   fileContent?: string; // For free tier direct file analysis
   fileName?: string; // File name when using direct content
   skipVectorSearch?: boolean; // Flag to skip vector search for free tier
+  documentId?: string; // Specific document ID to query
+  queryAllDocuments?: boolean; // Flag to query all documents vs specific document
+  sessionId?: string; // Document analysis session ID for conversation continuity
+  isNewConversation?: boolean; // Flag to start a new conversation session
 }
 
 export interface ProcessingResponse {
@@ -20,6 +24,10 @@ export interface ProcessingResponse {
   queryId?: string; // ID of saved query in database
   responseMode?: "question_answering" | "action_performance";
   editedFiles?: EditedFileInfo[];
+  sources?: QuerySource[]; // Source citations for RAG queries
+  processingQueued?: boolean; // Indicates if document was queued for processing
+  documentStatus?: string; // Status of the document (processing, completed, etc.)
+  sessionId?: string; // Document analysis session ID
 }
 
 export interface EditedFileInfo {
@@ -47,6 +55,14 @@ export interface ProcessedFileInfo {
 export interface OperationStep {
   operation: "summary" | "analysis" | "qa" | "action_performance";
   confidence?: number;
+}
+
+export interface QuerySource {
+  fileId: string;
+  fileName: string;
+  chunkIndex: number;
+  text: string;
+  score: number;
 }
 
 // Demo API Response (Limited functionality for guests)

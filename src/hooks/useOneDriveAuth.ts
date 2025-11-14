@@ -35,10 +35,13 @@ export function useOneDriveAuth() {
   }, []);
 
   // Sign in to OneDrive
-  const signIn = useCallback(async () => {
+  const signIn = useCallback(async (role: "attorney" | "client" = "attorney") => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/attorney/onedrive/auth-url");
+      const endpoint = role === "client" 
+        ? "/api/client/onedrive/auth-url"
+        : "/api/attorney/onedrive/auth-url";
+      const response = await fetch(endpoint);
       const data = await response.json();
 
       if (data.success && data.authUrl) {

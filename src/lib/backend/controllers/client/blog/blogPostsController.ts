@@ -2,7 +2,10 @@
 
 import { NextRequest } from "next/server";
 import { verifyClientAccess } from "../../../utils/clientAuth";
-import { getPublishedBlogPosts } from "../../../services/client/blog/blogPostsService";
+import {
+  getPublishedBlogPosts,
+  getPublishedBlogPostById,
+} from "../../../services/client/blog/blogPostsService";
 import { successResponse, errorResponse } from "../../../utils/response";
 
 /**
@@ -27,6 +30,24 @@ export async function handleGetBlogPosts(
     return successResponse(result);
   } catch (error) {
     return errorResponse(error, "Failed to fetch blog posts");
+  }
+}
+
+/**
+ * Handle GET request - Get a single published blog post by ID
+ */
+export async function handleGetBlogPost(
+  id: string,
+  userId: string
+): Promise<Response> {
+  try {
+    await verifyClientAccess(userId);
+
+    const blog = await getPublishedBlogPostById(id);
+
+    return successResponse({ blog });
+  } catch (error) {
+    return errorResponse(error, "Failed to fetch blog post");
   }
 }
 

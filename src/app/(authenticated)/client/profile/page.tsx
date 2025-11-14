@@ -213,40 +213,50 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
+      <div className="bg-card border-b border-border px-4 sm:px-6 py-4 sm:py-6">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-              <p className="text-gray-600 mt-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                My Profile
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
                 Manage your account information and preferences
               </p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
               {!isEditing ? (
-                <Button onClick={handleEdit}>
+                <Button
+                  onClick={handleEdit}
+                  className="w-full sm:w-auto h-10 sm:h-9"
+                >
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Profile
                 </Button>
               ) : (
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     onClick={handleCancel}
                     disabled={isSaving}
+                    className="flex-1 sm:flex-none h-10 sm:h-9"
                   >
                     <X className="w-4 h-4 mr-2" />
                     Cancel
                   </Button>
-                  <Button onClick={handleSave} disabled={isSaving}>
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex-1 sm:flex-none h-10 sm:h-9"
+                  >
                     {isSaving ? (
                       <Clock className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
                       <Save className="w-4 h-4 mr-2" />
                     )}
-                    Save Changes
+                    Save
                   </Button>
                 </div>
               )}
@@ -257,10 +267,10 @@ export default function ProfilePage() {
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="max-w-4xl mx-auto px-6 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+            <AlertDescription className="text-sm sm:text-base text-green-800">
               {success}
             </AlertDescription>
           </Alert>
@@ -268,17 +278,19 @@ export default function ProfilePage() {
       )}
 
       {error && (
-        <div className="max-w-4xl mx-auto px-6 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="text-sm sm:text-base">
+              {error}
+            </AlertDescription>
           </Alert>
         </div>
       )}
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Profile Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information */}
@@ -291,17 +303,17 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Avatar and Name */}
-                <div className="flex items-center space-x-4">
-                  <Avatar className="w-20 h-20">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
+                  <Avatar className="w-16 h-16 sm:w-20 sm:h-20">
                     <AvatarImage src={profile.avatar} />
-                    <AvatarFallback className="text-lg">
+                    <AvatarFallback className="text-base sm:text-lg">
                       {profile.name
                         .split(" ")
                         .map(n => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
+                  <div className="flex-1 w-full sm:w-auto text-center sm:text-left">
                     {isEditing ? (
                       <div className="space-y-2">
                         <Label htmlFor="name">Full Name</Label>
@@ -312,21 +324,24 @@ export default function ProfilePage() {
                             handleInputChange("name", e.target.value)
                           }
                           placeholder="Enter your full name"
+                          className="text-sm sm:text-base"
                         />
                       </div>
                     ) : (
                       <div>
-                        <h2 className="text-2xl font-bold text-gray-900">
+                        <h2 className="text-xl sm:text-2xl font-bold text-foreground">
                           {profile.name}
                         </h2>
-                        <p className="text-gray-500">{profile.email}</p>
+                        <p className="text-sm sm:text-base text-muted-foreground">
+                          {profile.email}
+                        </p>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Contact Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="email">Email Address</Label>
                     <Input
@@ -363,7 +378,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Company Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="company">Company</Label>
                     {isEditing ? (
@@ -394,7 +409,7 @@ export default function ProfilePage() {
                         onChange={e =>
                           handleInputChange("industry", e.target.value)
                         }
-                        className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Select industry</option>
                         {industries.map(industry => (
@@ -468,30 +483,38 @@ export default function ProfilePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-primary">
                       {profile.statistics.totalQueries}
                     </div>
-                    <div className="text-sm text-gray-500">Total Queries</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      Total Queries
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">
                       {profile.statistics.totalDocuments}
                     </div>
-                    <div className="text-sm text-gray-500">Documents</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      Documents
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">
                       {profile.statistics.totalConsultations}
                     </div>
-                    <div className="text-sm text-gray-500">Consultations</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      Consultations
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
+                    <div className="text-xl sm:text-2xl font-bold text-purple-600">
                       {profile.statistics.tokensUsed}
                     </div>
-                    <div className="text-sm text-gray-500">Tokens Used</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      Tokens Used
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -510,24 +533,30 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Status</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">
+                    Status
+                  </span>
                   <Badge
                     variant="secondary"
-                    className="bg-green-100 text-green-800"
+                    className="bg-green-100 text-green-800 text-xs sm:text-sm"
                   >
                     <CheckCircle className="w-3 h-3 mr-1" />
                     Active
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Member Since</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-xs sm:text-sm text-muted-foreground">
+                    Member Since
+                  </span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground">
                     {formatDate(profile.joinDate)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Last Active</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-xs sm:text-sm text-muted-foreground">
+                    Last Active
+                  </span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground">
                     {formatRelativeTime(profile.lastActive)}
                   </span>
                 </div>
@@ -544,16 +573,20 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-primary mb-2">
+                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-2">
                     {profile.statistics.tokensRemaining}
                   </div>
-                  <div className="text-sm text-gray-500">Tokens Remaining</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    Tokens Remaining
+                  </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Usage</span>
-                    <span className="text-sm font-medium">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Usage
+                    </span>
+                    <span className="text-xs sm:text-sm font-medium text-foreground">
                       {profile.statistics.tokensUsed} /{" "}
                       {profile.statistics.tokensUsed +
                         profile.statistics.tokensRemaining}

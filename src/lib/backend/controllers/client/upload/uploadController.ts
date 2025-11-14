@@ -2,14 +2,13 @@
 
 import { NextRequest } from "next/server";
 import { verifyClientAccess } from "../../../utils/clientAuth";
-import {
-  uploadClientFiles,
-  deleteClientFile,
-} from "../../../services/client/upload/uploadService";
+import { deleteClientFile } from "../../../services/client/upload/uploadService";
+import { processClientBatchFiles } from "../../../services/client/embedding/embeddingService";
 import { successResponse, errorResponse } from "../../../utils/response";
+import { ValidationError } from "../../../utils/errors";
 
 /**
- * Handle POST request - Upload files
+ * Handle POST request - Upload files and create embedding jobs
  */
 export async function handleUploadFiles(
   request: NextRequest,
@@ -18,15 +17,52 @@ export async function handleUploadFiles(
   try {
     await verifyClientAccess(userId);
 
+    if (!userId) {
+      return errorResponse(
+        new ValidationError("User ID is required"),
+        "User ID is required"
+      );
+    }
+
+    // Get FormData from request
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
 
-    const uploadedFiles = await uploadClientFiles(userId, files);
+    if (!files || files.length === 0) {
+      return errorResponse(
+        new ValidationError("No files provided"),
+        "No files provided"
+      );
+    }
 
+    // Extract OneDrive metadata if present
+    const oneDriveId = formData.get("oneDriveId") as string | null;
+    const oneDriveLastModified = formData.get("oneDriveLastModified") as
+      | string
+      | null;
+
+    const oneDriveMetadata = oneDriveId
+      ? { oneDriveId, oneDriveLastModified: oneDriveLastModified || undefined }
+      : undefined;
+
+    // Process files and create embedding jobs
+    const result = await processClientBatchFiles(
+      files,
+      userId,
+      oneDriveMetadata
+    );
+
+    // Return response
     return successResponse({
       success: true,
-      files: uploadedFiles,
-      message: `${uploadedFiles.length} file(s) uploaded successfully`,
+      files: result.successfulFiles,
+      failedFiles: result.failedFiles,
+      message: `${result.successfulFiles.length} file(s) processed successfully${
+        result.failedFiles.length > 0
+          ? `, ${result.failedFiles.length} failed`
+          : ""
+      }`,
+      totalFiles: files.length,
     });
   } catch (error) {
     return errorResponse(error, "Failed to upload files");
@@ -56,4 +92,3 @@ export async function handleDeleteFile(
     return errorResponse(error, "Failed to delete file");
   }
 }
-

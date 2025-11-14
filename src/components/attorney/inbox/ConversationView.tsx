@@ -12,6 +12,7 @@ import {
   Clock,
   AlertTriangle,
   X,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ interface Message {
   createdAt: string;
   senderId: string;
   isRead: boolean;
+  attachments?: string | string[] | { name: string; url: string }[];
   sender: {
     id: string;
     name: string | null;
@@ -66,10 +68,7 @@ interface ConversationViewProps {
 }
 
 const getUrgencyConfig = (urgency: string) => {
-  const configs: Record<
-    string,
-    { className: string; icon: any }
-  > = {
+  const configs: Record<string, { className: string; icon: any }> = {
     LOW: {
       className: "bg-chart-1/10 text-chart-1 border-chart-1/30",
       icon: Clock,
@@ -311,10 +310,7 @@ export function ConversationView({
                 );
                 const UrgencyIcon = urgencyConfig.icon;
                 return (
-                  <Badge
-                    variant="outline"
-                    className={urgencyConfig.className}
-                  >
+                  <Badge variant="outline" className={urgencyConfig.className}>
                     <UrgencyIcon className="w-3 h-3 mr-1" />
                     <span>{conversation.consultationRequest.urgency}</span>
                   </Badge>
@@ -349,17 +345,91 @@ export function ConversationView({
 
         {conversation.messages.map(msg => {
           const isSent = msg.senderId === currentUserId;
+
+          // Parse attachments
+          let parsedAttachments: { name: string; url: string }[] = [];
+          if (msg.attachments) {
+            if (typeof msg.attachments === "string") {
+              try {
+                if (msg.attachments.startsWith("http")) {
+                  parsedAttachments = [
+                    { name: "Attachment", url: msg.attachments },
+                  ];
+                } else {
+                  parsedAttachments = JSON.parse(msg.attachments);
+                }
+              } catch {
+                parsedAttachments = [
+                  { name: "Attachment", url: msg.attachments },
+                ];
+              }
+            } else if (Array.isArray(msg.attachments)) {
+              parsedAttachments = msg.attachments.map((att: any) => {
+                if (typeof att === "string") {
+                  return {
+                    name: att.split("/").pop() || "Attachment",
+                    url: att,
+                  };
+                }
+                return att;
+              });
+            }
+          }
+
           return (
             <div
               key={msg.id}
               className={`flex ${isSent ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[70%] rounded-lg p-3 ${isSent ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                className={`max-w-[70%] sm:max-w-[75%] rounded-lg p-3 ${
+                  isSent
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-foreground"
+                }`}
               >
-                <p className="text-sm">{msg.content}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">
+                  {msg.content}
+                </p>
+                {parsedAttachments.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {parsedAttachments.map((attachment, index) => (
+                      <a
+                        key={index}
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex items-center space-x-2 p-2 sm:p-2.5 rounded-lg transition-all duration-200 hover:opacity-90 ${
+                          isSent
+                            ? "bg-primary-foreground/20 hover:bg-primary-foreground/30"
+                            : "bg-background/50 hover:bg-background/70"
+                        }`}
+                      >
+                        <FileText
+                          className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${
+                            isSent ? "text-primary-foreground" : "text-primary"
+                          }`}
+                        />
+                        <span
+                          className={`text-xs sm:text-sm truncate min-w-0 flex-1 ${
+                            isSent
+                              ? "text-primary-foreground font-medium"
+                              : "text-foreground font-medium"
+                          }`}
+                          title={attachment.name}
+                        >
+                          {attachment.name}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                )}
                 <p
-                  className={`text-xs mt-1 ${isSent ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}
+                  className={`text-xs mt-1 ${
+                    isSent
+                      ? "text-primary-foreground/70"
+                      : "text-muted-foreground"
+                  }`}
                 >
                   {new Date(msg.createdAt).toLocaleTimeString()}
                 </p>

@@ -249,3 +249,24 @@ export async function updateConversationOnNewMessage(
     },
   });
 }
+
+/**
+ * Count total unread messages for an attorney across all conversations
+ */
+export async function countTotalUnreadMessagesForAttorney(
+  attorneyId: string
+): Promise<number> {
+  const result = await prisma.conversation.aggregate({
+    where: {
+      attorneyId,
+      unreadByAttorney: {
+        gt: 0,
+      },
+    },
+    _sum: {
+      unreadByAttorney: true,
+    },
+  });
+
+  return result._sum.unreadByAttorney || 0;
+}

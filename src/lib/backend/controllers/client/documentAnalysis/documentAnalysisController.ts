@@ -34,11 +34,24 @@ export async function handleDocumentAnalysis(
     }
 
     const body: ProcessingRequest = await request.json();
-    const { userPrompt } = body;
+    const { userPrompt, documentId, queryAllDocuments, sessionId, isNewConversation } = body;
 
     validateNonEmptyString(userPrompt, "User prompt");
 
-    const result = await performClientDocumentAnalysis(userId, body);
+    // Validate that either documentId or queryAllDocuments is set, but not both
+    if (documentId && queryAllDocuments) {
+      return errorResponse(
+        new Error("Cannot specify both documentId and queryAllDocuments"),
+        "Invalid request parameters"
+      );
+    }
+
+    // Pass sessionId and isNewConversation to service
+    const result = await performClientDocumentAnalysis(userId, {
+      ...body,
+      sessionId,
+      isNewConversation,
+    });
 
     return successResponse(result, 200, {
       headers: getRateLimitHeaders(rateLimit.remaining, rateLimit.resetTime),

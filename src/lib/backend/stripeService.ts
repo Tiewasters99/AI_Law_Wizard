@@ -23,7 +23,8 @@ export interface TokenPackage {
 export interface Wallet {
   id: string;
   userId: string;
-  tokens: number;
+  balance: number; // Token balance (matching Prisma schema)
+  tokens?: number; // Legacy field for backward compatibility
   createdAt: string;
   updatedAt: string;
   transactions: TokenTransaction[];
@@ -46,8 +47,23 @@ export const formatPrice = (priceInCents: number) => {
   }).format(priceInCents / 100);
 };
 
-export const createPaymentIntent = async (packageId: string) => {
-  const response = await fetch("/api/attorney/stripe/create-payment-intent", {
+export type UserRole = "ATTORNEY" | "CUSTOMER";
+
+/**
+ * Create payment intent for token package purchase
+ * @param packageId - The token package ID
+ * @param role - User role (ATTORNEY or CUSTOMER), defaults to ATTORNEY for backward compatibility
+ */
+export const createPaymentIntent = async (
+  packageId: string,
+  role: UserRole = "ATTORNEY"
+) => {
+  const endpoint =
+    role === "CUSTOMER"
+      ? "/api/client/stripe/create-payment-intent"
+      : "/api/attorney/stripe/create-payment-intent";
+
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -63,39 +79,102 @@ export const createPaymentIntent = async (packageId: string) => {
   return response.json();
 };
 
-export const fetchTokenPackages = async (): Promise<TokenPackage[]> => {
-  const response = await fetch("/api/attorney/token-packages");
+/**
+ * Fetch token packages for a specific role
+ * @param role - User role (ATTORNEY or CUSTOMER), defaults to ATTORNEY for backward compatibility
+ */
+export const fetchTokenPackages = async (
+  role: UserRole = "ATTORNEY"
+): Promise<TokenPackage[]> => {
+  // Use shared pricing endpoint that supports role filtering
+  const response = await fetch(
+    `/api/pricing/packages${role ? `?role=${role}` : ""}`
+  );
 
   if (!response.ok) {
+    // Fallback to attorney endpoint for backward compatibility
+    if (role === "ATTORNEY") {
+      const fallbackResponse = await fetch("/api/attorney/token-packages");
+      if (fallbackResponse.ok) {
+        const data = await fallbackResponse.json();
+        return data.packages || [];
+      }
+    }
     throw new Error("Failed to fetch token packages");
   }
 
   const data = await response.json();
-  return data.packages;
+  return data.packages || [];
 };
 
-export const fetchWallet = async (): Promise<Wallet> => {
-  const response = await fetch("/api/attorney/wallet");
+/**
+ * Fetch wallet for a specific role
+ * @param role - User role (ATTORNEY or CUSTOMER), defaults to ATTORNEY for backward compatibility
+ */
+export const fetchWallet = async (
+  role: UserRole = "ATTORNEY"
+): Promise<Wallet> => {
+  const endpoint =
+    role === "CUSTOMER"
+      ? "/api/client/tokens/balance"
+      : "/api/attorney/wallet";
+
+  const response = await fetch(endpoint);
 
   if (!response.ok) {
     throw new Error("Failed to fetch wallet");
   }
 
   const data = await response.json();
-  return data.wallet;
+  // Normalize response format
+  if (data.wallet) {
+    return data.wallet;
+  }
+  if (data.balance !== undefined) {
+    // Client balance endpoint returns different format
+    return {
+      id: "",
+      userId: "",
+      balance: data.balance,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      transactions: [],
+    };
+  }
+  throw new Error("Invalid wallet response format");
 };
 
-export const consumeTokens = async (amount: number, description?: string) => {
-  const response = await fetch("/api/attorney/wallet", {
+/**
+ * Consume tokens for a specific role
+ * @param amount - Amount of tokens to consume
+ * @param description - Optional description
+ * @param role - User role (ATTORNEY or CUSTOMER), defaults to ATTORNEY for backward compatibility
+ */
+export const consumeTokens = async (
+  amount: number,
+  description?: string,
+  role: UserRole = "ATTORNEY"
+) => {
+  const endpoint =
+    role === "CUSTOMER"
+      ? "/api/client/tokens/consume"
+      : "/api/attorney/wallet";
+
+  const body =
+    role === "CUSTOMER"
+      ? { amount, description }
+      : {
+          action: "consume",
+          amount,
+          description,
+        };
+
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      action: "consume",
-      amount,
-      description,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

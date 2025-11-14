@@ -1,334 +1,597 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import Image from "next/image";
+import { fetchWallet, Wallet } from "@/lib/backend/stripeService";
 import { TokenPurchase } from "@/components/attorney/tokens/TokenPurchase";
 import {
-  Coins,
-  TrendingUp,
-  History,
-  Settings,
+  Zap,
   CreditCard,
-  Award,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  TrendingUp,
+  RefreshCw,
+  Gift,
   Shield,
   FileText,
   BarChart3,
-  Clock,
-  Scale,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useSession } from "next-auth/react";
-import { fetchWallet, Wallet } from "@/lib/backend/stripeService";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface TokenTransaction {
+  id: string;
+  type: "purchase" | "usage" | "grant" | "refund";
+  amount: number;
+  description: string;
+  timestamp: Date;
+  status: "completed" | "pending" | "failed";
+  feature?: string;
+  packageName?: string;
+}
+
+interface UsageStats {
+  totalUsed: number;
+  totalPurchased: number;
+  currentBalance: number;
+  usageByFeature: {
+    feature: string;
+    tokens: number;
+    percentage: number;
+    count?: number;
+  }[];
+}
 
 export default function TokensPage() {
-  const [wallet, setWallet] = useState<Wallet | null>(null);
-  const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [transactions, setTransactions] = useState<TokenTransaction[]>([]);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("packages");
+
+  const features = [
+    {
+      name: "Document Analysis (Wizard)",
+      cost: 5,
+      description: "AI-powered document queries and analysis",
+    },
+    {
+      name: "Advanced Analysis (Grand Wizard)",
+      cost: 10,
+      description: "Ultimate AI with master-level insights",
+    },
+    {
+      name: "Legal Research",
+      cost: 3,
+      description: "Comprehensive legal research queries",
+    },
+    {
+      name: "Document Processing",
+      cost: 2,
+      description: "Document upload and processing",
+    },
+  ];
+
+  const fetchTokenData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch wallet
+      const walletData = await fetchWallet();
+      setWallet(walletData);
+
+      // Fetch transactions
+      const transactionsResponse = await fetch(
+        "/api/attorney/tokens/transactions"
+      );
+      if (transactionsResponse.ok) {
+        const transactionsData = await transactionsResponse.json();
+        const formattedTransactions: TokenTransaction[] =
+          transactionsData.transactions?.map((t: any) => ({
+            id: t.id,
+            type:
+              t.type === "PURCHASE"
+                ? "purchase"
+                : t.type === "CONSUMPTION"
+                  ? "usage"
+                  : t.type === "REFUND"
+                    ? "refund"
+                    : "grant",
+            amount: t.amount,
+            description: t.description || "Transaction",
+            timestamp: new Date(t.createdAt),
+            status: "completed",
+            feature: t.feature || undefined,
+            packageName: t.metadata?.packageName,
+          })) || [];
+        setTransactions(formattedTransactions);
+      }
+
+      // Fetch usage statistics
+      const usageResponse = await fetch("/api/attorney/tokens/usage");
+      if (usageResponse.ok) {
+        const usageData = await usageResponse.json();
+        setUsageStats({
+          totalUsed: usageData.totalUsed || 0,
+          totalPurchased: usageData.totalPurchased || 0,
+          currentBalance: (walletData?.balance ?? walletData?.tokens) || 0,
+          usageByFeature: usageData.breakdown || [],
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching token data:", error);
+      setError("Failed to load token data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadWallet = async () => {
-      if (session?.user) {
-        try {
-          const walletData = await fetchWallet();
-          setWallet(walletData);
-        } catch (error) {
-          console.error("Failed to load wallet:", error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
-    };
+    if (session?.user) {
+      fetchTokenData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [session?.user, fetchTokenData]);
 
-    loadWallet();
-  }, [session?.user]);
-
-  const isAttorney = useMemo(
-    () => session?.user?.role === "ATTORNEY",
-    [session?.user?.role]
+  const handlePurchaseSuccess = useCallback(
+    async (tokens: number) => {
+      setSuccess(`Successfully purchased ${tokens} tokens!`);
+      setTimeout(() => setSuccess(null), 5000);
+      await fetchTokenData();
+    },
+    [fetchTokenData]
   );
 
-  const serviceStats = useMemo(
-    () => [
-      {
-        title: "Available Credits",
-        value: wallet?.tokens || 0,
-        icon: Coins,
-        iconColor: "text-primary",
-        bgColor: "bg-accent",
-        borderColor: "border-primary/20",
-      },
-      {
-        title: "Credits Used",
-        value: 0, // This would come from usage analytics
-        icon: BarChart3,
-        iconColor: "text-green-700",
-        bgColor: "bg-green-50",
-        borderColor: "border-green-200",
-      },
-      {
-        title: "Transaction History",
-        value: wallet?.transactions?.length || 0,
-        icon: History,
-        iconColor: "text-purple-700",
-        bgColor: "bg-purple-50",
-        borderColor: "border-purple-200",
-      },
-    ],
-    [wallet?.tokens, wallet?.transactions?.length]
-  );
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case "purchase":
+        return <CreditCard className="w-4 h-4 text-green-600" />;
+      case "usage":
+        return <Zap className="w-4 h-4 text-blue-600" />;
+      case "grant":
+        return <Gift className="w-4 h-4 text-purple-600" />;
+      case "refund":
+        return <RefreshCw className="w-4 h-4 text-orange-600" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-600" />;
+    }
+  };
 
-  const professionalActions = useMemo(
-    () => [
-      {
-        title: "Purchase Credits",
-        description: "Acquire analysis credits for legal services",
-        icon: CreditCard,
-        action: "purchase",
-      },
-      {
-        title: "Usage Reports",
-        description: "Comprehensive usage analytics and insights",
-        icon: BarChart3,
-        action: "analytics",
-      },
-      {
-        title: "Transaction Records",
-        description: "Complete transaction history and invoices",
-        icon: History,
-        action: "history",
-      },
-      {
-        title: "Firm Packages",
-        description: "Enterprise solutions for law firms",
-        icon: Scale,
-        action: "settings",
-      },
-    ],
-    []
-  );
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = useCallback((date: Date) => {
+    return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-    });
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }, []);
+
+  const totalTokens = useMemo(() => {
+    if (!usageStats) return 0;
+    return usageStats.totalPurchased;
+  }, [usageStats]);
+
+  const totalUsed = useMemo(() => {
+    if (!usageStats) return 0;
+    return usageStats.totalUsed;
+  }, [usageStats]);
+
+  const availableTokens = useMemo(() => {
+    return (wallet?.balance ?? wallet?.tokens) || 0;
+  }, [wallet]);
+
+  const formattedTransactions = useMemo(() => {
+    return transactions.map(tx => ({
+      ...tx,
+      formattedDate: formatDate(tx.timestamp),
+    }));
+  }, [transactions, formatDate]);
+
+  const getFeatureDisplayName = (feature: string) => {
+    switch (feature) {
+      case "wizard":
+        return "Document Analysis (Wizard)";
+      case "grand-wizard":
+        return "Advanced Analysis (Grand Wizard)";
+      case "document-assistant":
+        return "Document Assistant";
+      case "legal-research":
+        return "Legal Research";
+      case "consultation-request":
+        return "Consultation Request";
+      default:
+        return feature;
+    }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="h-full overflow-y-auto">
-        <div className="bg-white mx-auto max-w-6xl p-4 sm:p-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-16 bg-gray-200 rounded"></div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-32 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-            <div className="h-64 bg-gray-200 rounded"></div>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading token information...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <motion.div
-        className="bg-white mx-auto max-w-6xl p-4 sm:p-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        {/* Professional Header */}
-        <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
-          <div>
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm bg-primary">
-                <Coins className="w-6 h-6 text-primary-foreground" />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="bg-card border-b border-border px-4 sm:px-6 py-4 sm:py-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                Token Management
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
+                Manage your AI credits and purchase additional tokens
+              </p>
+            </div>
+            <div className="text-left sm:text-right">
+              <div className="text-2xl sm:text-3xl font-bold text-primary">
+                {availableTokens.toLocaleString()}
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">
-                  Service Credit Management
-                </h1>
-                {isAttorney && (
-                  <Badge
-                    variant="outline"
-                    className="mt-1 text-primary bg-accent border-primary/20"
-                  >
-                    <Award className="w-3 h-3 mr-1" />
-                    Attorney Account
-                  </Badge>
-                )}
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                Credits Available
               </div>
             </div>
-            <p className="mt-2 text-muted-foreground">
-              Professional legal analysis credits for AI-powered services
-            </p>
           </div>
-          <div className="flex items-center space-x-2 p-3 rounded-lg border bg-accent border-primary/20">
-            <Shield className="w-5 h-5 text-primary" />
-            <span className="text-sm font-semibold text-primary">
-              Secure Platform
-            </span>
-          </div>
-        </div>
 
-        {/* Professional Service Stats */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {serviceStats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <motion.div
-                key={stat.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
-                <Card
-                  className={`hover:shadow-md transition-shadow border ${stat.borderColor}`}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium mb-1 text-foreground">
-                          {stat.title}
-                        </p>
-                        <p className="text-3xl font-bold text-foreground">
-                          {stat.value}
-                        </p>
-                      </div>
-                      <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                        <Icon className={`w-6 h-6 ${stat.iconColor}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
+          {/* Token Usage Bar */}
+          {usageStats && totalTokens > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-foreground">
+                  Usage Progress
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {totalUsed} / {totalTokens} used
+                </span>
+              </div>
+              <Progress
+                value={(totalUsed / totalTokens) * 100}
+                className="h-3"
+              />
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Professional Actions */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-foreground">
-            Credit Management
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {professionalActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <motion.div
-                  key={action.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                >
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow border border-border">
-                    <CardContent className="p-4">
-                      <div className="flex items-start space-x-3">
-                        <div className="p-2 rounded-lg bg-accent">
-                          <Icon className="w-5 h-5 text-primary" />
+      {/* Success/Error Messages */}
+      {success && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-sm sm:text-base text-green-800">
+              {success}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm sm:text-base">
+              {error}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-4 sm:space-y-6"
+        >
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsTrigger
+              value="packages"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Buy Tokens
+            </TabsTrigger>
+            <TabsTrigger
+              value="usage"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Usage Stats
+            </TabsTrigger>
+            <TabsTrigger
+              value="transactions"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Transactions
+            </TabsTrigger>
+            <TabsTrigger
+              value="features"
+              className="text-xs sm:text-sm py-2 sm:py-2.5"
+            >
+              Feature Costs
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="packages" className="space-y-4 sm:space-y-6">
+            {/* Token Purchase Section */}
+            <Card>
+              <CardContent className="p-6">
+                <TokenPurchase
+                  onSuccess={handlePurchaseSuccess}
+                  showWallet={false}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Payment Security */}
+            <Card>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span>Secure payment processing by Stripe</span>
+                  </div>
+                  <Separator
+                    orientation="vertical"
+                    className="hidden sm:block h-4"
+                  />
+                  <span className="hidden sm:inline">SSL encrypted</span>
+                  <Separator
+                    orientation="vertical"
+                    className="hidden sm:block h-4"
+                  />
+                  <span className="hidden sm:inline">
+                    30-day money-back guarantee
+                  </span>
+                  <div className="sm:hidden text-center">
+                    <div>SSL encrypted</div>
+                    <div>30-day money-back guarantee</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="usage" className="space-y-4 sm:space-y-6">
+            {usageStats && (
+              <>
+                {/* Usage Overview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Zap className="w-6 h-6 text-blue-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-sm mb-1 text-foreground">
-                            {action.title}
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            {action.description}
-                          </p>
+                          <div className="text-2xl font-bold text-foreground">
+                            {usageStats.totalUsed}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Tokens Used
+                          </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Professional Credit Purchase Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-foreground">
-            Purchase Service Credits
-          </h2>
-          <Card className="border shadow-sm border-gray-200">
-            <CardContent className="p-6">
-              <TokenPurchase showWallet={true} />
-            </CardContent>
-          </Card>
-        </div>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <TrendingUp className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-foreground">
+                            {usageStats.totalPurchased}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Tokens Purchased
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-        {/* Professional Usage Information */}
-        <div className="rounded-xl p-6 border bg-muted border-border">
-          <div className="flex items-center space-x-3 mb-4">
-            <FileText className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold text-foreground">
-              Service Credit Information
-            </h3>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold mb-2 text-primary">
-                Credit Usage
-              </h4>
-              <div className="flex items-start space-x-2">
-                <Clock className="w-4 h-4 mt-0.5 text-primary" />
-                <span className="text-sm text-foreground">
-                  Standard legal analysis: 1-3 credits per query
-                </span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <FileText className="w-4 h-4 mt-0.5 text-blue-700" />
-                <span className="text-sm text-foreground">
-                  Complex document processing: 3-5 credits per document
-                </span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <Scale className="w-4 h-4 mt-0.5 text-primary" />
-                <span className="text-sm text-foreground">
-                  Advanced case law research: 5-10 credits per session
-                </span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold mb-2 text-green-900">
-                Professional Benefits
-              </h4>
-              <div className="flex items-start space-x-2">
-                <Shield className="w-4 h-4 mt-0.5 text-green-700" />
-                <span className="text-sm text-foreground">
-                  Credits never expire - lifetime validity
-                </span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <Award className="w-4 h-4 mt-0.5 text-green-700" />
-                <span className="text-sm text-foreground">
-                  Volume discounts for law firm packages
-                </span>
-              </div>
-              <div className="flex items-start space-x-2">
-                <BarChart3 className="w-4 h-4 mt-0.5 text-green-700" />
-                <span className="text-sm text-foreground">
-                  Detailed usage analytics and reporting
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <CreditCard className="w-6 h-6 text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-foreground">
+                            {usageStats.currentBalance}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Current Balance
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Usage by Feature */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Usage by Feature</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {usageStats.usageByFeature.length > 0 ? (
+                      <div className="space-y-4">
+                        {usageStats.usageByFeature.map((item, index) => {
+                          const featureName = getFeatureDisplayName(
+                            item.feature
+                          );
+                          return (
+                            <div key={index} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-medium text-foreground">
+                                    {featureName}
+                                  </span>
+                                  {item.count !== undefined && (
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      ({item.count}{" "}
+                                      {item.count === 1 ? "use" : "uses"})
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {item.tokens} credits (
+                                  {item.percentage.toFixed(1)}%)
+                                </span>
+                              </div>
+                              <Progress
+                                value={item.percentage}
+                                className="h-2"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No usage data available yet</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="transactions" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Transaction History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {formattedTransactions.map(transaction => {
+                    const featureName = transaction.feature
+                      ? getFeatureDisplayName(transaction.feature)
+                      : undefined;
+                    return (
+                      <motion.div
+                        key={transaction.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border border-border rounded-lg gap-3 sm:gap-0"
+                      >
+                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                          {getTransactionIcon(transaction.type)}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-foreground text-sm sm:text-base truncate">
+                              {transaction.description}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="text-xs sm:text-sm text-muted-foreground">
+                                {transaction.formattedDate}
+                              </div>
+                              {transaction.feature && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {featureName}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-0 sm:flex-col sm:items-end">
+                          <div
+                            className={`font-semibold text-sm sm:text-base ${
+                              transaction.amount > 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {transaction.amount > 0 ? "+" : ""}
+                            {Math.abs(transaction.amount)} credits
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className="text-xs sm:text-sm"
+                          >
+                            {transaction.status}
+                          </Badge>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+
+                  {transactions.length === 0 && (
+                    <div className="text-center py-8">
+                      <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-muted-foreground">
+                        No transactions yet
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="features" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Feature Token Costs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {features.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-4 border border-border rounded-lg"
+                    >
+                      <div>
+                        <div className="font-medium text-foreground">
+                          {feature.name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {feature.description}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-semibold text-primary">
+                          {feature.cost === 0
+                            ? "Free"
+                            : `${feature.cost} token${
+                                feature.cost !== 1 ? "s" : ""
+                              }`}
+                        </div>
+                        {feature.cost > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            per use
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

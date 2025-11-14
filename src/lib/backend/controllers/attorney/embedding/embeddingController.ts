@@ -37,8 +37,15 @@ export async function handleFileUpload(
       ? { oneDriveId, oneDriveLastModified: oneDriveLastModified || undefined }
       : undefined;
 
+    if (!userId) {
+      return errorResponse(
+        new ValidationError("User ID is required"),
+        "User ID is required"
+      );
+    }
+
     // Process files
-    const result = await processBatchFiles(files, oneDriveMetadata);
+    const result = await processBatchFiles(files, userId, oneDriveMetadata);
 
     // Return response
     return successResponse({

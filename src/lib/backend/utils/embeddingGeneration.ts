@@ -50,11 +50,17 @@ export function chunkTextWithOverlap(
 /**
  * Generate embeddings and store in Pinecone
  * Optimized for batch processing with retry logic
+ *
+ * @param chunks - Array of text chunks to process
+ * @param jobId - Embedding job ID
+ * @param fileId - File identifier
+ * @param namespace - User-specific Pinecone namespace
  */
 export async function processEmbeddingsForChunks(
   chunks: Chunk[],
   jobId: string,
-  fileId: string
+  fileId: string,
+  namespace: string
 ): Promise<number> {
   if (!chunks || chunks.length === 0) {
     console.warn("No chunks provided for embedding generation");
@@ -116,8 +122,8 @@ export async function processEmbeddingsForChunks(
         },
       }));
 
-      // Upsert to Pinecone
-      await pineconeIndex.upsert(records);
+      // Upsert to Pinecone with user-specific namespace
+      await pineconeIndex.namespace(namespace).upsert(records);
 
       // Update chunk status to completed
       await Promise.all(

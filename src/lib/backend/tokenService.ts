@@ -6,6 +6,7 @@ export interface TokenTransaction {
   walletId: string;
   amount: number;
   type: "PURCHASE" | "CONSUMPTION" | "REFUND" | "ADMIN_ADJUSTMENT";
+  feature: string | null;
   description: string | null;
   reference: string | null;
   metadata: any;
@@ -47,21 +48,27 @@ export async function checkTokenBalance(
 
 /**
  * Deduct tokens from user balance
+ * @param trackOnly - If true, only track the transaction without deducting from balance (useful for attorneys)
  */
 export async function deductTokens(
   userId: string,
   amount: number,
-  reason: string
+  reason: string,
+  feature?: string,
+  metadata?: Record<string, any>,
+  trackOnly: boolean = false
 ): Promise<{ success: boolean; newBalance: number; error?: string }> {
   try {
-    // Check if user has sufficient balance
-    const hasBalance = await checkTokenBalance(userId, amount);
-    if (!hasBalance) {
-      return {
-        success: false,
-        newBalance: await getTokenBalance(userId),
-        error: "Insufficient token balance",
-      };
+    // Check if user has sufficient balance (unless tracking only)
+    if (!trackOnly) {
+      const hasBalance = await checkTokenBalance(userId, amount);
+      if (!hasBalance) {
+        return {
+          success: false,
+          newBalance: await getTokenBalance(userId),
+          error: "Insufficient token balance",
+        };
+      }
     }
 
     // Start transaction
@@ -77,29 +84,35 @@ export async function deductTokens(
         });
       }
 
-      // Update wallet balance
-      const updatedWallet = await tx.wallet.update({
-        where: { id: wallet.id },
-        data: {
-          balance: {
-            decrement: amount,
+      // Update wallet balance only if not tracking only
+      let updatedBalance = wallet.balance;
+      if (!trackOnly) {
+        const updatedWallet = await tx.wallet.update({
+          where: { id: wallet.id },
+          data: {
+            balance: {
+              decrement: amount,
+            },
           },
-        },
-        select: { balance: true },
-      });
+          select: { balance: true },
+        });
+        updatedBalance = updatedWallet.balance;
+      }
 
-      // Create transaction record
+      // Always create transaction record for tracking
       await tx.tokenTransaction.create({
         data: {
           walletId: wallet.id,
           userId,
           amount: -amount, // Negative for consumption
           type: "CONSUMPTION",
+          feature: feature || null,
           description: reason,
+          metadata: metadata || null,
         },
       });
 
-      return updatedWallet.balance;
+      return updatedBalance;
     });
 
     return {
@@ -196,6 +209,7 @@ export async function getTokenTransactions(
       walletId: tx.walletId,
       amount: tx.amount,
       type: tx.type,
+      feature: tx.feature,
       description: tx.description,
       reference: tx.reference,
       metadata: tx.metadata,

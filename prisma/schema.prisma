@@ -31,12 +31,16 @@ model EmbeddingJob {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // User association
+  userId String? // Link to user who uploaded the file
+
   // OneDrive tracking fields
   isOneDriveFile       Boolean @default(false)
   oneDriveId           String? @unique // OneDrive file ID if synced from OneDrive
   oneDriveLastModified String? // OneDrive last modified date
 
   // Relations
+  user   User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   chunks EmbeddingChunk[]
 
   @@map("embedding_jobs")
@@ -322,6 +326,7 @@ model User {
   sentMessages                 Message[]                 @relation("SentMessages")
   notifications                Notification[]
   tokenTransactions            TokenTransaction[]        @relation("UserTokenTransactions")
+  embeddingJobs                EmbeddingJob[]
 
   @@map("users")
 }
@@ -432,16 +437,19 @@ model TokenTransaction {
   walletId    String
   userId      String // User ID for easier querying
   type        TransactionType
+  feature     String? // Feature name (document-assistant, wizard, grand-wizard, consultation-request, etc.)
   amount      Int // Positive for purchase, negative for consumption
   description String?
   reference   String? // Payment intent ID or operation reference
-  metadata    Json? // Additional metadata (feature, operation details, etc.)
+  metadata    Json? // Additional metadata (operation details, sessionId, etc.)
   createdAt   DateTime        @default(now())
 
   // Relations
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
   user   User   @relation("UserTokenTransactions", fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([feature])
+  @@index([userId, feature])
   @@map("token_transactions")
 }
 
@@ -487,16 +495,18 @@ model Purchase {
 
 // Consultation request from client to attorney
 model ConsultationRequest {
-  id          String         @id @default(cuid())
-  clientId    String
-  attorneyId  String
-  caseType    String // Case type (Corporate, Criminal, Family, etc.)
-  description String         @db.Text
-  urgency     RequestUrgency @default(MEDIUM)
-  status      RequestStatus  @default(PENDING)
-  documents   Json? // Optional document references
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  clientId         String
+  attorneyId       String
+  caseType         String // Case type (Corporate, Criminal, Family, etc.)
+  description      String         @db.Text
+  urgency          RequestUrgency @default(MEDIUM)
+  status           RequestStatus  @default(PENDING)
+  documents        Json? // Optional document references
+  viewedByClient   Boolean        @default(false) // Track if client has viewed this request
+  viewedByAttorney Boolean        @default(false) // Track if attorney has viewed this request
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   // Relations
   client       User          @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)

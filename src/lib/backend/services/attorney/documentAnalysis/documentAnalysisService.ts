@@ -2,6 +2,9 @@
 
 import { openRouterService } from "../../openRouterService";
 import { createDocumentQuery, findDocumentQueries } from "../../../repositories/attorney/documentQueryRepository";
+import { findUserById } from "../../../repositories/common/userRepository";
+import { getUserNamespace } from "../../../config/pineconeConfig";
+import { deductTokens } from "../../../tokenService";
 import type { ProcessingRequest, ProcessingResponse } from "@/types/api";
 
 const ATTORNEY_SYSTEM_PROMPT = `You are a professional legal AI assistant for licensed attorneys. Provide comprehensive legal analysis and document processing.
@@ -71,6 +74,25 @@ export async function performDocumentAnalysis(
   } catch (dbError) {
     console.error("Failed to save query to database:", dbError);
     // Don't fail the request if database save fails
+  }
+
+  // Track token usage for attorneys (track only, don't deduct from balance)
+  const DOCUMENT_ANALYSIS_TOKEN_COST = 5;
+  try {
+    await deductTokens(
+      userId,
+      DOCUMENT_ANALYSIS_TOKEN_COST,
+      "Document Analysis (Attorney)",
+      "wizard",
+      {
+        operation: "document_analysis",
+        fileName: request.fileName,
+      },
+      true // trackOnly = true for attorneys
+    );
+  } catch (tokenError) {
+    console.error("Failed to track token usage:", tokenError);
+    // Don't fail the request if token tracking fails
   }
 
   return {

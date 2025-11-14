@@ -199,6 +199,7 @@ export async function createConsultationRequest(data: {
 
 /**
  * Count pending consultation requests for client
+ * Excludes requests that have been viewed by the client
  */
 export async function countPendingConsultationRequestsForClient(
   clientId: string
@@ -207,6 +208,25 @@ export async function countPendingConsultationRequestsForClient(
     where: {
       clientId,
       status: "PENDING",
+      viewedByClient: false,
+    },
+  });
+}
+
+/**
+ * Mark consultation request as viewed by client
+ */
+export async function markConsultationRequestAsViewedByClient(
+  requestId: string,
+  clientId: string
+) {
+  return await prisma.consultationRequest.updateMany({
+    where: {
+      id: requestId,
+      clientId, // Ensure the request belongs to this client
+    },
+    data: {
+      viewedByClient: true,
     },
   });
 }

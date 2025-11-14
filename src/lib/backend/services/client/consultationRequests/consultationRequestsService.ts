@@ -7,6 +7,7 @@ import {
   findConsultationRequestByIdForClient,
   updateConsultationRequestStatus,
   createConsultationRequest,
+  markConsultationRequestAsViewedByClient,
 } from "../../../repositories/attorney/consultationRequestRepository";
 import { findConversationById } from "../../../repositories/attorney/conversationRepository";
 import { createMessage } from "../../../repositories/attorney/messageRepository";
@@ -217,4 +218,36 @@ export async function updateClientConsultationRequestStatus(
   }
 
   return { request: updatedRequest };
+}
+
+/**
+ * Mark consultation request as viewed by client
+ */
+export async function markRequestAsViewed(
+  requestId: string,
+  clientId: string
+) {
+  // Verify consultation request belongs to user
+  const consultationRequest = await prisma.consultationRequest.findFirst({
+    where: {
+      id: requestId,
+      clientId,
+    },
+  });
+
+  if (!consultationRequest) {
+    throw new NotFoundError("Consultation request not found");
+  }
+
+  // Mark as viewed
+  const result = await markConsultationRequestAsViewedByClient(
+    requestId,
+    clientId
+  );
+
+  if (result.count === 0) {
+    throw new NotFoundError("Consultation request not found or already viewed");
+  }
+
+  return { success: true };
 }

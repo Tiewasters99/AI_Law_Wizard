@@ -2,7 +2,10 @@
 
 import { NextRequest } from "next/server";
 import { verifyAttorneyAccess } from "../../../utils/attorneyAuth";
-import { sendMessage } from "../../../services/attorney/messages/messagesService";
+import {
+  sendMessage,
+  getTotalUnreadMessageCount,
+} from "../../../services/attorney/messages/messagesService";
 import { successResponse, errorResponse } from "../../../utils/response";
 import { validateRequired, validateNonEmptyString } from "../../../utils/validation";
 
@@ -37,6 +40,24 @@ export async function handleSendMessage(
     });
   } catch (error) {
     return errorResponse(error, "Failed to send message");
+  }
+}
+
+/**
+ * Handle GET request - Get unread message count
+ */
+export async function handleGetUnreadMessageCount(
+  userId: string
+): Promise<Response> {
+  try {
+    await verifyAttorneyAccess(userId);
+    const count = await getTotalUnreadMessageCount(userId);
+    return successResponse({
+      count,
+      success: true,
+    });
+  } catch (error) {
+    return errorResponse(error, "Failed to fetch unread message count");
   }
 }
 

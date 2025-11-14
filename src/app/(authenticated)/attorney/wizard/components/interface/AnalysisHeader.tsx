@@ -1,9 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Brain, Sparkles } from "lucide-react";
+import { Brain, Sparkles, Crown } from "lucide-react";
 
-export const AnalysisHeader: React.FC = () => {
+interface AnalysisHeaderProps {
+  model?: string;
+}
+
+export const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({ model }) => {
+  const isAdvanced = model?.includes("gemini-2.5-pro");
+  const title = isAdvanced ? "Advanced AI Document Analysis" : "AI Document Analysis";
+  const description = isAdvanced 
+    ? "Premium legal document processing powered by Gemini 2.5 Pro"
+    : "Advanced legal document processing powered by AI";
+  const Icon = isAdvanced ? Crown : Brain;
   return (
     <motion.div
       className="flex items-center gap-3"
@@ -21,19 +31,19 @@ export const AnalysisHeader: React.FC = () => {
               "6px 6px 12px rgba(163, 177, 198, 0.6), -6px -6px 12px rgba(255, 255, 255, 0.5)",
           }}
         >
-          <Brain className="w-6 h-6 text-blue-600" />
+          <Icon className="w-6 h-6 text-blue-600" />
         </div>
       </div>
 
       <div className="flex flex-col">
         <div className="flex items-center gap-2">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
-            AI Document Analysis
+            {title}
           </h1>
           <Sparkles className="w-5 h-5 text-yellow-500" />
         </div>
         <p className="text-sm text-gray-600">
-          Advanced legal document processing powered by AI
+          {description}
         </p>
       </div>
     </motion.div>

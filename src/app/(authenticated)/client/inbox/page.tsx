@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface Message {
   id: string;
@@ -66,12 +67,14 @@ interface Conversation {
   status: "pending" | "accepted" | "in-progress" | "completed" | "cancelled";
   caseType: string;
   urgency: string;
+  consultationRequestId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export default function InboxPage() {
   const { data: session } = useSession();
+  const { refetch: refetchNotifications } = useNotifications();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
@@ -83,14 +86,16 @@ export default function InboxPage() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tokenBalance, setTokenBalance] = useState(0);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   const statusOptions = [
-    { value: "all", label: "All Conversations", color: "text-gray-600" },
-    { value: "pending", label: "Pending", color: "text-yellow-600" },
-    { value: "accepted", label: "Accepted", color: "text-blue-600" },
-    { value: "in-progress", label: "In Progress", color: "text-green-600" },
-    { value: "completed", label: "Completed", color: "text-gray-600" },
-    { value: "cancelled", label: "Cancelled", color: "text-red-600" },
+    { value: "all", label: "All Conversations" },
+    { value: "pending", label: "Pending" },
+    { value: "accepted", label: "Accepted" },
+    { value: "in-progress", label: "In Progress" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
   ];
 
   // Fetch conversations from API
@@ -141,6 +146,7 @@ export default function InboxPage() {
               caseType:
                 conv.consultationRequest?.caseType || "General Consultation",
               urgency: conv.consultationRequest?.urgency || "medium",
+              consultationRequestId: conv.consultationRequest?.id,
               createdAt: new Date(conv.createdAt),
               updatedAt: new Date(conv.lastMessageAt),
             }));
@@ -183,6 +189,26 @@ export default function InboxPage() {
     }
   }, [session?.user?.id]);
 
+  // Mark messages page as viewed when page loads
+  useEffect(() => {
+    if (session?.user?.id) {
+      const viewedKey = `messages-page-viewed-${session.user.id}`;
+      const alreadyViewed = localStorage.getItem(viewedKey) === "true";
+
+      if (!alreadyViewed) {
+        localStorage.setItem(viewedKey, "true");
+        // Dispatch custom event for same-tab updates (storage event only fires in other tabs)
+        window.dispatchEvent(
+          new CustomEvent("localStorageChange", {
+            detail: { key: viewedKey, value: "true" },
+          })
+        );
+        // Trigger notification count refetch to update badge immediately
+        refetchNotifications();
+      }
+    }
+  }, [session?.user?.id, refetchNotifications]);
+
   // Fetch messages for selected conversation
   useEffect(() => {
     if (selectedConversation) {
@@ -210,7 +236,27 @@ export default function InboxPage() {
                 timestamp: new Date(msg.createdAt),
                 isRead: msg.isRead,
                 attachments: msg.attachments
-                  ? JSON.parse(msg.attachments)
+                  ? (() => {
+                      try {
+                        // If it's already an object/array, return it
+                        if (typeof msg.attachments === "object") {
+                          return msg.attachments;
+                        }
+                        // If it's a string, try to parse it
+                        if (typeof msg.attachments === "string") {
+                          // Check if it's a URL (starts with http)
+                          if (msg.attachments.startsWith("http")) {
+                            return [msg.attachments];
+                          }
+                          // Try to parse as JSON
+                          return JSON.parse(msg.attachments);
+                        }
+                        return undefined;
+                      } catch (error) {
+                        // If parsing fails, treat as URL string
+                        return [msg.attachments];
+                      }
+                    })()
                   : undefined,
               })
             );
@@ -228,6 +274,35 @@ export default function InboxPage() {
       fetchMessages();
     }
   }, [selectedConversation, session?.user?.id]);
+
+  // Mark consultation request as viewed when conversation is selected
+  useEffect(() => {
+    if (
+      selectedConversation?.consultationRequestId &&
+      selectedConversation.status === "pending"
+    ) {
+      const markAsViewed = async () => {
+        try {
+          const response = await fetch(
+            `/api/client/consultation-requests/${selectedConversation.consultationRequestId}/viewed`,
+            {
+              method: "POST",
+            }
+          );
+
+          if (response.ok) {
+            // Optionally refetch notification counts to update badge
+            // The useNotifications hook will poll and update automatically
+          }
+        } catch (error) {
+          // Silently fail - don't disrupt user experience
+          console.error("Error marking request as viewed:", error);
+        }
+      };
+
+      markAsViewed();
+    }
+  }, [selectedConversation]);
 
   const filteredConversations = conversations.filter(conv => {
     const matchesSearch =
@@ -334,17 +409,17 @@ export default function InboxPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-accent/10 text-accent-foreground border-accent/30";
       case "accepted":
-        return "bg-blue-100 text-blue-800";
+        return "bg-primary/10 text-primary border-primary/30";
       case "in-progress":
-        return "bg-green-100 text-green-800";
+        return "bg-chart-1/10 text-chart-1 border-chart-1/30";
       case "completed":
-        return "bg-gray-100 text-gray-800";
+        return "bg-muted text-muted-foreground border-border";
       case "cancelled":
-        return "bg-red-100 text-red-800";
+        return "bg-destructive/10 text-destructive border-destructive/30";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-muted text-muted-foreground border-border";
     }
   };
 
@@ -365,30 +440,74 @@ export default function InboxPage() {
     }
   };
 
+  // Toggle sidebar on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setShowSidebar(true);
+      } else if (selectedConversation) {
+        setShowSidebar(false);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [selectedConversation]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading conversations...</p>
+          <p className="text-muted-foreground">Loading conversations...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex">
+    <div className="h-screen bg-background flex relative">
+      {/* Mobile Overlay */}
+      {showSidebar && selectedConversation && (
+        <div
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
       {/* Sidebar - Conversation List */}
-      <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
+      <div
+        className={`${
+          showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        } fixed lg:static inset-y-0 left-0 z-50 lg:z-auto w-full sm:w-80 lg:w-1/3 bg-card border-r border-border flex flex-col transition-transform duration-300 ease-in-out`}
+      >
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline" className="text-sm">
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSidebar(false)}
+                className="lg:hidden mr-2"
+                aria-label="Close sidebar"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl font-semibold text-foreground truncate">
+                Messages
+              </h1>
+            </div>
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <Badge variant="outline" className="text-xs sm:text-sm">
                 {tokenBalance} tokens
               </Badge>
-              <Badge variant="secondary" className="bg-primary text-white">
+              <Badge
+                variant="secondary"
+                className="bg-primary text-primary-foreground text-xs sm:text-sm"
+              >
                 {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)}{" "}
                 unread
               </Badge>
@@ -398,16 +517,16 @@ export default function InboxPage() {
           {/* Search and Filter */}
           <div className="space-y-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-background"
               />
             </div>
 
-            <div className="flex space-x-2 overflow-x-auto">
+            <div className="flex space-x-2 overflow-x-auto pb-2 -mx-2 px-2">
               {statusOptions.map(option => (
                 <Button
                   key={option.value}
@@ -416,7 +535,7 @@ export default function InboxPage() {
                   }
                   size="sm"
                   onClick={() => setFilterStatus(option.value)}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap text-xs sm:text-sm h-9"
                 >
                   {option.label}
                 </Button>
@@ -430,8 +549,8 @@ export default function InboxPage() {
           <div className="p-2">
             {filteredConversations.length === 0 ? (
               <div className="text-center py-8">
-                <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500">No conversations found</p>
+                <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No conversations found</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -442,10 +561,15 @@ export default function InboxPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className={`p-3 rounded-lg cursor-pointer transition-colors ${
                       selectedConversation?.id === conversation.id
-                        ? "bg-primary text-white"
-                        : "hover:bg-gray-50"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
                     }`}
-                    onClick={() => setSelectedConversation(conversation)}
+                    onClick={() => {
+                      setSelectedConversation(conversation);
+                      if (isMobile) {
+                        setShowSidebar(false);
+                      }
+                    }}
                   >
                     <div className="flex items-start space-x-3">
                       <Avatar className="w-10 h-10">
@@ -463,30 +587,30 @@ export default function InboxPage() {
                           <h3
                             className={`font-medium truncate ${
                               selectedConversation?.id === conversation.id
-                                ? "text-white"
-                                : "text-gray-900"
+                                ? "text-primary-foreground"
+                                : "text-foreground"
                             }`}
                           >
                             {conversation.attorneyName}
                           </h3>
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
                             {conversation.unreadCount > 0 && (
                               <Badge
                                 variant="secondary"
                                 className={`text-xs ${
                                   selectedConversation?.id === conversation.id
-                                    ? "bg-white text-primary"
-                                    : "bg-primary text-white"
+                                    ? "bg-primary-foreground text-primary"
+                                    : "bg-primary text-primary-foreground"
                                 }`}
                               >
                                 {conversation.unreadCount}
                               </Badge>
                             )}
                             <span
-                              className={`text-xs ${
+                              className={`text-xs whitespace-nowrap ${
                                 selectedConversation?.id === conversation.id
-                                  ? "text-white/70"
-                                  : "text-gray-500"
+                                  ? "text-primary-foreground/70"
+                                  : "text-muted-foreground"
                               }`}
                             >
                               {formatTime(conversation.lastMessage.timestamp)}
@@ -494,21 +618,21 @@ export default function InboxPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <p
-                            className={`text-sm truncate ${
+                            className={`text-sm truncate min-w-0 flex-1 ${
                               selectedConversation?.id === conversation.id
-                                ? "text-white/80"
-                                : "text-gray-600"
+                                ? "text-primary-foreground/80"
+                                : "text-muted-foreground"
                             }`}
                           >
                             {conversation.lastMessage.content}
                           </p>
                           <Badge
                             variant="outline"
-                            className={`text-xs ${
+                            className={`text-xs flex-shrink-0 ${
                               selectedConversation?.id === conversation.id
-                                ? "border-white/30 text-white"
+                                ? "border-primary-foreground/30 text-primary-foreground"
                                 : getStatusColor(conversation.status)
                             }`}
                           >
@@ -516,21 +640,21 @@ export default function InboxPage() {
                           </Badge>
                         </div>
 
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-between mt-1 gap-2">
                           <span
-                            className={`text-xs ${
+                            className={`text-xs truncate ${
                               selectedConversation?.id === conversation.id
-                                ? "text-white/60"
-                                : "text-gray-500"
+                                ? "text-primary-foreground/60"
+                                : "text-muted-foreground"
                             }`}
                           >
                             {conversation.caseType}
                           </span>
                           <span
-                            className={`text-xs ${
+                            className={`text-xs whitespace-nowrap ${
                               selectedConversation?.id === conversation.id
-                                ? "text-white/60"
-                                : "text-gray-500"
+                                ? "text-primary-foreground/60"
+                                : "text-muted-foreground"
                             }`}
                           >
                             {conversation.urgency} priority
@@ -547,14 +671,23 @@ export default function InboxPage() {
       </div>
 
       {/* Main Content - Messages */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="bg-white border-b border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="w-10 h-10">
+            <div className="bg-card border-b border-border p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSidebar(true)}
+                    className="lg:hidden mr-1"
+                    aria-label="Open sidebar"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
                     <AvatarImage src={selectedConversation.attorneyAvatar} />
                     <AvatarFallback>
                       {selectedConversation.attorneyName
@@ -563,32 +696,40 @@ export default function InboxPage() {
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <h2 className="font-semibold text-gray-900">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-semibold text-foreground truncate text-sm sm:text-base">
                       {selectedConversation.attorneyName}
                     </h2>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap">
                       <Badge
                         variant="outline"
-                        className={getStatusColor(selectedConversation.status)}
+                        className={`text-xs ${getStatusColor(selectedConversation.status)}`}
                       >
                         {getStatusLabel(selectedConversation.status)}
                       </Badge>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-xs sm:text-sm text-muted-foreground truncate">
                         {selectedConversation.caseType}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
-                    <Phone className="w-4 h-4 mr-1" />
-                    Call
+                <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex"
+                  >
+                    <Phone className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden md:inline">Call</span>
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Mail className="w-4 h-4 mr-1" />
-                    Email
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex"
+                  >
+                    <Mail className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden md:inline">Email</span>
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -596,7 +737,7 @@ export default function InboxPage() {
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent>
+                    <DropdownMenuContent align="end">
                       <DropdownMenuItem>View Profile</DropdownMenuItem>
                       <DropdownMenuItem>Schedule Meeting</DropdownMenuItem>
                       <DropdownMenuItem>Archive Conversation</DropdownMenuItem>
@@ -607,7 +748,7 @@ export default function InboxPage() {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-3 sm:p-4">
               <div className="space-y-4">
                 {messages.map(message => (
                   <motion.div
@@ -621,23 +762,40 @@ export default function InboxPage() {
                     }`}
                   >
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-lg ${
                         message.senderType === "client"
-                          ? "bg-primary text-white"
-                          : "bg-white border border-gray-200"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card border border-border text-card-foreground"
                       }`}
                     >
                       <p className="text-sm">{message.content}</p>
                       {message.attachments &&
                         message.attachments.length > 0 && (
-                          <div className="mt-2 space-y-1">
+                          <div className="mt-2 space-y-1.5">
                             {message.attachments.map((attachment, index) => (
                               <div
                                 key={index}
-                                className="flex items-center space-x-2 p-2 bg-gray-100 rounded"
+                                className={`flex items-center space-x-2 p-2 sm:p-2.5 rounded-lg transition-all duration-200 ${
+                                  message.senderType === "client"
+                                    ? "bg-primary-foreground/20 hover:bg-primary-foreground/30"
+                                    : "bg-muted hover:bg-muted/80"
+                                }`}
                               >
-                                <FileText className="w-4 h-4" />
-                                <span className="text-xs truncate">
+                                <FileText
+                                  className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${
+                                    message.senderType === "client"
+                                      ? "text-primary-foreground"
+                                      : "text-primary"
+                                  }`}
+                                />
+                                <span
+                                  className={`text-xs sm:text-sm truncate min-w-0 flex-1 ${
+                                    message.senderType === "client"
+                                      ? "text-primary-foreground font-medium"
+                                      : "text-foreground font-medium"
+                                  }`}
+                                  title={attachment.name}
+                                >
                                   {attachment.name}
                                 </span>
                               </div>
@@ -647,8 +805,8 @@ export default function InboxPage() {
                       <p
                         className={`text-xs mt-1 ${
                           message.senderType === "client"
-                            ? "text-white/70"
-                            : "text-gray-500"
+                            ? "text-primary-foreground/70"
+                            : "text-muted-foreground"
                         }`}
                       >
                         {formatTime(message.timestamp)}
@@ -660,31 +818,38 @@ export default function InboxPage() {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="bg-white border-t border-gray-200 p-4">
+            <div className="bg-card border-t border-border p-3 sm:p-4">
               {error && (
-                <Alert variant="destructive" className="mb-4">
+                <Alert variant="destructive" className="mb-3 sm:mb-4">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="text-sm">
+                    {error}
+                  </AlertDescription>
                 </Alert>
               )}
 
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 w-10 p-0 flex-shrink-0"
+                >
                   <Paperclip className="w-4 h-4" />
                 </Button>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <Textarea
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Type your message..."
-                    className="min-h-[40px] max-h-32 resize-none"
+                    className="min-h-[40px] max-h-32 resize-none text-sm sm:text-base"
                     disabled={isSending}
                   />
                 </div>
                 <Button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || isSending}
+                  className="h-10 w-10 p-0 flex-shrink-0"
                 >
                   {isSending ? (
                     <Clock className="w-4 h-4 animate-spin" />
@@ -696,15 +861,26 @@ export default function InboxPage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center max-w-md">
+              <MessageSquare className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 Select a conversation
               </h3>
-              <p className="text-gray-500">
-                Choose a conversation from the sidebar to start messaging
+              <p className="text-muted-foreground text-sm sm:text-base">
+                {isMobile
+                  ? "Tap a conversation to start messaging"
+                  : "Choose a conversation from the sidebar to start messaging"}
               </p>
+              {isMobile && (
+                <Button
+                  onClick={() => setShowSidebar(true)}
+                  className="mt-4"
+                  variant="outline"
+                >
+                  View Conversations
+                </Button>
+              )}
             </div>
           </div>
         )}

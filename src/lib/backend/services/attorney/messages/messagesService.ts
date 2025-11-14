@@ -7,6 +7,7 @@ import {
 import {
   findConversationById,
   updateConversationOnNewMessage,
+  countTotalUnreadMessagesForAttorney,
 } from "../../../repositories/attorney/conversationRepository";
 
 /**
@@ -34,5 +35,12 @@ export async function sendMessage(
   await updateConversationOnNewMessage(data.conversationId, true);
 
   return message;
+}
+
+/**
+ * Get total unread message count for an attorney
+ */
+export async function getTotalUnreadMessageCount(attorneyId: string) {
+  return await countTotalUnreadMessagesForAttorney(attorneyId);
 }
 

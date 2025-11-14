@@ -121,23 +121,29 @@ interface SelectItemProps {
   value: string;
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 
 const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
-  ({ className, value, children, ...props }, ref) => {
+  ({ className, value, children, disabled, ...props }, ref) => {
     const { value: selectedValue, onValueChange, setOpen } = useSelect();
 
     const handleClick = () => {
-      onValueChange(value);
-      setOpen(false);
+      if (!disabled) {
+        onValueChange(value);
+        setOpen(false);
+      }
     };
 
     return (
       <div
         ref={ref}
         className={cn(
-          "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-          selectedValue === value && "bg-accent",
+          "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+          disabled
+            ? "cursor-not-allowed opacity-50 pointer-events-none"
+            : "hover:bg-accent focus:bg-accent",
+          selectedValue === value && !disabled && "bg-accent",
           className
         )}
         onClick={handleClick}

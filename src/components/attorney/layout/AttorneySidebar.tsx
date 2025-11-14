@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { fetchWallet, Wallet } from "@/lib/backend/stripeService";
 import {
   Users,
   MessageSquare,
@@ -122,9 +124,95 @@ export function AttorneySidebar({
   unreadCount = 0,
 }: AttorneySidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const currentTokens = 0; // TODO: Get from store
-  const tokenLoading = false;
+  const [hasViewedInboxPage, setHasViewedInboxPage] = useState(false);
+  const previousUnreadCountRef = useRef<number>(0);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [tokenLoading, setTokenLoading] = useState(false);
+
+  // Fetch wallet balance
+  useEffect(() => {
+    const loadWallet = async () => {
+      if (session?.user?.id) {
+        try {
+          setTokenLoading(true);
+          const walletData = await fetchWallet();
+          setWallet(walletData);
+        } catch (error) {
+          console.error("Failed to load wallet:", error);
+          // Don't set error state, just leave wallet as null
+          // Will display 0 gracefully
+        } finally {
+          setTokenLoading(false);
+        }
+      }
+    };
+
+    loadWallet();
+  }, [session?.user?.id]);
+
+  // Calculate current tokens from wallet
+  const currentTokens = wallet ? (wallet.balance ?? wallet.tokens ?? 0) : 0;
+
+  // Check if inbox page has been viewed
+  useEffect(() => {
+    if (session?.user?.id) {
+      const viewedKey = `inbox-page-viewed-${session.user.id}`;
+      const checkViewed = () => {
+        const viewed = localStorage.getItem(viewedKey) === "true";
+        setHasViewedInboxPage(viewed);
+      };
+
+      // Check initially
+      checkViewed();
+
+      // Listen for storage changes (when inbox page marks itself as viewed)
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === viewedKey) {
+          checkViewed();
+        }
+      };
+
+      window.addEventListener("storage", handleStorageChange);
+
+      // Also listen for custom event for same-tab updates
+      const handleCustomStorageChange = (e: Event) => {
+        const customEvent = e as CustomEvent;
+        if (customEvent.detail?.key === viewedKey) {
+          checkViewed();
+        }
+      };
+
+      window.addEventListener(
+        "localStorageChange",
+        handleCustomStorageChange as EventListener
+      );
+
+      return () => {
+        window.removeEventListener("storage", handleStorageChange);
+        window.removeEventListener(
+          "localStorageChange",
+          handleCustomStorageChange as EventListener
+        );
+      };
+    }
+  }, [session?.user?.id]);
+
+  // Reset viewed state when new unread messages arrive (transition from 0 to > 0)
+  useEffect(() => {
+    if (
+      session?.user?.id &&
+      previousUnreadCountRef.current === 0 &&
+      unreadCount > 0 &&
+      hasViewedInboxPage
+    ) {
+      const viewedKey = `inbox-page-viewed-${session.user.id}`;
+      localStorage.removeItem(viewedKey);
+      setHasViewedInboxPage(false);
+    }
+    previousUnreadCountRef.current = unreadCount;
+  }, [unreadCount, hasViewedInboxPage, session?.user?.id]);
 
   const handleMouseEnter = useCallback((href: string) => {
     setHoveredItem(href);
@@ -173,7 +261,11 @@ export function AttorneySidebar({
                 {section.items.map(item => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
-                  const showBadge = item.badge === "unread" && unreadCount > 0;
+                  const showBadge =
+                    item.badge === "unread" &&
+                    unreadCount > 0 &&
+                    !hasViewedInboxPage;
+                  const badgeCount = unreadCount;
 
                   return (
                     <Link
@@ -216,9 +308,9 @@ export function AttorneySidebar({
                           {showBadge && (
                             <Badge
                               variant="destructive"
-                              className="ml-auto text-xs px-1.5 py-0.5 min-w-[20px] h-5"
+                              className="ml-auto text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center"
                             >
-                              {unreadCount > 9 ? "9+" : unreadCount}
+                              {badgeCount > 9 ? "9+" : badgeCount}
                             </Badge>
                           )}
                         </>
@@ -233,7 +325,7 @@ export function AttorneySidebar({
                               variant="destructive"
                               className="ml-2 text-xs px-1.5 py-0.5"
                             >
-                              {unreadCount}
+                              {badgeCount > 9 ? "9+" : badgeCount}
                             </Badge>
                           )}
                         </div>

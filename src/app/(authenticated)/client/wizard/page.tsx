@@ -1,10 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { TokenTracker } from "@/lib/frontend/tokenTracker";
-import { colors } from "@/lib/frontend/designSystem";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
 import {
   Send,
   Bot,
@@ -12,22 +18,18 @@ import {
   Loader2,
   AlertCircle,
   Zap,
-  Clock,
-  CheckCircle,
   Crown,
-  Sparkles,
+  Plus,
   Brain,
-  Shield,
-  FileText,
-  Gavel,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
 // Message type definition
 interface Message {
@@ -43,142 +45,230 @@ function TokenGuard({
   requiredTokens,
   feature,
   description,
+  balance,
+  onPurchase,
 }: {
   children: React.ReactNode;
   requiredTokens: number;
   feature: string;
   description: string;
+  balance: number;
+  onPurchase: () => void;
 }) {
+  if (balance < requiredTokens) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full bg-card border border-border rounded-xl p-6 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Insufficient Credits
+          </h2>
+          <p className="text-muted-foreground">
+            You need {requiredTokens} credits to use {feature}, but you only
+            have {balance} credits remaining.
+          </p>
+          <Button onClick={onPurchase} className="w-full">
+            Purchase Credits
+          </Button>
+        </div>
+      </div>
+    );
+  }
   return <>{children}</>;
 }
 
-// Upgrade Modal Component (inline)
-function UpgradeModal({
+// Insufficient Credits Modal Component (inline)
+function InsufficientCreditsModal({
   isOpen,
   onClose,
-  currentUsage,
-  limit,
-  feature,
+  onPurchase,
+  balance,
+  required,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  currentUsage: number;
-  limit: number;
-  feature: string;
+  onPurchase: () => void;
+  balance: number;
+  required: number;
 }) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-md">
-        <h3 className="text-lg font-semibold mb-2">Token Limit Reached</h3>
-        <p className="text-gray-600 mb-4">
-          You&apos;ve used {currentUsage} of {limit} tokens. Purchase more
-          tokens to continue using {feature}.
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card border border-border p-4 sm:p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h3 className="text-base sm:text-lg font-semibold mb-2 text-foreground">
+          Insufficient Credits
+        </h3>
+        <p className="text-sm sm:text-base text-muted-foreground mb-4">
+          You need {required} credits to use this feature, but you only have{" "}
+          {balance} credits remaining. Purchase more credits to continue.
         </p>
-        <Button onClick={onClose}>Close</Button>
+        <div className="flex gap-3">
+          <Button onClick={onPurchase} className="flex-1">
+            Purchase Credits
+          </Button>
+          <Button onClick={onClose} variant="outline" className="flex-1">
+            Close
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-const WIZARD_TOKEN_REQUIREMENT = 100;
+const WIZARD_TOKEN_REQUIREMENT = 2;
 const WIZARD_TOKEN_COST = 2;
 
 export default function WizardPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const {
+    balance,
+    loading: balanceLoading,
+    refetch: refetchBalance,
+  } = useTokenBalance();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [tokenUsage, setTokenUsage] = useState({ used: 0, limit: 0 });
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] =
+    useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [consultationType, setConsultationType] =
-    useState<string>("comprehensive");
+  const [showReasoning, setShowReasoning] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const consultationTypes = [
-    {
-      value: "comprehensive",
-      label: "Comprehensive Analysis",
-      icon: Brain,
-      description: "Deep legal analysis with multiple perspectives",
-    },
-    {
-      value: "strategy",
-      label: "Legal Strategy",
-      icon: Shield,
-      description: "Strategic legal planning and risk assessment",
-    },
-    {
-      value: "research",
-      label: "Advanced Research",
-      icon: Sparkles,
-      description: "In-depth legal research with citations",
-    },
-    {
-      value: "drafting",
-      label: "Document Drafting",
-      icon: FileText,
-      description: "Help with legal document creation",
-    },
-    {
-      value: "litigation",
-      label: "Litigation Support",
-      icon: Gavel,
-      description: "Court case preparation and strategy",
-    },
-  ];
-
+  // Load session from database when sessionId query param is present
   useEffect(() => {
-    // Load token usage
-    const userId = session?.user?.id;
-    if (userId) {
-      const used = TokenTracker.getTokenUsage(userId);
-      const limit = TokenTracker.getLimit(userId);
-      setTokenUsage({ used, limit });
-    }
+    const loadSessionFromDatabase = async (sessionIdParam: string) => {
+      if (!session?.user?.id) return;
 
-    // Load existing session and messages
-    const existingSessionId = localStorage.getItem("wizardChatSessionId");
-    const existingMessages = localStorage.getItem("wizardChatMessages");
+      setIsLoadingSession(true);
+      setError(null);
 
-    if (existingSessionId) {
-      setSessionId(existingSessionId);
-    }
-
-    if (existingMessages) {
       try {
-        const parsedMessages = JSON.parse(existingMessages);
-        setMessages(parsedMessages);
-      } catch (error) {
-        console.error("Error parsing stored messages:", error);
-      }
-    }
+        // Fetch session details
+        const sessionResponse = await fetch(
+          `/api/client/chat/sessions/${sessionIdParam}`
+        );
 
-    // Listen for chat updates
-    const handleChatUpdate = () => {
-      const updatedMessages = localStorage.getItem("wizardChatMessages");
-      if (updatedMessages) {
-        try {
-          const parsedMessages = JSON.parse(updatedMessages);
-          setMessages(parsedMessages);
-        } catch (error) {
-          console.error("Error parsing updated messages:", error);
+        if (!sessionResponse.ok) {
+          let errorMessage = `Failed to load session (${sessionResponse.status})`;
+          try {
+            const contentType = sessionResponse.headers.get("content-type");
+            if (contentType?.includes("application/json")) {
+              const errorData = await sessionResponse.json();
+              errorMessage =
+                errorData.error || errorData.message || errorMessage;
+            }
+          } catch {
+            // Use default error message
+          }
+          throw new Error(errorMessage);
         }
+
+        const sessionData = await sessionResponse.json();
+
+        // Validate response structure
+        if (!sessionData || typeof sessionData !== "object") {
+          throw new Error("Invalid response structure from server");
+        }
+
+        // Handle error responses
+        if (sessionData.error) {
+          throw new Error(sessionData.error || "Failed to load session");
+        }
+
+        // API returns { success: true, session: {...} } - check both structures for compatibility
+        const loadedSession = sessionData.session || sessionData.data?.session;
+        if (sessionData.success && loadedSession) {
+          // Verify session belongs to user
+          if (loadedSession.userId !== session.user.id) {
+            throw new Error("Unauthorized access to session");
+          }
+          setSessionId(loadedSession.id);
+        } else {
+          throw new Error("Session not found in response");
+        }
+
+        // Fetch messages
+        const messagesResponse = await fetch(
+          `/api/client/chat/sessions/${sessionIdParam}/messages`
+        );
+
+        if (!messagesResponse.ok) {
+          let errorMessage = `Failed to load messages (${messagesResponse.status})`;
+          try {
+            const contentType = messagesResponse.headers.get("content-type");
+            if (contentType?.includes("application/json")) {
+              const errorData = await messagesResponse.json();
+              errorMessage =
+                errorData.error || errorData.message || errorMessage;
+            }
+          } catch {
+            // Use default error message
+          }
+          throw new Error(errorMessage);
+        }
+
+        const messagesData = await messagesResponse.json();
+
+        // Validate response structure
+        if (!messagesData || typeof messagesData !== "object") {
+          throw new Error("Invalid messages response structure from server");
+        }
+
+        // Handle error responses
+        if (messagesData.error) {
+          throw new Error(messagesData.error || "Failed to load messages");
+        }
+
+        // API returns { success: true, messages: [...], session: {...} } - check both structures for compatibility
+        const messages = messagesData.messages || messagesData.data?.messages;
+        if (messagesData.success && Array.isArray(messages)) {
+          const loadedMessages = messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            role: msg.role.toLowerCase() as "user" | "assistant",
+            timestamp: new Date(msg.createdAt),
+          }));
+          setMessages(loadedMessages);
+        } else {
+          console.warn(
+            "No messages found in response, starting with empty messages"
+          );
+          setMessages([]);
+        }
+      } catch (err) {
+        console.error("Error loading session:", err);
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to load session. Please try again.";
+        setError(errorMessage);
+      } finally {
+        setIsLoadingSession(false);
       }
     };
 
-    window.addEventListener("wizard-chat-update", handleChatUpdate);
-    return () =>
-      window.removeEventListener("wizard-chat-update", handleChatUpdate);
-  }, [session?.user?.id]);
+    // Check for sessionId in query params
+    const sessionIdParam = searchParams.get("sessionId");
+    if (sessionIdParam && session?.user?.id) {
+      loadSessionFromDatabase(sessionIdParam);
+    }
+  }, [session?.user?.id, searchParams]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handlePurchaseCredits = useCallback(() => {
+    router.push("/client/tokens");
+  }, [router]);
 
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -186,12 +276,9 @@ export default function WizardPage() {
     const userId = session?.user?.id;
     if (!userId) return;
 
-    // Check token limit
-    const hasExceeded = TokenTracker.hasExceededLimit(userId);
-    if (hasExceeded) {
-      const usage = TokenTracker.getUsageSummary(userId);
-      setTokenUsage({ used: usage.used, limit: usage.limit });
-      setShowUpgradeModal(true);
+    // Check if user has sufficient balance
+    if (balance < WIZARD_TOKEN_COST) {
+      setShowInsufficientCreditsModal(true);
       return;
     }
 
@@ -203,63 +290,91 @@ export default function WizardPage() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputValue.trim();
     setInputValue("");
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch("/api/legal-analysis", {
+      const response = await fetch("/api/client/legal-research", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userIssue: inputValue.trim(),
-          sessionId: sessionId,
-          consultationType: consultationType,
-          tier: "wizard", // Premium tier
+          query: currentInput,
+          stream: true,
+          model: "openai/gpt-4o-mini",
+          sessionId: sessionId || undefined,
+          showReasoning: showReasoning,
+          newChat: !sessionId,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`API Error: ${response.status} - ${errorData}`);
+        let errorMessage = `API Error: ${response.status}`;
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } else {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = `${errorMessage} - ${errorText}`;
+            }
+          }
+        } catch (parseError) {
+          errorMessage = `API Error: ${response.status} - ${response.statusText || "Unknown error"}`;
+        }
+
+        if (response.status === 404) {
+          errorMessage =
+            "The requested service is not available. Please contact support.";
+        } else if (response.status === 401 || response.status === 403) {
+          errorMessage =
+            "You are not authorized to use this service. Please log in again.";
+        } else if (response.status === 429) {
+          errorMessage =
+            "Too many requests. Please wait a moment and try again.";
+        } else if (response.status >= 500) {
+          errorMessage =
+            "Server error. Please try again later or contact support.";
+        }
+
+        throw new Error(errorMessage);
       }
 
+      // Handle streaming response
       let markdownContent = "";
-      const contentType = response.headers.get("content-type");
-      if (contentType?.includes("text/event-stream")) {
-        // Handle streaming response
-        let responseStructure: string[] = [];
 
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: "",
-          role: "assistant",
-          timestamp: new Date(),
-        };
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "",
+        role: "assistant",
+        timestamp: new Date(),
+      };
 
-        setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
 
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-        if (reader) {
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-              const chunk = decoder.decode(value);
-              const lines = chunk.split("\n");
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
 
-              for (const line of lines) {
-                if (line.startsWith("data: ")) {
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
                   const data = JSON.parse(line.slice(6));
 
-                  if (data.type === "metadata") {
-                    responseStructure = data.responseStructure;
-                  } else if (data.type === "content") {
+                  if (data.type === "content") {
                     markdownContent += data.content;
                     setMessages(prev =>
                       prev.map(msg =>
@@ -269,92 +384,40 @@ export default function WizardPage() {
                       )
                     );
                   } else if (data.type === "done") {
+                    // Capture sessionId from done event
                     if (data.sessionId) {
                       setSessionId(data.sessionId);
-                      localStorage.setItem(
-                        "wizardChatSessionId",
-                        data.sessionId
+                      // Update URL to include sessionId for better UX
+                      window.history.replaceState(
+                        {},
+                        "",
+                        `/client/wizard?sessionId=${data.sessionId}`
                       );
                     }
 
-                    if (data.tokensUsed) {
-                      TokenTracker.addTokenUsage(data.tokensUsed, userId);
-                      const updatedUsage = TokenTracker.getUsageSummary(userId);
-                      setTokenUsage({
-                        used: updatedUsage.used,
-                        limit: updatedUsage.limit,
-                      });
-                    }
+                    // Refetch balance to update sidebar (tokens consumed in backend)
+                    refetchBalance();
                   } else if (data.type === "error") {
                     throw new Error(data.error);
                   }
+                } catch (parseError) {
+                  // Skip invalid JSON lines
+                  continue;
                 }
               }
             }
-          } finally {
-            reader.releaseLock();
           }
-        }
-      } else {
-        // Fallback to JSON response
-        const responseData = await response.json();
-
-        if (responseData.error) {
-          throw new Error(
-            responseData.error || "The backend function call failed."
-          );
-        }
-
-        if (!responseData.success || !responseData.content) {
-          throw new Error("No content received from the AI.");
-        }
-
-        const markdownContent = responseData.content;
-
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: markdownContent,
-          role: "assistant",
-          timestamp: new Date(),
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
-
-        if (responseData.sessionId) {
-          setSessionId(responseData.sessionId);
-          localStorage.setItem("wizardChatSessionId", responseData.sessionId);
-        }
-
-        if (responseData.tokensUsed) {
-          TokenTracker.addTokenUsage(responseData.tokensUsed, userId);
-          const updatedUsage = TokenTracker.getUsageSummary(userId);
-          setTokenUsage({ used: updatedUsage.used, limit: updatedUsage.limit });
+        } finally {
+          reader.releaseLock();
         }
       }
-
-      // Update localStorage with all messages
-      const updatedMessages = [...messages, userMessage];
-      if (contentType?.includes("text/event-stream")) {
-        updatedMessages.push({
-          id: (Date.now() + 1).toString(),
-          content: markdownContent,
-          role: "assistant",
-          timestamp: new Date(),
-        });
-      }
-      localStorage.setItem(
-        "wizardChatMessages",
-        JSON.stringify(updatedMessages)
-      );
     } catch (error) {
       console.error("Error sending message:", error);
       setError((error as Error).message);
 
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `Error: ${
-          (error as Error).message
-        }\n\nPlease try again or contact support if the issue persists.`,
+        content: `Error: ${(error as Error).message}\n\nPlease try again or contact support if the issue persists.`,
         role: "assistant",
         timestamp: new Date(),
       };
@@ -367,9 +430,10 @@ export default function WizardPage() {
     inputValue,
     session?.user?.id,
     sessionId,
-    consultationType,
-    messages,
+    showReasoning,
     isLoading,
+    balance,
+    refetchBalance,
   ]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -379,18 +443,22 @@ export default function WizardPage() {
     }
   };
 
-  const clearChat = () => {
+  const startNewChat = async () => {
     setMessages([]);
     setSessionId(null);
-    localStorage.removeItem("wizardChatMessages");
-    localStorage.removeItem("wizardChatSessionId");
+    setError(null);
+    setInputValue("");
+    // Navigate to clean URL without sessionId
+    window.history.replaceState({}, "", "/client/wizard");
   };
 
-  const formatTime = (timestamp: Date) => {
+  const formatTime = (timestamp: Date | string) => {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    if (isNaN(date.getTime())) return "Invalid date";
     return new Intl.DateTimeFormat("en-US", {
       hour: "2-digit",
       minute: "2-digit",
-    }).format(timestamp);
+    }).format(date);
   };
 
   const renderMessage = (message: Message) => {
@@ -407,9 +475,9 @@ export default function WizardPage() {
         }`}
       >
         <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
             isUser
-              ? "bg-primary text-white"
+              ? "bg-primary text-primary-foreground"
               : "bg-gradient-to-br from-purple-500 to-blue-500 text-white"
           }`}
         >
@@ -417,21 +485,27 @@ export default function WizardPage() {
         </div>
 
         <div
-          className={`flex-1 max-w-3xl ${isUser ? "text-right" : "text-left"}`}
+          className={`flex-1 max-w-[85%] sm:max-w-xs lg:max-w-3xl ${
+            isUser ? "text-right" : "text-left"
+          }`}
         >
           <div
-            className={`inline-block p-4 rounded-2xl ${
+            className={`inline-block p-3 sm:p-4 rounded-xl ${
               isUser
-                ? "bg-primary text-white"
-                : "bg-white border border-gray-200 shadow-sm"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card border border-border shadow-sm"
             }`}
           >
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">
-              {message.content}
-            </div>
+            {isUser ? (
+              <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">
+                {message.content}
+              </div>
+            ) : (
+              <MarkdownRenderer content={message.content} />
+            )}
           </div>
           <div
-            className={`text-xs text-gray-500 mt-1 ${
+            className={`text-xs text-muted-foreground mt-1 ${
               isUser ? "text-right" : "text-left"
             }`}
           >
@@ -442,122 +516,87 @@ export default function WizardPage() {
     );
   };
 
+  if (balanceLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <TokenGuard
       requiredTokens={WIZARD_TOKEN_REQUIREMENT}
-      feature="Wizard Chat"
+      feature="Legal Chat"
       description="Premium AI legal assistant with enhanced capabilities"
+      balance={balance}
+      onPurchase={handlePurchaseCredits}
     >
-      <div className="h-screen flex flex-col bg-gray-50">
+      <div className="h-screen flex flex-col bg-background">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+        <div className="bg-card border-b border-border px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-semibold text-gray-900">
-                    Wizard Chat
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-semibold text-foreground">
+                    Legal Chat
                   </h1>
                   <Badge
                     variant="secondary"
-                    className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700"
+                    className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 dark:from-purple-900 dark:to-blue-900 dark:text-purple-200 text-xs sm:text-sm"
                   >
                     <Crown className="w-3 h-3 mr-1" />
                     Premium
                   </Badge>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Enhanced AI Legal Assistant • 2 tokens per message
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">
-                  {tokenUsage.limit - tokenUsage.used} credits remaining
-                </div>
-                <div className="text-xs text-gray-500">
-                  {tokenUsage.used} / {tokenUsage.limit} used
-                </div>
-              </div>
-
+            <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto justify-end">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={clearChat}
-                className="text-gray-600"
+                onClick={startNewChat}
+                className="text-xs sm:text-sm h-9"
               >
-                Clear Chat
+                <Plus className="w-4 h-4 mr-1" />
+                New Chat
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Consultation Type Selector */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3">
-          <div className="flex items-center space-x-2 overflow-x-auto">
-            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
-              Type:
-            </span>
-            {consultationTypes.map(type => {
-              const Icon = type.icon;
-              return (
-                <Button
-                  key={type.value}
-                  variant={
-                    consultationType === type.value ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() => setConsultationType(type.value)}
-                  className="whitespace-nowrap"
-                  title={type.description}
-                >
-                  <Icon className="w-4 h-4 mr-1" />
-                  {type.label}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Messages */}
-        <ScrollArea className="flex-1 px-6 py-4">
+        <ScrollArea className="flex-1 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
           <div className="max-w-4xl mx-auto">
-            {messages.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-8 h-8 text-purple-600" />
+            {isLoadingSession ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading chat session...</p>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center py-8 sm:py-12">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900 dark:to-blue-900 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-300" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">
                   Premium Legal Consultation
                 </h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto px-4">
                   Get enhanced AI-powered legal guidance with comprehensive
                   analysis, strategic planning, and advanced research
                   capabilities.
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {[
-                    "Analyze this complex legal issue",
-                    "Create a legal strategy for my case",
-                    "Research recent case law on this topic",
-                    "Draft a legal document for me",
-                  ].map(suggestion => (
-                    <Button
-                      key={suggestion}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setInputValue(suggestion)}
-                      className="text-xs"
-                    >
-                      {suggestion}
-                    </Button>
-                  ))}
-                </div>
               </div>
             ) : (
               <AnimatePresence>{messages.map(renderMessage)}</AnimatePresence>
@@ -568,31 +607,56 @@ export default function WizardPage() {
 
         {/* Error Display */}
         {error && (
-          <div className="px-6 py-2">
+          <div className="px-3 sm:px-4 lg:px-6 py-2">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="text-xs sm:text-sm">
+                {error}
+              </AlertDescription>
             </Alert>
           </div>
         )}
 
         {/* Input */}
-        <div className="bg-white border-t border-gray-200 px-6 py-4">
+        <div className="bg-card border-t border-border px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
           <div className="max-w-4xl mx-auto">
-            <div className="flex gap-3">
-              <Textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask your advanced legal question..."
-                className="flex-1 min-h-[44px] max-h-32 resize-none"
-                disabled={isLoading}
-              />
+            <div className="flex gap-2 sm:gap-3 items-end">
+              <div className="flex-1 flex flex-col gap-2">
+                <Textarea
+                  ref={textareaRef}
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask your legal question..."
+                  className="flex-1 min-h-[44px] max-h-32 resize-none text-sm sm:text-base"
+                  disabled={isLoading}
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Brain className="w-3 h-3" />
+                    <Label
+                      htmlFor="reasoning-toggle"
+                      className="text-xs cursor-pointer"
+                    >
+                      Show Reasoning
+                    </Label>
+                    <Switch
+                      id="reasoning-toggle"
+                      checked={showReasoning}
+                      onCheckedChange={setShowReasoning}
+                      className="scale-75"
+                    />
+                  </div>
+                  <span className="hidden sm:inline">
+                    Press Enter to send, Shift+Enter for new line
+                  </span>
+                  <span className="sm:hidden">Enter to send</span>
+                </div>
+              </div>
               <Button
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() || isLoading}
-                className="px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                className="px-3 sm:px-4 h-11 sm:h-10 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -601,19 +665,18 @@ export default function WizardPage() {
                 )}
               </Button>
             </div>
-            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-              <span>Press Enter to send, Shift+Enter for new line</span>
+            <div className="flex justify-end mt-1 text-xs text-muted-foreground">
               <span>2 tokens per message</span>
             </div>
           </div>
         </div>
 
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-          currentUsage={tokenUsage.used}
-          limit={tokenUsage.limit}
-          feature="wizard"
+        <InsufficientCreditsModal
+          isOpen={showInsufficientCreditsModal}
+          onClose={() => setShowInsufficientCreditsModal(false)}
+          onPurchase={handlePurchaseCredits}
+          balance={balance}
+          required={WIZARD_TOKEN_COST}
         />
       </div>
     </TokenGuard>

@@ -7,6 +7,7 @@ interface CollapsibleProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
+  className?: string;
 }
 
 interface CollapsibleTriggerProps {
@@ -21,9 +22,9 @@ interface CollapsibleContentProps {
 }
 
 const Collapsible = React.forwardRef<HTMLDivElement, CollapsibleProps>(
-  ({ open, onOpenChange, children, ...props }, ref) => {
+  ({ open, onOpenChange, children, className, ...props }, ref) => {
     return (
-      <div ref={ref} {...props}>
+      <div ref={ref} className={cn(className)} {...props}>
         {React.Children.map(children, child => {
           if (React.isValidElement(child)) {
             return React.cloneElement(child, {
@@ -77,12 +78,20 @@ const CollapsibleContent = React.forwardRef<
   HTMLDivElement,
   CollapsibleContentProps
 >(({ children, className, ...props }, ref) => {
-  const { open } = (props as any) || {};
+  // Extract open from props (passed from Collapsible parent)
+  const { open, ...restProps } = (props as any) || {};
 
   if (!open) return null;
 
   return (
-    <div ref={ref} className={cn("overflow-hidden", className)} {...props}>
+    <div
+      ref={ref}
+      className={cn(
+        "overflow-hidden transition-all data-[state=open]:animate-in data-[state=closed]:animate-out",
+        className
+      )}
+      {...restProps}
+    >
       {children}
     </div>
   );
