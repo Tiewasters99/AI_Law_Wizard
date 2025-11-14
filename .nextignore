@@ -1,0 +1,6 @@
+# Exclude archive folder from Next.js build
+archive-src/
+
+# Exclude other non-essential folders
+Temp/
+spec/

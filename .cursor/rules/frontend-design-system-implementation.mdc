@@ -1,0 +1,239 @@
+---
+alwaysApply: true
+---
+
+# Frontend Design System Implementation Rules
+
+When implementing UI components and styling in the AI Law Wizard application, strictly follow the design system documented in `DESIGN_SYSTEM.md`.
+
+## Color System Rules
+
+### Always Use CSS Variables
+
+- **NEVER** use raw color values like `#1e40af`, `rgb()`, or `hsl()` directly in className or inline styles
+- **ALWAYS** use semantic CSS variables: `bg-primary`, `text-foreground`, `bg-card`, `bg-muted`, etc.
+- **NEVER** use inline styles for colors: `style={{ backgroundColor: '#f9fafb' }}`
+- **ALWAYS** use Tailwind classes: `className="bg-background"`
+
+### Color Usage Guidelines
+
+- Primary actions: Use `bg-primary` and `text-primary-foreground`
+- Destructive actions: Use `bg-destructive` and `text-destructive-foreground`
+- Backgrounds: Use `bg-background` for page backgrounds, `bg-card` for card backgrounds
+- Text: Use `text-foreground` for primary text, `text-muted-foreground` for secondary text
+- Borders: Use `border-border` for standard borders, `border-input` for input borders
+- Professional blue accents: Use `blue-700`, `blue-600` for headers and trust-building elements (only for specific UI elements, not theme-aware components)
+
+## Typography Rules
+
+### Font Families
+
+- Default body text: Use `font-sans` (Alatsi)
+- Legal documents: Use `font-serif` (Abyssinica SIL) if needed
+- Code/IDs: Use `font-mono` (IBM Plex Mono)
+
+### Font Sizes
+
+- Use Tailwind's standard sizing: `text-xs`, `text-sm`, `text-base`, `text-lg`, `text-xl`, `text-2xl`, `text-3xl`
+- Page titles: `text-3xl` or `text-4xl` with `font-bold`
+- Section headings: `text-2xl` with `font-bold`
+- Card titles: `text-lg` with `font-bold`
+- Body text: `text-base` or `text-sm`
+
+### Font Weights
+
+- Body text: `font-normal` (400)
+- Buttons and important labels: `font-semibold` (600)
+- Headings: `font-bold` (700)
+
+## Spacing Rules
+
+### Use Standard Spacing Scale
+
+- **NEVER** use arbitrary values: `p-[13px]`, `gap-[7px]`
+- **ALWAYS** use Tailwind spacing scale: `p-2`, `p-3`, `p-4`, `p-6`, `p-8`
+- Card padding: Standard `p-4` (16px), Compact `p-3` (12px), Spacious `p-6` (24px)
+- Section gaps: `gap-3` (12px) or `gap-4` (16px)
+- Component margins: `mb-2` (8px) for spacing between elements
+- Grid gaps: `gap-4` (16px) for grid layouts
+
+### Responsive Spacing
+
+- Use mobile-first approach: `px-4 sm:px-6 lg:px-8 lg:px-12`
+- Scale spacing appropriately: `py-4 sm:py-6`, `gap-3 md:gap-4`
+
+## Border Radius Rules
+
+- Cards and major containers: Use `rounded-xl`
+- Buttons and inputs: Use `rounded-lg`
+- Badges and circular avatars: Use `rounded-full`
+- **NEVER** override with inline styles: `style={{ borderRadius: '8px' }}`
+- The base radius is `1.4rem` (22.4px) defined as `--radius` CSS variable
+
+## Shadow Rules
+
+- Cards: Use `shadow-sm` with `hover:shadow-md` on hover
+- Modals and dropdowns: Use `shadow-lg`
+- Elevated elements: Use `shadow-xl`
+- **ALWAYS** include transitions: `transition-shadow` for shadow changes
+
+## Component Pattern Rules
+
+### Buttons
+
+- Primary button: `bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-xl font-semibold shadow-sm transition-all duration-200`
+- Include disabled states: `disabled:opacity-50 disabled:cursor-not-allowed`
+- Include loading states with spinner (Loader2 icon from lucide-react)
+- Standard height: `py-3` (~40px), Compact: `h-9` or `h-10`, Large: `py-4`
+
+### Cards
+
+- Standard card: `p-4 rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow`
+- Glassmorphic card: Use `backdrop-blur-md` with inline styles for background, border, and shadow (only exception for inline styles)
+- **ALWAYS** use the `Card` component from shadcn/ui when possible
+
+### Input Fields
+
+- Standard input: `w-full pl-10 pr-3 py-3 bg-background border-2 border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 placeholder:text-muted-foreground text-foreground`
+- Icon inputs: Use relative container with absolutely positioned icon (`left-3 top-1/2 transform -translate-y-1/2`)
+- Icon size in inputs: `w-5 h-5` with `text-muted-foreground`
+
+### Badges
+
+- Small: `text-xs px-2 py-0.5`
+- Default: `text-sm px-2.5 py-1`
+- Status colors: Use `bg-green-50 text-green-700 border-green-200` for success, similar pattern for warning, error, info
+- **ALWAYS** use the `Badge` component from shadcn/ui
+
+### Icons
+
+- Small: `w-4 h-4` (16px) - Inline with text
+- Medium: `w-5 h-5` (20px) - Buttons, inputs
+- Large: `w-6 h-6` (24px) - Headings, features
+- Extra Large: `w-7 h-7` or `w-8 h-8` (28px/32px) - Hero sections
+- Colors: `text-muted-foreground` (default), `text-primary` (primary), `text-white` or `text-primary-foreground` (on colored backgrounds)
+
+## Animation Rules
+
+### Framer Motion
+
+- Page transitions: `initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}`
+- Hover effects: `whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}`
+- Duration: 200-500ms for most interactions
+- Spring animations: `transition={{ type: "spring", stiffness: 500, damping: 30 }}`
+
+### CSS Transitions
+
+- **PREFER** CSS transitions for simple hover effects: `transition-all duration-200`
+- Use Framer Motion for complex animations only
+
+## Responsive Design Rules
+
+### Breakpoints
+
+- Mobile-first approach: Design for mobile first, enhance for desktop
+- Breakpoints: `sm: 640px`, `md: 768px`, `lg: 1024px`, `xl: 1280px`, `2xl: 1400px`
+
+### Patterns
+
+- Grid layouts: `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`
+- Hidden/visible: `md:hidden` (mobile-only), `hidden md:block` (desktop-only)
+- Touch targets: Minimum 44x44px (`h-11`), buttons: `h-10` (40px) or `h-12` (48px) for mobile
+
+### Container
+
+- Max width: `2xl: 1400px`
+- Padding: `2rem` (32px)
+- Center: `container mx-auto`
+
+## Dark Mode Rules
+
+- **ALWAYS** use semantic color tokens: `bg-card` not `bg-white`, `text-foreground` not `text-black`
+- All components must work in both light and dark mode
+- Colors automatically adapt via CSS variables - no special dark mode classes needed
+
+## Anti-Patterns to Avoid
+
+### ❌ NEVER Do These
+
+1. Use raw color values: `bg-[#1e40af]`, `style={{ color: '#000' }}`
+2. Create custom spacing: `p-[13px]`, `gap-[7px]`
+3. Skip responsive design: `w-96` (use `w-full md:w-96`)
+4. Override theme variables with inline styles
+5. Mix design systems (Material Design, Bootstrap, etc.)
+6. Use inline styles for colors or spacing
+7. Create custom components when shadcn/ui components exist
+
+### ✅ ALWAYS Do These
+
+1. Use CSS variable colors: `bg-primary`, `text-foreground`
+2. Use standard spacing scale: `p-4`, `gap-4`
+3. Make everything responsive: `w-full md:w-96`
+4. Use existing shadcn/ui components
+5. Include hover states and transitions
+6. Test in both light and dark modes
+7. Use semantic HTML and ARIA labels
+
+## Component Library Reference
+
+### shadcn/ui Components
+
+- **ALWAYS** check if a shadcn/ui component exists before creating custom components
+- Use `Button` with variants: default, destructive, outline, secondary, ghost, link
+- Use `Card` for containers
+- Use `Badge` for status indicators
+- Use `Input` for form inputs (with proper styling from patterns above)
+
+## Visual Hierarchy Rules
+
+### Heading Sizes
+
+- H1/Page Title: `text-3xl` or `text-4xl` + `font-bold`
+- H2/Section Title: `text-2xl` + `font-bold`
+- H3/Subsection: `text-xl` + `font-bold`
+- H4/Card Title: `text-lg` + `font-bold`
+- Body: `text-base` or `text-sm` + `font-normal`
+
+### Color Hierarchy
+
+1. Primary actions: `bg-primary` (most important)
+2. Secondary actions: `bg-secondary` (less important)
+3. Text: `text-foreground` > `text-muted-foreground` (importance via contrast)
+
+## Code Quality Checklist
+
+When implementing any UI component, ensure:
+
+- [ ] Uses CSS variable colors (not raw values)
+- [ ] Follows spacing scale (p-4, gap-4, etc.)
+- [ ] Uses consistent border radius (rounded-xl for cards)
+- [ ] Includes hover states and transitions
+- [ ] Is responsive (mobile-first)
+- [ ] Works in both light and dark mode
+- [ ] Uses semantic HTML
+- [ ] Includes proper ARIA labels if interactive
+- [ ] Follows animation guidelines (if animated)
+- [ ] Uses existing shadcn/ui components when possible
+
+## Glassmorphic Design Pattern
+
+For premium UI elements (hero cards, feature cards, role selection):
+
+```tsx
+className="backdrop-blur-md rounded-xl p-4"
+style={{
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  border: '1px solid rgba(226, 232, 240, 0.5)',
+  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+}}
+```
+
+This is the ONLY acceptable use of inline styles for colors.
+
+## Design Principles
+
+1. **Professional & Trustworthy**: Use professional blue accents, clean layouts, consistent typography
+2. **Accessibility First**: WCAG AA contrast, keyboard navigation, screen reader support
+3. **Mobile-First**: Design for mobile, enhance for desktop, touch-friendly targets (44px minimum)
+4. **Consistency**: Use design system tokens, consistent spacing, unified patterns
+5. **Performance**: Optimize animations, use CSS transitions when possible, lazy load heavy components

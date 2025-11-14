@@ -15,28 +15,32 @@ datasource db {
 
 // Embedding job to track file processing
 model EmbeddingJob {
-  id          String   @id @default(cuid())
-  status      JobStatus @default(PENDING)
-  fileName    String
-  originalName String
-  fileType    String
-  fileSize    Int
-  filePath    String?
-  totalChunks Int      @default(0)
-  processedChunks Int  @default(0)
-  failedChunks Int     @default(0)
-  error       String?
-  startedAt   DateTime @default(now())
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id              String    @id @default(cuid())
+  status          JobStatus @default(PENDING)
+  fileName        String
+  originalName    String
+  fileType        String
+  fileSize        Int
+  filePath        String?
+  totalChunks     Int       @default(0)
+  processedChunks Int       @default(0)
+  failedChunks    Int       @default(0)
+  error           String?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // User association
+  userId String? // Link to user who uploaded the file
+
   // OneDrive tracking fields
-  isOneDriveFile Boolean @default(false)
-  oneDriveId    String?  @unique // OneDrive file ID if synced from OneDrive
+  isOneDriveFile       Boolean @default(false)
+  oneDriveId           String? @unique // OneDrive file ID if synced from OneDrive
   oneDriveLastModified String? // OneDrive last modified date
 
   // Relations
+  user   User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   chunks EmbeddingChunk[]
 
   @@map("embedding_jobs")
@@ -44,19 +48,19 @@ model EmbeddingJob {
 
 // Individual chunks for detailed tracking
 model EmbeddingChunk {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   jobId         String
   chunkIndex    Int
-  content       String   @db.Text
+  content       String      @db.Text
   contentLength Int
   status        ChunkStatus @default(PENDING)
-  embeddingId   String?  // Pinecone vector ID
-  summary       String?  @db.Text // Document summary for quick retrieval
-  metadata      Json?    // Additional metadata for enhanced search
+  embeddingId   String? // Pinecone vector ID
+  summary       String?     @db.Text // Document summary for quick retrieval
+  metadata      Json? // Additional metadata for enhanced search
   error         String?
   processedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   // Relations
   job EmbeddingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
@@ -69,30 +73,30 @@ model EmbeddingChunk {
 model ChatSession {
   id        String   @id @default(cuid())
   title     String?
-  userId    String?  // Link to user for user-specific chats
+  userId    String? // Link to user for user-specific chats
   isActive  Boolean  @default(true)
-  metadata  Json?    // Store additional context like system prompts, chat type, etc.
+  metadata  Json? // Store additional context like system prompts, chat type, etc.
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  user     User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   documentQueries DocumentQuery[]
-  messages ChatMessage[]
+  messages        ChatMessage[]
 
   @@map("chat_sessions")
 }
 
 // Chat messages with enhanced LangChain support
 model ChatMessage {
-  id          String      @id @default(cuid())
-  sessionId   String
-  role        MessageRole
-  content     String      @db.Text
-  metadata    Json?       // Store LangChain message metadata, tool calls, etc.
-  tokenCount  Int?        // Track token usage for billing
-  modelUsed   String?     // Track which model was used
-  createdAt   DateTime    @default(now())
+  id         String      @id @default(cuid())
+  sessionId  String
+  role       MessageRole
+  content    String      @db.Text
+  metadata   Json? // Store LangChain message metadata, tool calls, etc.
+  tokenCount Int? // Track token usage for billing
+  modelUsed  String? // Track which model was used
+  createdAt  DateTime    @default(now())
 
   // Relations
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -102,43 +106,43 @@ model ChatMessage {
 
 // Document Query History for tracking user queries and AI responses
 model DocumentQuery {
-  id              String   @id @default(cuid())
-  userQuery       String   @db.Text
-  aiResponse      String   @db.Text
-  searchQuery     String?  // Optional search query used
-  
+  id          String  @id @default(cuid())
+  userQuery   String  @db.Text
+  aiResponse  String  @db.Text
+  searchQuery String? // Optional search query used
+
   // Processing metadata
-  success         Boolean  @default(true)
-  error           String?  // Error message if failed
-  confidence      Float?   // AI confidence score
-  processingTime  Int?     // Processing time in milliseconds
-  totalSteps      Int      @default(1)
-  completedSteps  Int      @default(1)
-  
+  success        Boolean @default(true)
+  error          String? // Error message if failed
+  confidence     Float? // AI confidence score
+  processingTime Int? // Processing time in milliseconds
+  totalSteps     Int     @default(1)
+  completedSteps Int     @default(1)
+
   // Tool usage tracking
-  toolsUsed       String[] // Array of tool names used
-  filesProcessed  Json?    // Processed files info as JSON
-  
+  toolsUsed      String[] // Array of tool names used
+  filesProcessed Json? // Processed files info as JSON
+
   // User tracking (optional for future user auth)
-  userId          String?
-  sessionId       String?  // For grouping related queries
-  chatSessionId   String?  // Link to chat session for enhanced functionality
-  documentSessionId String?  // Link to document analysis session
-  
+  userId            String?
+  sessionId         String? // For grouping related queries
+  chatSessionId     String? // Link to chat session for enhanced functionality
+  documentSessionId String? // Link to document analysis session
+
   // Enhanced conversation context
-  conversationContext Json?  // Store conversation context
-  followUpQuestion Boolean @default(false) // Is this a follow-up question?
-  parentQueryId   String?  // Reference to parent query for follow-ups
-  
+  conversationContext Json? // Store conversation context
+  followUpQuestion    Boolean @default(false) // Is this a follow-up question?
+  parentQueryId       String? // Reference to parent query for follow-ups
+
   // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  chatSession     ChatSession? @relation(fields: [chatSessionId], references: [id])
+  chatSession     ChatSession?             @relation(fields: [chatSessionId], references: [id])
   documentSession DocumentAnalysisSession? @relation(fields: [documentSessionId], references: [id])
-  parentQuery     DocumentQuery? @relation("QueryFollowUps", fields: [parentQueryId], references: [id])
-  followUpQueries DocumentQuery[] @relation("QueryFollowUps")
+  parentQuery     DocumentQuery?           @relation("QueryFollowUps", fields: [parentQueryId], references: [id])
+  followUpQueries DocumentQuery[]          @relation("QueryFollowUps")
 
   @@map("document_queries")
 }
@@ -146,16 +150,16 @@ model DocumentQuery {
 // Enhanced Chat Session for document analysis with mode tracking
 model DocumentAnalysisSession {
   id        String   @id @default(cuid())
-  userId    String?  // Link to user
+  userId    String? // Link to user
   mode      ChatMode @default(QA) // QA or ACTION mode
-  title     String?  // Session title
-  context   Json?    // Store session context (relevant files, conversation state)
+  title     String? // Session title
+  context   Json? // Store session context (relevant files, conversation state)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  user         User?                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User?                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages     DocumentAnalysisMessage[]
   queries      DocumentQuery[]
   fileContexts FileContext[]
@@ -165,14 +169,14 @@ model DocumentAnalysisSession {
 
 // Enhanced Chat Messages for document analysis
 model DocumentAnalysisMessage {
-  id          String      @id @default(cuid())
-  sessionId   String
-  role        MessageRole
-  content     String      @db.Text
-  metadata    Json?       // Store file references, actions performed, etc.
-  tokenCount  Int?        // Track token usage
-  modelUsed   String?     // Track which model was used
-  createdAt   DateTime    @default(now())
+  id         String      @id @default(cuid())
+  sessionId  String
+  role       MessageRole
+  content    String      @db.Text
+  metadata   Json? // Store file references, actions performed, etc.
+  tokenCount Int? // Track token usage
+  modelUsed  String? // Track which model was used
+  createdAt  DateTime    @default(now())
 
   // Relations
   session DocumentAnalysisSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -182,14 +186,14 @@ model DocumentAnalysisMessage {
 
 // File Context tracking for sessions
 model FileContext {
-  id              String   @id @default(cuid())
-  sessionId       String
-  fileId          String   // Reference to embedding job or file
-  fileName        String
-  chunksUsed      Json?    // Array of chunk indices used
-  relevanceScore  Float?   // Relevance score for this file in context
-  lastAccessed    DateTime @default(now())
-  createdAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  sessionId      String
+  fileId         String // Reference to embedding job or file
+  fileName       String
+  chunksUsed     Json? // Array of chunk indices used
+  relevanceScore Float? // Relevance score for this file in context
+  lastAccessed   DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   // Relations
   session DocumentAnalysisSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -240,77 +244,89 @@ enum PurchaseStatus {
 }
 
 model Blog {
-  id String @id @default(cuid())
-  title String
-  content String @db.Text
-  author String @default("Admin") // Blog author name
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  author    String   @default("Admin") // Blog author name
+  category  String? // Blog category (Corporate, Criminal, Family, etc.)
+  tags      String[] @default([]) // Tags for filtering
+  readTime  Int? // Estimated read time in minutes
+  views     Int      @default(0) // View count
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  published Boolean @default(false)
-  
+  published Boolean  @default(false)
+
   // Relations
   comments Comment[]
-  
+
   @@map("blogs")
 }
 
 model Comment {
-  id String @id @default(cuid())
-  content String @db.Text
-  authorName String
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  authorName  String
   authorEmail String?
-  blogId String
-  parentId String? // For nested replies
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  blogId      String
+  parentId    String? // For nested replies
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // Relations
-  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
-  parent Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  blog    Blog      @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies Comment[] @relation("CommentReplies")
-  
+
   @@map("comments")
 }
 
-
 // Enums for User Roles
 enum Role {
-  LAWYER
   CUSTOMER
   ATTORNEY
 }
 
 // User model for authentication
 model User {
-  id              String    @id @default(cuid())
-  name            String?
-  email           String?   @unique
-  emailVerified   DateTime?
-  image           String?
-  password        String?
-  role            Role      @default(CUSTOMER)
-  profileComplete Boolean   @default(false)
-  profileData     Json?     // Store additional profile information
-  freeConsultationRequestsUsed Int @default(0) // Track free consultation requests used
-  maxFreeConsultationRequests  Int @default(1) // Max free consultation requests allowed
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                           String    @id @default(cuid())
+  name                         String?
+  email                        String?   @unique
+  emailVerified                DateTime?
+  image                        String?
+  password                     String?
+  role                         Role      @default(CUSTOMER)
+  profileComplete              Boolean   @default(false)
+  profileData                  Json? // Store additional profile information
+  freeConsultationRequestsUsed Int       @default(0) // Track free consultation requests used
+  maxFreeConsultationRequests  Int       @default(1) // Max free consultation requests allowed
+
+  // Profile fields
+  phone    String?
+  company  String?
+  industry String?
+  location String?
+  bio      String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  accounts                Account[]
-  sessions                Session[]
-  lawyerProfile           LawyerProfile?
-  customerProfile         CustomerProfile?
-  wallet                  Wallet?
-  purchases               Purchase[]
-  chatSessions            ChatSession[]
-  documentAnalysisSessions DocumentAnalysisSession[]
-  clientConsultationRequests ConsultationRequest[] @relation("ClientRequests")
-  attorneyConsultationRequests ConsultationRequest[] @relation("AttorneyRequests")
-  clientConversations     Conversation[] @relation("ClientConversations")
-  attorneyConversations   Conversation[] @relation("AttorneyConversations")
-  sentMessages            Message[] @relation("SentMessages")
-  notifications           Notification[]
+  accounts                     Account[]
+  sessions                     Session[]
+  lawyerProfile                LawyerProfile?
+  customerProfile              CustomerProfile?
+  wallet                       Wallet?
+  purchases                    Purchase[]
+  chatSessions                 ChatSession[]
+  documentAnalysisSessions     DocumentAnalysisSession[]
+  clientConsultationRequests   ConsultationRequest[]     @relation("ClientRequests")
+  attorneyConsultationRequests ConsultationRequest[]     @relation("AttorneyRequests")
+  clientConversations          Conversation[]            @relation("ClientConversations")
+  attorneyConversations        Conversation[]            @relation("AttorneyConversations")
+  sentMessages                 Message[]                 @relation("SentMessages")
+  notifications                Notification[]
+  tokenTransactions            TokenTransaction[]        @relation("UserTokenTransactions")
+  embeddingJobs                EmbeddingJob[]
 
   @@map("users")
 }
@@ -362,14 +378,21 @@ model VerificationToken {
 
 // Profile for Lawyers
 model LawyerProfile {
-  id               String  @id @default(cuid())
-  userId           String  @unique
-  specialty        String? // e.g., "Corporate Law", "Criminal Law"
-  barLicense       String? // Bar license number
-  bio              String? @db.Text
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  specialty         String? // e.g., "Corporate Law", "Criminal Law"
+  barLicense        String? // Bar license number
+  barNumber         String? // Bar number
+  bio               String?  @db.Text
   yearsOfExperience Int?
-  firmName         String? // Law firm name
-  verified         Boolean @default(false) // For future verification system
+  firmName          String? // Law firm name
+  verified          Boolean  @default(false) // For future verification system
+  location          String? // Attorney location
+  practiceAreas     String[] @default([]) // Array of practice areas
+  rating            Float? // Attorney rating (0-5)
+  casesHandled      Int? // Number of cases handled
+  availability      String? // Availability status
+  hourlyRate        Float? // Hourly rate in dollars
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -395,9 +418,9 @@ model CustomerProfile {
 
 // Wallet model for token management
 model Wallet {
-  id      String @id @default(cuid())
-  userId  String @unique
-  tokens  Int    @default(0)
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(0) // Token balance
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -410,49 +433,56 @@ model Wallet {
 
 // Token transactions for tracking token usage and purchases
 model TokenTransaction {
-  id          String            @id @default(cuid())
+  id          String          @id @default(cuid())
   walletId    String
+  userId      String // User ID for easier querying
   type        TransactionType
-  amount      Int               // Positive for purchase, negative for consumption
+  feature     String? // Feature name (document-assistant, wizard, grand-wizard, consultation-request, etc.)
+  amount      Int // Positive for purchase, negative for consumption
   description String?
-  reference   String?           // Payment intent ID or operation reference
-  createdAt   DateTime          @default(now())
+  reference   String? // Payment intent ID or operation reference
+  metadata    Json? // Additional metadata (operation details, sessionId, etc.)
+  createdAt   DateTime        @default(now())
 
   // Relations
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserTokenTransactions", fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([feature])
+  @@index([userId, feature])
   @@map("token_transactions")
 }
 
 // Token packages configuration for admin
 model TokenPackage {
-  id          String   @id @default(cuid())
-  name        String
-  tokens      Int
-  priceInCents Int     // Price in cents (e.g., 1000 = $10.00)
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  tokens       Int
+  priceInCents Int // Price in cents (e.g., 1000 = $10.00)
+  description  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  purchases Purchase[]
+  purchases   Purchase[]
+  RolePricing RolePricing[]
 
   @@map("token_packages")
 }
 
 // Purchase records for tracking Stripe payments
 model Purchase {
-  id                String       @id @default(cuid())
-  userId            String
-  packageId         String
-  stripePaymentIntent String     @unique
-  status            PurchaseStatus @default(PENDING)
-  tokensAwarded     Int
-  amountPaid        Int          // Amount in cents
-  metadata          String?      // Additional metadata as JSON
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id                  String         @id @default(cuid())
+  userId              String
+  packageId           String
+  stripePaymentIntent String         @unique
+  status              PurchaseStatus @default(PENDING)
+  tokensAwarded       Int
+  amountPaid          Int // Amount in cents
+  metadata            String? // Additional metadata as JSON
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   // Relations
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -465,20 +495,22 @@ model Purchase {
 
 // Consultation request from client to attorney
 model ConsultationRequest {
-  id          String              @id @default(cuid())
-  clientId    String
-  attorneyId  String
-  caseType    String              // Case type (Corporate, Criminal, Family, etc.)
-  description String              @db.Text
-  urgency     RequestUrgency      @default(MEDIUM)
-  status      RequestStatus       @default(PENDING)
-  documents   Json?               // Optional document references
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id               String         @id @default(cuid())
+  clientId         String
+  attorneyId       String
+  caseType         String // Case type (Corporate, Criminal, Family, etc.)
+  description      String         @db.Text
+  urgency          RequestUrgency @default(MEDIUM)
+  status           RequestStatus  @default(PENDING)
+  documents        Json? // Optional document references
+  viewedByClient   Boolean        @default(false) // Track if client has viewed this request
+  viewedByAttorney Boolean        @default(false) // Track if attorney has viewed this request
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   // Relations
-  client       User         @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)
-  attorney     User         @relation("AttorneyRequests", fields: [attorneyId], references: [id], onDelete: Cascade)
+  client       User          @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)
+  attorney     User          @relation("AttorneyRequests", fields: [attorneyId], references: [id], onDelete: Cascade)
   conversation Conversation?
 
   @@map("consultation_requests")
@@ -511,7 +543,7 @@ model Message {
   conversationId String
   senderId       String
   content        String   @db.Text
-  attachments    Json?    // Optional file attachments
+  attachments    Json? // Optional file attachments
   isRead         Boolean  @default(false)
   createdAt      DateTime @default(now())
 
@@ -529,7 +561,7 @@ model Notification {
   type      NotificationType
   title     String
   message   String           @db.Text
-  relatedId String?          // ID of related entity (request, message, etc.)
+  relatedId String? // ID of related entity (request, message, etc.)
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
 
@@ -564,4 +596,113 @@ enum NotificationType {
   REQUEST_CANCELLED
 }
 
+model Admin {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  password     String // Required - no OAuth for admins
+  image        String?
+  isSuperAdmin Boolean   @default(false) // For future multi-level admin
+  isActive     Boolean   @default(true) // Can deactivate admin
+  lastLoginAt  DateTime?
+  lastLoginIp  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
+  // Relations
+  activityLogs AdminActivityLog[]
+
+  @@map("admins")
+}
+
+model AdminActivityLog {
+  id         String      @id @default(cuid())
+  adminId    String
+  action     AdminAction
+  targetType String? // 'User', 'Feature', 'Package', etc.
+  targetId   String? // ID of affected entity
+  details    Json? // Additional context (before/after values, etc.)
+  ipAddress  String?
+  userAgent  String? // Browser/device information
+  createdAt  DateTime    @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("admin_activity_logs")
+}
+
+enum AdminAction {
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  USER_PASSWORD_RESET
+  FEATURE_TOGGLED
+  FEATURE_CREATED
+  PRICING_UPDATED
+  PACKAGE_CREATED
+  PACKAGE_UPDATED
+  PACKAGE_DELETED
+  TOKEN_ADJUSTMENT
+  ROLE_PRICING_CREATED
+  ROLE_PRICING_UPDATED
+}
+
+// Feature Management Models
+model Feature {
+  id           String          @id @default(cuid())
+  name         String          @unique // e.g., 'attorney_wizard', 'client_directory'
+  displayName  String // e.g., 'Document Analysis', 'Find Attorney'
+  description  String? // Feature description for admin reference
+  route        String // e.g., '/attorney/wizard', '/client/directory'
+  category     FeatureCategory
+  isGlobal     Boolean         @default(true) // Global on/off
+  isEnabled    Boolean         @default(true) // Current enabled state
+  roleSpecific FeatureRole[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("features")
+}
+
+model FeatureRole {
+  id        String  @id @default(cuid())
+  featureId String
+  role      Role // ATTORNEY or CUSTOMER
+  isEnabled Boolean @default(true)
+  feature   Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@unique([featureId, role])
+  @@map("feature_roles")
+}
+
+enum FeatureCategory {
+  DOCUMENT_PROCESSING
+  LEGAL_RESEARCH
+  DOCKET_GENIE
+  INTEGRATIONS
+  COMMUNICATION
+  ANALYTICS
+  CLIENT_MANAGEMENT
+  RESOURCES
+}
+
+// Pricing Management Models
+model RolePricing {
+  id           String       @id @default(cuid())
+  role         Role // ATTORNEY or CUSTOMER
+  packageId    String
+  priceInCents Int // Override price for this role
+  isActive     Boolean      @default(true)
+  package      TokenPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([role, packageId])
+  @@map("role_pricing")
+}

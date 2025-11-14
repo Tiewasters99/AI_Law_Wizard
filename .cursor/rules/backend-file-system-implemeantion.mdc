@@ -1,0 +1,437 @@
+---
+alwaysApply: true
+---
+
+# Backend File System Implementation Rules
+
+When implementing backend functionality in the AI Law Wizard application, strictly follow the layered architecture pattern documented in `API_ARCHITECTURE.md`.
+
+## Architecture Pattern
+
+**ALWAYS** follow the four-layer architecture:
+
+```
+API Route → Controller → Service → Repository → Database
+```
+
+### Layer Responsibilities
+
+1. **API Routes** (`src/app/api/[role]/[resource]/route.ts`):
+   - Minimal HTTP handling only
+   - Route request to appropriate controller
+   - Export GET, POST, PATCH, DELETE handlers
+
+2. **Controllers** (`src/lib/backend/controllers/[domain]/[resource]Controller.ts`):
+   - Request/response handling
+   - Authentication & authorization
+   - Input validation
+   - Error handling via response utilities
+   - Call service functions
+
+3. **Services** (`src/lib/backend/services/[domain]/[resource]Service.ts`):
+   - Business logic orchestration
+   - Coordinate between multiple repositories
+   - Complex operations and workflows
+   - Throw custom AppError subclasses
+
+4. **Repositories** (`src/lib/backend/repositories/[domain]/[resource]Repository.ts`):
+   - Database operations only
+   - Prisma queries
+   - Simple CRUD functions
+   - Return data models, not NextResponse
+
+## Implementation Rules
+
+### ❌ NEVER Do These
+
+1. Put database queries directly in API routes or controllers
+2. Put business logic in repositories
+3. Put database queries in services (delegate to repositories)
+4. Return `NextResponse` from services or repositories
+5. Mix concerns - authentication in repository, business logic in controller
+6. Use raw error handling instead of custom error classes
+7. Skip the layered architecture for "simple" endpoints
+
+### ✅ ALWAYS Do These
+
+1. Create all four layers (Route, Controller, Service, Repository)
+2. Use repository pattern for ALL database operations
+3. Use service layer for ALL business logic
+4. Use controllers for request/response and auth only
+5. Throw custom errors (ValidationError, NotFoundError, etc.)
+6. Use response utilities (successResponse, errorResponse)
+7. Follow the directory structure exactly
+
+## File Structure Rules
+
+### Repository Layer
+
+```typescript
+// src/lib/backend/repositories/[domain]/[entity]Repository.ts
+import { prisma } from "../../prisma";
+
+// ✅ Good: Simple database operations only
+export async function findEntityById(id: string) {
+  return await prisma.entity.findUnique({ where: { id } });
+}
+
+// ✅ Good: Returns data, not NextResponse
+export async function findAllEntities() {
+  return await prisma.entity.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+// ❌ Bad: Business logic in repository
+export async function getEntitiesWithValidation(id: string) {
+  const entity = await prisma.entity.findUnique({ where: { id } });
+  if (!entity) throw new Error("Not found"); // NO - this belongs in service
+  return entity;
+}
+```
+
+### Service Layer
+
+```typescript
+// src/lib/backend/services/[domain]/[entity]Service.ts
+import {
+  findEntityById,
+  findAllEntities,
+} from "../../../repositories/[domain]/[entity]Repository";
+import { NotFoundError, ValidationError } from "../../../utils/errors";
+
+// ✅ Good: Business logic and validation
+export async function getEntity(id: string) {
+  if (!id) throw new ValidationError("ID is required");
+  const entity = await findEntityById(id);
+  if (!entity) throw new NotFoundError("Entity");
+  return entity;
+}
+
+// ✅ Good: Orchestrating multiple repositories
+export async function createEntityWithRelations(data: any) {
+  const entity = await findEntityById(data.id);
+  if (entity) throw new ConflictError("Entity already exists");
+  return await createEntity(data);
+}
+
+// ❌ Bad: Direct database access
+export async function getEntityBadly(id: string) {
+  return await prisma.entity.findUnique({ where: { id } }); // NO - use repository
+}
+```
+
+### Controller Layer
+
+```typescript
+// src/lib/backend/controllers/[domain]/[entity]Controller.ts
+import { NextRequest } from "next/server";
+import { requireAuth } from "../../../utils/[role]Auth";
+import {
+  getEntity,
+  listEntities,
+} from "../../../services/[domain]/[entity]Service";
+import { successResponse, errorResponse } from "../../../utils/response";
+
+// ✅ Good: Auth, delegation to service, standardized responses
+export async function handleGetEntity(request: NextRequest, id: string) {
+  try {
+    const user = await requireAuth(request);
+    const entity = await getEntity(id);
+    return successResponse({ entity });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+// ✅ Good: Authentication check
+export async function handleListEntities(request: NextRequest) {
+  try {
+    await requireAuth(request);
+    const entities = await listEntities();
+    return successResponse({ entities });
+  } catch (error) {
+    return errorResponse(error, "Failed to fetch entities");
+  }
+}
+
+// ❌ Bad: Business logic in controller
+export async function handleGetEntityBadly(request: NextRequest, id: string) {
+  const entity = await prisma.entity.findUnique({ where: { id } });
+  if (!entity)
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ entity });
+}
+```
+
+### API Route Layer
+
+```typescript
+// src/app/api/[role]/[resource]/route.ts
+import { NextRequest } from "next/server";
+import { handleListEntities } from "@/lib/backend/controllers/[domain]/[entity]Controller";
+
+// ✅ Good: Minimal routing only
+export async function GET(request: NextRequest) {
+  return await handleListEntities(request);
+}
+
+// src/app/api/[role]/[resource]/[id]/route.ts
+import { handleGetEntity } from "@/lib/backend/controllers/[domain]/[entity]Controller";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return await handleGetEntity(request, params.id);
+}
+
+// ❌ Bad: Logic in route handler
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const data = await prisma.entity.findMany();
+  return NextResponse.json({ data });
+}
+```
+
+## Error Handling Rules
+
+### Use Custom Error Classes
+
+```typescript
+// ✅ Good: Throw custom errors in service layer
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+} from "../../../utils/errors";
+
+export async function updateEntity(id: string, data: any) {
+  if (!data.name) throw new ValidationError("Name is required");
+  const entity = await findEntityById(id);
+  if (!entity) throw new NotFoundError("Entity");
+  return await updateEntity(id, data);
+}
+```
+
+### Use Response Utilities in Controllers
+
+```typescript
+// ✅ Good: Use standardized responses
+import { successResponse, errorResponse } from "../../../utils/response";
+
+export async function handleUpdateEntity(request: NextRequest, id: string) {
+  try {
+    const user = await requireAuth(request);
+    const data = await request.json();
+    const entity = await updateEntity(id, data);
+    return successResponse({ entity });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+```
+
+## Directory Structure
+
+**ALWAYS** organize files by domain and role:
+
+```
+src/
+├── app/
+│   └── api/
+│       ├── admin/           # Admin endpoints
+│       ├── attorney/        # Attorney endpoints
+│       ├── client/          # Client endpoints
+│       ├── auth/            # Authentication
+│       ├── guest/           # Public endpoints
+│       └── demo/            # Demo endpoints
+└── lib/
+    └── backend/
+        ├── controllers/     # By domain/role
+        │   ├── admin/
+        │   ├── attorney/
+        │   ├── client/
+        │   └── auth/
+        ├── services/        # By domain/role
+        │   ├── admin/
+        │   ├── attorney/
+        │   ├── client/
+        │   └── auth/
+        ├── repositories/    # By domain
+        │   ├── admin/
+        │   ├── attorney/
+        │   └── common/
+        └── utils/
+            ├── errors.ts
+            ├── response.ts
+            └── validation.ts
+```
+
+## Common Patterns
+
+### Creating New Feature
+
+1. **Repository**: Add database functions in `repositories/[domain]/[entity]Repository.ts`
+2. **Service**: Add business logic in `services/[domain]/[entity]Service.ts`
+3. **Controller**: Add request handlers in `controllers/[domain]/[entity]Controller.ts`
+4. **Route**: Create API route in `app/api/[role]/[resource]/route.ts`
+
+### Authentication
+
+```typescript
+// Controllers: Use auth utilities
+import { requireAuth } from "../../../utils/adminAuth"; // For admin
+import { requireAdminAuth } from "@/lib/admin/apiProtection"; // Alternative admin
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/backend/auth"; // For regular users
+```
+
+### Rate Limiting
+
+```typescript
+// Controllers: Apply rate limiting
+import { checkRateLimit, getRateLimitHeaders } from "@/lib/backend";
+
+const rateLimit = checkRateLimit(
+  request,
+  session.user.id,
+  session.user.role,
+  true
+);
+if (!rateLimit.allowed) {
+  return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+}
+
+// Add headers to response
+return successResponse(data, 200, {
+  headers: getRateLimitHeaders(rateLimit.remaining, rateLimit.resetTime),
+});
+```
+
+### Input Validation
+
+```typescript
+// Services: Validate input
+import { ValidationError } from "../../../utils/errors";
+
+export async function createEntity(data: any) {
+  if (!data.name) throw new ValidationError("Name is required");
+  if (data.email && !isValidEmail(data.email)) {
+    throw new ValidationError("Invalid email format");
+  }
+  return await createEntity(data);
+}
+```
+
+## Import Conventions
+
+**ALWAYS** use these import paths:
+
+```typescript
+// Repositories
+import { prisma } from "../../prisma";
+import { findEntity } from "../otherEntity/otherEntityRepository";
+
+// Services
+import { Repository functions } from "../../../repositories/[domain]/[entity]Repository";
+import { OtherService } from "../otherEntity/otherEntityService";
+import { CustomError } from "../../../utils/errors";
+
+// Controllers
+import { Service functions } from "../../../services/[domain]/[entity]Service";
+import { successResponse, errorResponse } from "../../../utils/response";
+import { requireAuth } from "../../../utils/[role]Auth";
+
+// Routes
+import { Controller handlers } from "@/lib/backend/controllers/[domain]/[entity]Controller";
+import { NextRequest } from "next/server";
+```
+
+## Code Quality Checklist
+
+When implementing any backend feature:
+
+- [ ] Repository layer: Pure database operations only
+- [ ] Service layer: Business logic, validation, orchestration
+- [ ] Controller layer: Auth, request handling, response formatting
+- [ ] Route layer: Minimal HTTP routing
+- [ ] Custom errors thrown from services
+- [ ] Standardized responses from controllers
+- [ ] No direct Prisma access outside repositories
+- [ ] No business logic in controllers or repositories
+- [ ] Proper authentication in controllers
+- [ ] Input validation in services
+- [ ] Error handling at each layer appropriately
+
+## Reference Documentation
+
+- **Complete Guide**: `API_ARCHITECTURE.md`
+- **Quick Reference**: `API_QUICK_REFERENCE.md`
+- **Examples**: See existing implementations in:
+  - `src/lib/backend/controllers/admin/dashboard/`
+  - `src/lib/backend/services/admin/dashboard/`
+  - `src/lib/backend/repositories/admin/`
+
+## Anti-Pattern Examples
+
+### ❌ BAD: Skipping Layers
+
+```typescript
+// In route.ts - TOO MUCH in one place
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (session.user.role !== "CUSTOMER") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const data = await prisma.entity.findMany({
+    where: { userId: session.user.id },
+    include: { related: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json({ success: true, data });
+}
+```
+
+### ✅ GOOD: Proper Layering
+
+```typescript
+// route.ts
+export async function GET(request: NextRequest) {
+  return await handleListEntities(request);
+}
+
+// controller.ts
+export async function handleListEntities(request: NextRequest) {
+  try {
+    await requireAuth(request);
+    const entities = await listEntities();
+    return successResponse({ entities });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+// service.ts
+export async function listEntities() {
+  return await findAllEntities();
+}
+
+// repository.ts
+export async function findAllEntities() {
+  return await prisma.entity.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+}
+```
+
+## Summary
+
+**The Rule**: Every backend feature MUST follow the four-layer pattern. No shortcuts. No exceptions. This ensures maintainability, testability, and consistency across the entire application.

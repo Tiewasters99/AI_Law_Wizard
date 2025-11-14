@@ -1,29 +1,39 @@
-import { DefaultSession, DefaultUser } from 'next-auth';
-import { JWT, DefaultJWT } from 'next-auth/jwt';
+import { DefaultSession, DefaultUser } from "next-auth";
+import { JWT, DefaultJWT } from "next-auth/jwt";
 
-// Role types
-export type UserRole = 'ATTORNEY' | 'CUSTOMER';
-export type PrismaRole = 'ATTORNEY' | 'LAWYER' | 'CUSTOMER'; // Include LAWYER for backward compatibility
+export type UserRole = "ATTORNEY" | "CUSTOMER";
 
-declare module 'next-auth' {
+declare module "next-auth" {
   interface Session {
-    user: {
+    user?: {
       id: string;
-      role: PrismaRole; // Can be ATTORNEY, LAWYER (legacy), or CUSTOMER
+      role: UserRole;
       profileComplete: boolean;
-    } & DefaultSession['user'];
+    } & DefaultSession["user"];
+    // Admin session properties
+    adminId?: string;
+    isAdmin?: boolean;
+    isSuperAdmin?: boolean;
   }
 
   interface User extends DefaultUser {
-    role: PrismaRole; // Can be ATTORNEY, LAWYER (legacy), or CUSTOMER
-    profileComplete: boolean;
+    role?: UserRole;
+    profileComplete?: boolean;
+    // Admin user properties
+    isAdmin?: boolean;
+    isSuperAdmin?: boolean;
   }
 }
 
-declare module 'next-auth/jwt' {
+declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
-    id: string;
-    role: PrismaRole; // Can be ATTORNEY, LAWYER (legacy), or CUSTOMER
-    profileComplete: boolean;
+    // User properties
+    id?: string;
+    role?: UserRole;
+    profileComplete?: boolean;
+    // Admin properties
+    adminId?: string;
+    isAdmin?: boolean;
+    isSuperAdmin?: boolean;
   }
 }

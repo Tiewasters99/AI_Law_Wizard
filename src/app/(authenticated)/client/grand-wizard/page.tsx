@@ -1,0 +1,690 @@
+"use client";
+
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { useSession } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
+import {
+  Send,
+  User,
+  Loader2,
+  AlertCircle,
+  Crown,
+  Brain,
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+
+// Message type definition
+interface Message {
+  id: string;
+  content: string;
+  role: "user" | "assistant";
+  timestamp: Date;
+}
+
+// Token Guard Component (inline)
+function TokenGuard({
+  children,
+  requiredTokens,
+  feature,
+  description,
+  balance,
+  onPurchase,
+}: {
+  children: React.ReactNode;
+  requiredTokens: number;
+  feature: string;
+  description: string;
+  balance: number;
+  onPurchase: () => void;
+}) {
+  if (balance < requiredTokens) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full bg-card border border-border rounded-xl p-6 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Insufficient Credits
+          </h2>
+          <p className="text-muted-foreground">
+            You need {requiredTokens} credits to use {feature}, but you only
+            have {balance} credits remaining.
+          </p>
+          <Button onClick={onPurchase} className="w-full">
+            Purchase Credits
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
+// Insufficient Credits Modal Component (inline)
+function InsufficientCreditsModal({
+  isOpen,
+  onClose,
+  onPurchase,
+  balance,
+  required,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onPurchase: () => void;
+  balance: number;
+  required: number;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card border border-border p-4 sm:p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h3 className="text-base sm:text-lg font-semibold mb-2 text-foreground">
+          Insufficient Credits
+        </h3>
+        <p className="text-sm sm:text-base text-muted-foreground mb-4">
+          You need {required} credits to use this feature, but you only have{" "}
+          {balance} credits remaining. Purchase more credits to continue.
+        </p>
+        <div className="flex gap-3">
+          <Button onClick={onPurchase} className="flex-1">
+            Purchase Credits
+          </Button>
+          <Button onClick={onClose} variant="outline" className="flex-1">
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const GRAND_WIZARD_TOKEN_REQUIREMENT = 5;
+const GRAND_WIZARD_TOKEN_COST = 5;
+
+export default function GrandWizardPage() {
+  const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const {
+    balance,
+    loading: balanceLoading,
+    refetch: refetchBalance,
+  } = useTokenBalance();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] =
+    useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showReasoning, setShowReasoning] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load session from database when sessionId query param is present
+  useEffect(() => {
+    const loadSessionFromDatabase = async (sessionIdParam: string) => {
+      if (!session?.user?.id) return;
+
+      setIsLoadingSession(true);
+      setError(null);
+
+      try {
+        // Fetch session details
+        const sessionResponse = await fetch(
+          `/api/client/chat/sessions/${sessionIdParam}`
+        );
+
+        if (!sessionResponse.ok) {
+          let errorMessage = `Failed to load session (${sessionResponse.status})`;
+          try {
+            const contentType = sessionResponse.headers.get("content-type");
+            if (contentType?.includes("application/json")) {
+              const errorData = await sessionResponse.json();
+              errorMessage =
+                errorData.error || errorData.message || errorMessage;
+            }
+          } catch {
+            // Use default error message
+          }
+          throw new Error(errorMessage);
+        }
+
+        const sessionData = await sessionResponse.json();
+
+        // Validate response structure
+        if (!sessionData || typeof sessionData !== "object") {
+          throw new Error("Invalid response structure from server");
+        }
+
+        // Handle error responses
+        if (sessionData.error) {
+          throw new Error(sessionData.error || "Failed to load session");
+        }
+
+        // API returns { success: true, session: {...} } - check both structures for compatibility
+        const loadedSession = sessionData.session || sessionData.data?.session;
+        if (sessionData.success && loadedSession) {
+          // Verify session belongs to user
+          if (loadedSession.userId !== session.user.id) {
+            throw new Error("Unauthorized access to session");
+          }
+          setSessionId(loadedSession.id);
+        } else {
+          throw new Error("Session not found in response");
+        }
+
+        // Fetch messages
+        const messagesResponse = await fetch(
+          `/api/client/chat/sessions/${sessionIdParam}/messages`
+        );
+
+        if (!messagesResponse.ok) {
+          let errorMessage = `Failed to load messages (${messagesResponse.status})`;
+          try {
+            const contentType = messagesResponse.headers.get("content-type");
+            if (contentType?.includes("application/json")) {
+              const errorData = await messagesResponse.json();
+              errorMessage =
+                errorData.error || errorData.message || errorMessage;
+            }
+          } catch {
+            // Use default error message
+          }
+          throw new Error(errorMessage);
+        }
+
+        const messagesData = await messagesResponse.json();
+
+        // Validate response structure
+        if (!messagesData || typeof messagesData !== "object") {
+          throw new Error("Invalid messages response structure from server");
+        }
+
+        // Handle error responses
+        if (messagesData.error) {
+          throw new Error(messagesData.error || "Failed to load messages");
+        }
+
+        // API returns { success: true, messages: [...], session: {...} } - check both structures for compatibility
+        const messages = messagesData.messages || messagesData.data?.messages;
+        if (messagesData.success && Array.isArray(messages)) {
+          const loadedMessages = messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            role: msg.role.toLowerCase() as "user" | "assistant",
+            timestamp: new Date(msg.createdAt),
+          }));
+          setMessages(loadedMessages);
+        } else {
+          console.warn(
+            "No messages found in response, starting with empty messages"
+          );
+          setMessages([]);
+        }
+      } catch (err) {
+        console.error("Error loading session:", err);
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to load session. Please try again.";
+        setError(errorMessage);
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+
+    // Check for sessionId in query params
+    const sessionIdParam = searchParams.get("sessionId");
+    if (sessionIdParam && session?.user?.id) {
+      loadSessionFromDatabase(sessionIdParam);
+    }
+  }, [session?.user?.id, searchParams]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handlePurchaseCredits = useCallback(() => {
+    router.push("/client/tokens");
+  }, [router]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    // Check if user has sufficient balance
+    if (balance < GRAND_WIZARD_TOKEN_COST) {
+      setShowInsufficientCreditsModal(true);
+      return;
+    }
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: inputValue.trim(),
+      role: "user",
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue("");
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/client/legal-research", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: inputValue.trim(),
+          stream: true,
+          model: "google/gemini-2.5-pro",
+          sessionId: sessionId || undefined,
+          showReasoning: showReasoning,
+          newChat: !sessionId,
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `API Error: ${response.status}`;
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } else {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = `${errorMessage} - ${errorText}`;
+            }
+          }
+        } catch (parseError) {
+          errorMessage = `API Error: ${response.status} - ${response.statusText || "Unknown error"}`;
+        }
+
+        if (response.status === 404) {
+          errorMessage =
+            "The requested service is not available. Please contact support.";
+        } else if (response.status === 401 || response.status === 403) {
+          errorMessage =
+            "You are not authorized to use this service. Please log in again.";
+        } else if (response.status === 429) {
+          errorMessage =
+            "Too many requests. Please wait a moment and try again.";
+        } else if (response.status >= 500) {
+          errorMessage =
+            "Server error. Please try again later or contact support.";
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Handle streaming response
+      let markdownContent = "";
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "",
+        role: "assistant",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = JSON.parse(line.slice(6));
+
+                if (data.type === "content") {
+                  markdownContent += data.content;
+                  setMessages(prev =>
+                    prev.map(msg =>
+                      msg.id === assistantMessage.id
+                        ? { ...msg, content: markdownContent }
+                        : msg
+                    )
+                  );
+                } else if (data.type === "done") {
+                  // Capture sessionId from done event
+                  if (data.sessionId) {
+                    setSessionId(data.sessionId);
+                    // Update URL to include sessionId for better UX
+                    window.history.replaceState(
+                      {},
+                      "",
+                      `/client/grand-wizard?sessionId=${data.sessionId}`
+                    );
+                  }
+
+                  // Refetch balance to update sidebar (tokens consumed in backend)
+                  refetchBalance();
+                } else if (data.type === "error") {
+                  // Capture sessionId from error event if available
+                  if (data.sessionId) {
+                    setSessionId(data.sessionId);
+                    window.history.replaceState(
+                      {},
+                      "",
+                      `/client/grand-wizard?sessionId=${data.sessionId}`
+                    );
+                  }
+                  throw new Error(data.error);
+                }
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
+
+      // Messages are automatically saved to database by the backend API
+      // No need to store in localStorage
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setError((error as Error).message);
+
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Error: ${
+          (error as Error).message
+        }\n\nPlease try again or contact support if the issue persists.`,
+        role: "assistant",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    inputValue,
+    session?.user?.id,
+    sessionId,
+    showReasoning,
+    isLoading,
+    balance,
+    refetchBalance,
+  ]);
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const startNewChat = () => {
+    setMessages([]);
+    setSessionId(null);
+    setError(null);
+    setInputValue("");
+    // Navigate to clean URL without sessionId
+    window.history.replaceState({}, "", "/client/grand-wizard");
+  };
+
+  const formatTime = (timestamp: Date | string) => {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    if (isNaN(date.getTime())) return "Invalid date";
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  };
+
+  const renderMessage = (message: Message) => {
+    const isUser = message.role === "user";
+    const Icon = isUser ? User : Crown;
+
+    return (
+      <motion.div
+        key={message.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`flex gap-3 mb-6 ${
+          isUser ? "flex-row-reverse" : "flex-row"
+        }`}
+      >
+        <div
+          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+            isUser
+              ? "bg-primary text-white"
+              : "bg-gradient-to-br from-yellow-400 to-orange-500 text-white"
+          }`}
+        >
+          <Icon className="w-4 h-4" />
+        </div>
+
+        <div
+          className={`flex-1 max-w-[85%] sm:max-w-xs lg:max-w-3xl ${isUser ? "text-right" : "text-left"}`}
+        >
+          <div
+            className={`inline-block p-3 sm:p-4 rounded-xl ${
+              isUser
+                ? "bg-primary text-primary-foreground"
+                : "bg-card border border-border shadow-sm"
+            }`}
+          >
+            {isUser ? (
+              <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">
+                {message.content}
+              </div>
+            ) : (
+              <MarkdownRenderer content={message.content} />
+            )}
+          </div>
+          <div
+            className={`text-xs text-muted-foreground mt-1 ${
+              isUser ? "text-right" : "text-left"
+            }`}
+          >
+            {formatTime(message.timestamp)}
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  if (balanceLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <TokenGuard
+      requiredTokens={GRAND_WIZARD_TOKEN_REQUIREMENT}
+      feature="Grand Legal Chat"
+      description="Ultimate AI legal assistant with master-level capabilities"
+      balance={balance}
+      onPurchase={handlePurchaseCredits}
+    >
+      <div className="h-screen flex flex-col bg-background">
+        {/* Header */}
+        <div className="bg-card border-b border-border px-4 sm:px-6 py-3 sm:py-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-semibold text-foreground">
+                    Grand Wizard
+                  </h1>
+                  <Badge
+                    variant="secondary"
+                    className="bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-700 border-orange-200 text-xs sm:text-sm"
+                  >
+                    <Crown className="w-3 h-3 mr-1" />
+                    Ultra
+                  </Badge>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Master AI Legal Assistant • 5 tokens per message
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={startNewChat}
+                className="text-xs sm:text-sm h-9"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                New Chat
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <ScrollArea className="flex-1 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+          <div className="max-w-4xl mx-auto">
+            {isLoadingSession ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading chat session...</p>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center py-8 sm:py-12">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900 dark:to-orange-900 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 dark:text-orange-300" />
+                </div>
+                <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">
+                  Grand Wizard Legal Consultation
+                </h3>
+                <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto px-4">
+                  Access the most advanced AI legal assistant with master-level
+                  analysis, expert strategic planning, and sophisticated legal
+                  insights.
+                </p>
+              </div>
+            ) : (
+              <AnimatePresence>{messages.map(renderMessage)}</AnimatePresence>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        {/* Error Display */}
+        {error && (
+          <div className="px-3 sm:px-4 lg:px-6 py-2">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs sm:text-sm">
+                {error}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {/* Input */}
+        <div className="bg-card border-t border-border px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex gap-2 sm:gap-3 items-end">
+              <div className="flex-1 flex flex-col gap-2">
+                <Textarea
+                  ref={textareaRef}
+                  value={inputValue}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setInputValue(e.target.value)
+                  }
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask your master-level legal question..."
+                  className="flex-1 min-h-[44px] max-h-32 resize-none text-sm sm:text-base"
+                  disabled={isLoading}
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Brain className="w-3 h-3" />
+                    <Label
+                      htmlFor="reasoning-toggle"
+                      className="text-xs cursor-pointer"
+                    >
+                      Show Reasoning
+                    </Label>
+                    <Switch
+                      id="reasoning-toggle"
+                      checked={showReasoning}
+                      onCheckedChange={setShowReasoning}
+                      className="scale-75"
+                    />
+                  </div>
+                  <span className="hidden sm:inline">
+                    Press Enter to send, Shift+Enter for new line
+                  </span>
+                  <span className="sm:hidden">Enter to send</span>
+                </div>
+              </div>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim() || isLoading}
+                className="px-3 sm:px-4 h-11 sm:h-10 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+            <div className="flex justify-end mt-1 text-xs text-muted-foreground">
+              <span>5 tokens per message</span>
+            </div>
+          </div>
+        </div>
+
+        <InsufficientCreditsModal
+          isOpen={showInsufficientCreditsModal}
+          onClose={() => setShowInsufficientCreditsModal(false)}
+          onPurchase={handlePurchaseCredits}
+          balance={balance}
+          required={GRAND_WIZARD_TOKEN_COST}
+        />
+      </div>
+    </TokenGuard>
+  );
+}
