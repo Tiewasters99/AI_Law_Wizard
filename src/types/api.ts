@@ -10,6 +10,7 @@ export interface ProcessingRequest {
   queryAllDocuments?: boolean; // Flag to query all documents vs specific document
   sessionId?: string; // Document analysis session ID for conversation continuity
   isNewConversation?: boolean; // Flag to start a new conversation session
+  model?: string; // Optional model to use for processing (e.g., "openai/gpt-4o-mini")
 }
 
 export interface ProcessingResponse {

@@ -37,7 +37,7 @@ export async function createOrGetChatSession(
   // Create a new session
   return await createChatSession({
     userId,
-    title: title || null,
+    title: title,
     metadata: {},
   });
 }
@@ -120,7 +120,7 @@ export async function createNewChatSession(
   // Create new active session
   return await createChatSession({
     userId,
-    title: title || null,
+    title: title,
     metadata: {},
   });
 }

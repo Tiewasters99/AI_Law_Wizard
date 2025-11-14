@@ -8,8 +8,9 @@ import { handleGetFile } from "@/lib/backend/controllers/client/files/filesContr
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  return handleGetFile(request, session?.user?.id, params.id);
+  const { id } = await params;
+  return handleGetFile(request, session?.user?.id, id);
 }

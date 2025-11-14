@@ -8,7 +8,18 @@ export * from "./services/openRouterService";
 export * from "./services/documentProcessor";
 export * from "./services/onedriveService";
 export * from "./pacerCodes";
-export * from "./stripeService";
+export {
+  getStripe,
+  formatPrice,
+  fetchTokenPackages,
+  fetchWallet,
+  consumeTokens,
+  type TokenPackage,
+  type Wallet,
+  type TokenTransaction,
+  type UserRole,
+  createPaymentIntent as createPaymentIntentClient,
+} from "./stripeService";
 export * from "./stripeServer";
 
 // Utils
@@ -122,7 +133,7 @@ export {
 export * from "./controllers/client/tokens/tokenBalanceController";
 export * from "./controllers/client/tokens/tokenTransactionsController";
 export * from "./controllers/client/tokens/tokenUsageController";
-export * from "./controllers/client/stripe/stripePaymentController";
+export { handleCreatePaymentIntent as handleCreateClientPaymentIntent } from "./controllers/client/stripe/stripePaymentController";
 export * from "./controllers/client/upload/uploadController";
 
 // Controllers - Admin
@@ -203,7 +214,7 @@ export * from "./services/client/profile/profileService";
 export * from "./services/client/tokens/tokenBalanceService";
 export * from "./services/client/tokens/tokenTransactionsService";
 export * from "./services/client/tokens/tokenUsageService";
-export * from "./services/client/stripe/stripePaymentService";
+export { createPaymentIntent as createClientPaymentIntent } from "./services/client/stripe/stripePaymentService";
 export * from "./services/client/upload/uploadService";
 
 // Services - Admin

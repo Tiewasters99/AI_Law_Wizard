@@ -9,7 +9,7 @@ import {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -18,6 +18,7 @@ export async function PATCH(
       { status: 401 }
     );
   }
-  return handleUpdateSession(request, session.user.id, params.sessionId);
+  const { sessionId } = await params;
+  return handleUpdateSession(request, session.user.id, sessionId);
 }
 

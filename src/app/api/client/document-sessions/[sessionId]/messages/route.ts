@@ -7,7 +7,7 @@ import { handleGetSessionMessages } from "@/lib/backend/controllers/client/docum
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -15,5 +15,6 @@ export async function GET(
       status: 401,
     });
   }
-  return handleGetSessionMessages(request, session.user.id, params.sessionId);
+  const { sessionId } = await params;
+  return handleGetSessionMessages(request, session.user.id, sessionId);
 }

@@ -12,14 +12,19 @@ function convertToOpenRouterMessages(messages: BaseMessage[]): Array<{
   content: string;
 }> {
   return messages.map(msg => {
+    // Convert content to string - handle both string and complex content types
+    const content = typeof msg.content === "string" 
+      ? msg.content 
+      : String(msg.content);
+    
     if (msg instanceof SystemMessage) {
-      return { role: "system" as const, content: msg.content };
+      return { role: "system" as const, content };
     } else if (msg instanceof HumanMessage) {
-      return { role: "user" as const, content: msg.content };
+      return { role: "user" as const, content };
     } else if (msg instanceof AIMessage) {
-      return { role: "assistant" as const, content: msg.content };
+      return { role: "assistant" as const, content };
     }
-    return { role: "user" as const, content: String(msg.content) };
+    return { role: "user" as const, content };
   });
 }
 

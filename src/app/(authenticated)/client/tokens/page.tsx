@@ -72,6 +72,7 @@ interface UsageStats {
     feature: string;
     tokens: number;
     percentage: number;
+    count?: number;
   }[];
   dailyUsage: {
     date: string;

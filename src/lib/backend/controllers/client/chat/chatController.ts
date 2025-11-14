@@ -11,7 +11,7 @@ import {
   updateSessionTitle,
 } from "../../../services/client/chat/chatService";
 import { successResponse, errorResponse } from "../../../utils/response";
-import { NotFoundError } from "../../../utils/errors";
+import { NotFoundError, AuthorizationError } from "../../../utils/errors";
 
 /**
  * Handle GET request - List all chat sessions for a user
@@ -71,13 +71,13 @@ export async function handleGetChatSession(
 
     // Verify the session belongs to the user
     if (session.userId !== userId) {
-      return errorResponse(new Error("Unauthorized"), "Unauthorized", 403);
+      return errorResponse(new AuthorizationError("Unauthorized"));
     }
 
     return successResponse({ session });
   } catch (error) {
     if (error instanceof NotFoundError) {
-      return errorResponse(error, "Chat session not found", 404);
+      return errorResponse(error, "Chat session not found");
     }
     return errorResponse(error, "Failed to fetch chat session");
   }
@@ -98,7 +98,7 @@ export async function handleUpdateChatSession(
 
     // Verify the session belongs to the user
     if (session.userId !== userId) {
-      return errorResponse(new Error("Unauthorized"), "Unauthorized", 403);
+      return errorResponse(new AuthorizationError("Unauthorized"));
     }
 
     const body = await request.json();
@@ -112,7 +112,7 @@ export async function handleUpdateChatSession(
     return successResponse({ session });
   } catch (error) {
     if (error instanceof NotFoundError) {
-      return errorResponse(error, "Chat session not found", 404);
+      return errorResponse(error, "Chat session not found");
     }
     return errorResponse(error, "Failed to update chat session");
   }
@@ -133,7 +133,7 @@ export async function handleDeleteChatSession(
 
     // Verify the session belongs to the user
     if (session.userId !== userId) {
-      return errorResponse(new Error("Unauthorized"), "Unauthorized", 403);
+      return errorResponse(new AuthorizationError("Unauthorized"));
     }
 
     await removeChatSession(sessionId);
@@ -141,7 +141,7 @@ export async function handleDeleteChatSession(
     return successResponse({ success: true });
   } catch (error) {
     if (error instanceof NotFoundError) {
-      return errorResponse(error, "Chat session not found", 404);
+      return errorResponse(error, "Chat session not found");
     }
     return errorResponse(error, "Failed to delete chat session");
   }
@@ -162,7 +162,7 @@ export async function handleGetChatMessages(
 
     // Verify the session belongs to the user
     if (session.userId !== userId) {
-      return errorResponse(new Error("Unauthorized"), "Unauthorized", 403);
+      return errorResponse(new AuthorizationError("Unauthorized"));
     }
 
     const messages = await loadChatMessages(sessionId);
@@ -170,7 +170,7 @@ export async function handleGetChatMessages(
     return successResponse({ messages, session });
   } catch (error) {
     if (error instanceof NotFoundError) {
-      return errorResponse(error, "Chat session not found", 404);
+      return errorResponse(error, "Chat session not found");
     }
     return errorResponse(error, "Failed to fetch chat messages");
   }

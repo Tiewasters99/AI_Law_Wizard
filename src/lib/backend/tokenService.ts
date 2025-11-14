@@ -108,7 +108,7 @@ export async function deductTokens(
           type: "CONSUMPTION",
           feature: feature || null,
           description: reason,
-          metadata: metadata || null,
+          metadata: metadata ?? undefined,
         },
       });
 

@@ -86,7 +86,7 @@ export async function handleLegalResearch(
             });
 
             // Send content chunks as they arrive
-            let finalResult: { fullResult: string } | null = null;
+            let finalResult: { fullResult: string; sessionId?: string } | null = null;
             let result = await streamGenerator.next();
 
             while (!result.done) {
