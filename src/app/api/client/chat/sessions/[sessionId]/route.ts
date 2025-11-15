@@ -50,4 +50,3 @@ export async function DELETE(
   const { sessionId } = await params;
   return handleDeleteChatSession(request, session.user.id, sessionId);
 }
-

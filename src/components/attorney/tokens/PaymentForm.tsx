@@ -139,7 +139,7 @@ export const PaymentForm = ({
                   Processing...
                 </>
               ) : (
-                <>Pay {formatPrice(pkg.priceInCents)}</>
+                <>Pay {formatPrice(pkg.priceInCents ?? 0)}</>
               )}
             </Button>
           </div>

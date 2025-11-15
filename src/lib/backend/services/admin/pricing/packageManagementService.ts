@@ -48,4 +48,3 @@ export async function deletePackage(id: string) {
   // This allows deletion of packages regardless of existing purchases
   await deletePackageRepo(id);
 }
-

@@ -36,4 +36,3 @@ export function generateClientOneDriveAuthUrl(): OneDriveAuthUrlResponse {
     authUrl,
   };
 }
-

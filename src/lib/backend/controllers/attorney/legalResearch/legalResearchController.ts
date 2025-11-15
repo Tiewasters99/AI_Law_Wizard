@@ -40,10 +40,12 @@ export async function handleLegalResearch(
       practiceArea,
     });
 
-    const headers = getRateLimitHeaders(rateLimit.remaining, rateLimit.resetTime);
+    const headers = getRateLimitHeaders(
+      rateLimit.remaining,
+      rateLimit.resetTime
+    );
     return successResponse(result, 200, { headers });
   } catch (error) {
     return errorResponse(error, "Legal research failed");
   }
 }
-

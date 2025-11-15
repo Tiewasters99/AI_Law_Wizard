@@ -1,7 +1,11 @@
 // Controller for admin clients API endpoints
 
 import { NextRequest } from "next/server";
-import { requireAdminAuth, getClientIP, getUserAgent } from "../../../utils/adminAuth";
+import {
+  requireAdminAuth,
+  getClientIP,
+  getUserAgent,
+} from "../../../utils/adminAuth";
 import {
   listClients,
   getClient,
@@ -33,9 +37,16 @@ export async function handleListClients(request: NextRequest) {
       | "totalSpent"
       | "purchaseCount"
       | undefined;
-    const sortOrder = (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
+    const sortOrder =
+      (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
 
-    const result = await listClients({ page, limit, search, sortBy, sortOrder });
+    const result = await listClients({
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+    });
 
     return successResponse(result);
   } catch (error) {
@@ -120,4 +131,3 @@ export async function handleDeleteClient(request: NextRequest, id: string) {
     return errorResponse(error, "Failed to delete client");
   }
 }
-

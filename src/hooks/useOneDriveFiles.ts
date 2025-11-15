@@ -27,9 +27,10 @@ export function useOneDriveFiles(
         params.append("pageSize", "100");
         params.append("orderBy", "name");
 
-        const endpoint = role === "client"
-          ? `/api/client/onedrive?${params.toString()}`
-          : `/api/attorney/onedrive?${params.toString()}`;
+        const endpoint =
+          role === "client"
+            ? `/api/client/onedrive?${params.toString()}`
+            : `/api/attorney/onedrive?${params.toString()}`;
 
         const response = await fetch(endpoint);
         const data = await response.json();

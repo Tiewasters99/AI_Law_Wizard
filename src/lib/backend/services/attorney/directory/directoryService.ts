@@ -9,14 +9,11 @@ import { prisma } from "../../../prisma";
  */
 export async function getClientDirectory(attorneyId: string) {
   // Fetch consultation requests for this attorney
-  const consultationRequests = await findConsultationRequestsByAttorneyId(
-    attorneyId
-  );
+  const consultationRequests =
+    await findConsultationRequestsByAttorneyId(attorneyId);
 
   // Get unique client IDs
-  const clientIds = [
-    ...new Set(consultationRequests.map(req => req.clientId)),
-  ];
+  const clientIds = [...new Set(consultationRequests.map(req => req.clientId))];
 
   // Fetch client details
   const users = await prisma.user.findMany({
@@ -61,4 +58,3 @@ export async function getClientDirectory(attorneyId: string) {
     };
   });
 }
-

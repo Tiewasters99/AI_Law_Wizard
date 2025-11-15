@@ -21,4 +21,3 @@ export async function handleGetFeatureSpending(request: NextRequest) {
     return errorResponse(error, "Failed to fetch feature spending statistics");
   }
 }
-

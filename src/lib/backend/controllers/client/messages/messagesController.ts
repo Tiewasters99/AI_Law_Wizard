@@ -64,4 +64,3 @@ export async function handleSendMessage(
     return errorResponse(error, "Failed to send message");
   }
 }
-

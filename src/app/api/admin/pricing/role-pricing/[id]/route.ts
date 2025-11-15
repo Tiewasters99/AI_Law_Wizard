@@ -19,4 +19,3 @@ export async function DELETE(
   const { id } = await params;
   return handleDeleteRolePricing(request, id);
 }
-

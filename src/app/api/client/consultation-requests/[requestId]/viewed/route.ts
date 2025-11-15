@@ -12,10 +12,5 @@ export async function POST(
 ) {
   const session = await getServerSession(authOptions);
   const { requestId } = await params;
-  return handleMarkRequestAsViewed(
-    request,
-    requestId,
-    session?.user?.id || ""
-  );
+  return handleMarkRequestAsViewed(request, requestId, session?.user?.id || "");
 }
-

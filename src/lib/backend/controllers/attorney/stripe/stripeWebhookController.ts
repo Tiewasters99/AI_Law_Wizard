@@ -32,10 +32,7 @@ export async function handleStripeWebhook(
       );
     } catch (error) {
       console.error("Webhook signature verification failed:", error);
-      return errorResponse(
-        error,
-        "Webhook signature verification failed"
-      );
+      return errorResponse(error, "Webhook signature verification failed");
     }
 
     // Process webhook event
@@ -49,4 +46,3 @@ export async function handleStripeWebhook(
     );
   }
 }
-

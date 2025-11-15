@@ -36,4 +36,3 @@ export async function handleCreatePaymentIntent(
     return errorResponse(error, "Failed to create payment intent");
   }
 }
-

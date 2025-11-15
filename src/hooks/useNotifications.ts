@@ -92,7 +92,7 @@ export function useNotifications() {
     } catch (err) {
       // Handle different types of errors
       let errorMessage = "Unknown error";
-      
+
       if (err instanceof TypeError && err.message.includes("fetch")) {
         // Network error (e.g., "Failed to fetch")
         errorMessage = "Network error: Unable to connect to server";

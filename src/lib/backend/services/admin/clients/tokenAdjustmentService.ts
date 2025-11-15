@@ -1,7 +1,7 @@
 // Service for admin client token adjustments
 
 import { adjustClientTokens } from "../../../repositories/admin/clients/tokenAdjustmentRepository";
-import { findClientById } from "../../clients/clientsRepository";
+import { findClientById } from "../../../repositories/admin/clients/clientsRepository";
 import { ValidationError, NotFoundError } from "../../../utils/errors";
 
 /**
@@ -32,7 +32,12 @@ export async function adjustClientTokenBalance(
     throw new ValidationError("Amount cannot be zero");
   }
 
-  const newBalance = await adjustClientTokens(userId, amount, reason.trim(), adminId);
+  const newBalance = await adjustClientTokens(
+    userId,
+    amount,
+    reason.trim(),
+    adminId
+  );
 
   return {
     success: true,
@@ -41,4 +46,3 @@ export async function adjustClientTokenBalance(
     adjustment: amount,
   };
 }
-

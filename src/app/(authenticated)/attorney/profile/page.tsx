@@ -145,7 +145,9 @@ export default function ProfilePage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-foreground">Profile</h1>
-            <p className="text-muted-foreground mt-1">Manage your attorney profile</p>
+            <p className="text-muted-foreground mt-1">
+              Manage your attorney profile
+            </p>
           </div>
         </div>
         {profileData && (

@@ -40,4 +40,3 @@ export async function handleGetRolePricing(
     return errorResponse(error, "Failed to fetch role-specific pricing");
   }
 }
-

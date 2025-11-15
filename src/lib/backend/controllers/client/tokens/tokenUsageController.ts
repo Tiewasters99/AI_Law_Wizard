@@ -18,4 +18,3 @@ export async function handleGetTokenUsage(userId: string): Promise<Response> {
     return errorResponse(error, "Failed to fetch usage stats");
   }
 }
-

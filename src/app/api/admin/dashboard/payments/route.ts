@@ -4,4 +4,3 @@ import { handleGetPayments } from "@/lib/backend/controllers/admin/dashboard/pay
 export async function GET(request: NextRequest) {
   return handleGetPayments(request);
 }
-

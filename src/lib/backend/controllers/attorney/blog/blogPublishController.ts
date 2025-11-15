@@ -33,4 +33,3 @@ export async function handlePublishBlog(
     return errorResponse(error, "Failed to update blog publish status");
   }
 }
-

@@ -1,7 +1,10 @@
 // Service for attorney document analysis functionality
 
 import { openRouterService } from "../../openRouterService";
-import { createDocumentQuery, findDocumentQueries } from "../../../repositories/attorney/documentQueryRepository";
+import {
+  createDocumentQuery,
+  findDocumentQueries,
+} from "../../../repositories/attorney/documentQueryRepository";
 import { findUserById } from "../../../repositories/common/userRepository";
 import { getUserNamespace } from "../../../config/pineconeConfig";
 import { deductTokens } from "../../../tokenService";
@@ -68,7 +71,12 @@ export async function performDocumentAnalysis(
       completedSteps: 1,
       toolsUsed: ["openrouter_ai"],
       filesProcessed: request.fileName
-        ? [{ fileName: request.fileName, fileSize: request.fileContent?.length || 0 }]
+        ? [
+            {
+              fileName: request.fileName,
+              fileSize: request.fileContent?.length || 0,
+            },
+          ]
         : undefined,
       userId,
     });
@@ -84,10 +92,13 @@ export async function performDocumentAnalysis(
     tokenCost = await getFeatureTokenCost("wizard", "ATTORNEY");
   } catch (pricingError) {
     // Fallback to default if pricing not found
-    console.error('Failed to get pricing for feature "wizard" (ATTORNEY):', pricingError);
+    console.error(
+      'Failed to get pricing for feature "wizard" (ATTORNEY):',
+      pricingError
+    );
     tokenCost = 5;
   }
-  
+
   try {
     await deductTokens(
       userId,
@@ -153,4 +164,3 @@ export async function getDocumentAnalysisHistory(
     },
   };
 }
-

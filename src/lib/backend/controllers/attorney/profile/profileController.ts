@@ -43,4 +43,3 @@ export async function handleUpdateProfile(
     return errorResponse(error, "Failed to update profile");
   }
 }
-

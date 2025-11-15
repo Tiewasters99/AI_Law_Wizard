@@ -116,4 +116,3 @@ export async function getChatSession(sessionId: string) {
     updatedAt: session.updatedAt,
   };
 }
-

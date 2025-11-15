@@ -7,9 +7,7 @@ import { successResponse, errorResponse } from "../../../utils/response";
 /**
  * Handle GET request - Get token balance
  */
-export async function handleGetTokenBalance(
-  userId: string
-): Promise<Response> {
+export async function handleGetTokenBalance(userId: string): Promise<Response> {
   try {
     await verifyClientAccess(userId);
 
@@ -20,4 +18,3 @@ export async function handleGetTokenBalance(
     return errorResponse(error, "Failed to fetch token balance");
   }
 }
-

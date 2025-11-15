@@ -68,4 +68,3 @@ export async function deleteRolePricing(id: string, adminId: string) {
     },
   });
 }
-

@@ -134,7 +134,9 @@ export default function DocumentAssistantPage() {
   useEffect(() => {
     const fetchTokenCost = async () => {
       try {
-        const response = await fetch("/api/pricing/feature-pricing?feature=document-assistant&role=CUSTOMER");
+        const response = await fetch(
+          "/api/pricing/feature-pricing?feature=document-assistant&role=CUSTOMER"
+        );
         if (response.ok) {
           const data = await response.json();
           if (data.pricing?.tokens) {
@@ -374,7 +376,7 @@ export default function DocumentAssistantPage() {
         setIsQueryLoading(false);
       }
     },
-    [session?.user?.id, balance, sessionId, refetchBalance]
+    [session?.user?.id, balance, sessionId, refetchBalance, tokenCost]
   );
 
   if (isLoading || isLoadingSession || balanceLoading) {

@@ -31,10 +31,7 @@ export async function getClientProfile(clientId: string) {
   }
 
   // Calculate token statistics
-  const totalPurchased = await aggregateTokenTransactions(
-    clientId,
-    "PURCHASE"
-  );
+  const totalPurchased = await aggregateTokenTransactions(clientId, "PURCHASE");
   const totalConsumed = await aggregateTokenTransactions(
     clientId,
     "CONSUMPTION"
@@ -108,4 +105,3 @@ export async function updateClientProfile(
     bio: updatedUser.bio,
   };
 }
-

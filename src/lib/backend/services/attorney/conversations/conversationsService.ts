@@ -51,4 +51,3 @@ export async function getConversationMessages(
   // Fetch messages
   return await findMessagesByConversationId(conversationId);
 }
-

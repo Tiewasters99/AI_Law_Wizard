@@ -20,7 +20,9 @@ export interface TokenPackageWithRolePricing {
 /**
  * Find all active token packages with role pricing
  */
-export async function findActivePackages(): Promise<TokenPackageWithRolePricing[]> {
+export async function findActivePackages(): Promise<
+  TokenPackageWithRolePricing[]
+> {
   return await prisma.tokenPackage.findMany({
     where: {
       isActive: true,
@@ -46,7 +48,9 @@ export async function findPackageByIdWithRolePricing(
   role?: Role
 ): Promise<TokenPackageWithRolePricing | null> {
   const where: any = { id: packageId };
-  const rolePricingWhere: any = role ? { role, isActive: true } : { isActive: true };
+  const rolePricingWhere: any = role
+    ? { role, isActive: true }
+    : { isActive: true };
 
   return await prisma.tokenPackage.findUnique({
     where,
@@ -85,7 +89,9 @@ export async function findActivePackagesByRole(
 /**
  * Find all token packages (admin use - includes inactive)
  */
-export async function findAllPackages(): Promise<TokenPackageWithRolePricing[]> {
+export async function findAllPackages(): Promise<
+  TokenPackageWithRolePricing[]
+> {
   return await prisma.tokenPackage.findMany({
     include: {
       RolePricing: true,
@@ -172,4 +178,3 @@ export async function hasPackagePurchases(id: string): Promise<boolean> {
   });
   return !!purchase;
 }
-

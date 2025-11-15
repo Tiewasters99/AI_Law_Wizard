@@ -21,4 +21,3 @@ export async function handleListAdmins(request: NextRequest) {
     return errorResponse(error, "Failed to fetch admins");
   }
 }
-

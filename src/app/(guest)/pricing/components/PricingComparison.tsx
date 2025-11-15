@@ -147,9 +147,7 @@ export function PricingComparison({
                 <Shield className="w-5 h-5 text-primary" />
               )}
             </div>
-            <h3 className="font-semibold text-sm text-foreground">
-              {feature}
-            </h3>
+            <h3 className="font-semibold text-sm text-foreground">{feature}</h3>
           </motion.div>
         ))}
       </div>
@@ -163,7 +161,9 @@ export function PricingComparison({
           })
           .map((pkg, index) => {
             const isPopular = index === 1; // Mark middle package as popular
-            const rolePricing = pkg.RolePricing?.find(rp => rp.role === role && rp.isActive);
+            const rolePricing = pkg.RolePricing?.find(
+              rp => rp.role === role && rp.isActive
+            );
             const priceInCents = rolePricing?.priceInCents || 0;
 
             return (
@@ -216,7 +216,9 @@ export function PricingComparison({
                     <div className="space-y-2 mb-6">
                       <div className="flex items-center text-sm">
                         <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
-                        <span>{pkg.tokens.toLocaleString()} tokens included</span>
+                        <span>
+                          {pkg.tokens.toLocaleString()} tokens included
+                        </span>
                       </div>
                       <div className="flex items-center text-sm">
                         <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
@@ -235,9 +237,7 @@ export function PricingComparison({
                     <Button
                       onClick={() => onSelectPackage(pkg)}
                       className={`w-full ${
-                        isPopular
-                          ? "bg-primary hover:bg-primary/90"
-                          : ""
+                        isPopular ? "bg-primary hover:bg-primary/90" : ""
                       }`}
                       size="lg"
                       disabled={!isAuthenticated}

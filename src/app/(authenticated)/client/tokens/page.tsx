@@ -89,13 +89,16 @@ export default function TokensPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<StripeTokenPackage | null>(
+  const [selectedPackage, setSelectedPackage] =
+    useState<StripeTokenPackage | null>(null);
+  const [activeTab, setActiveTab] = useState("packages");
+  const [stripePackages, setStripePackages] = useState<StripeTokenPackage[]>(
+    []
+  );
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(
     null
   );
-  const [activeTab, setActiveTab] = useState("packages");
-  const [stripePackages, setStripePackages] = useState<StripeTokenPackage[]>([]);
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [primaryColorHex, setPrimaryColorHex] = useState("#2563eb");
   const [featurePricing, setFeaturePricing] = useState<any[]>([]);
@@ -120,7 +123,9 @@ export default function TokensPage() {
   useEffect(() => {
     const loadFeaturePricing = async () => {
       try {
-        const response = await fetch("/api/pricing/feature-pricing?role=CUSTOMER");
+        const response = await fetch(
+          "/api/pricing/feature-pricing?role=CUSTOMER"
+        );
         if (response.ok) {
           const data = await response.json();
           const pricing = Array.isArray(data.pricing) ? data.pricing : [];
@@ -137,105 +142,108 @@ export default function TokensPage() {
   useEffect(() => {
     // Get primary color from theme on mount and theme changes
     setPrimaryColorHex(getPrimaryColorHex());
-    
+
     // Listen for theme changes
     const observer = new MutationObserver(() => {
       setPrimaryColorHex(getPrimaryColorHex());
     });
-    
+
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class'],
+      attributeFilter: ["class"],
     });
-    
+
     return () => observer.disconnect();
   }, []);
 
   // Convert Stripe packages to display format
-  const tokenPackages: TokenPackage[] = stripePackages.length > 0
-    ? stripePackages.map((pkg, index) => ({
-        id: pkg.id,
-        name: pkg.name,
-        tokens: pkg.tokens,
-        price: pkg.priceInCents / 100,
-        popular: index === 1, // Mark second package as popular
-        features: [
-          `${pkg.tokens} tokens`,
-          "All legal chat access",
-          "Document analysis",
-          "Legal research",
-        ],
-        description: pkg.description || `${pkg.tokens} tokens for legal services`,
-      }))
-    : [
-    {
-      id: "starter",
-      name: "Starter Pack",
-      tokens: 100,
-      price: 9.99,
-      features: [
-        "100 tokens",
-        "Basic legal chat access",
-        "Document upload (5 tokens each)",
-        "Email support",
-      ],
-      description: "Perfect for getting started with basic legal assistance",
-    },
-    {
-      id: "professional",
-      name: "Professional Pack",
-      tokens: 500,
-      price: 39.99,
-      originalPrice: 49.99,
-      discount: 20,
-      popular: true,
-      features: [
-        "500 tokens",
-        "All chat tiers access",
-        "Document analysis (5 tokens each)",
-        "Legal Chat access",
-        "Priority support",
-        "Advanced features",
-      ],
-      description: "Most popular choice for regular legal needs",
-    },
-    {
-      id: "business",
-      name: "Business Pack",
-      tokens: 1000,
-      price: 69.99,
-      originalPrice: 99.99,
-      discount: 30,
-      features: [
-        "1000 tokens",
-        "All features included",
-        "Grand Wizard access",
-        "Bulk document processing",
-        "API access",
-        "Dedicated support",
-        "Custom integrations",
-      ],
-      description: "Ideal for businesses with high legal document volume",
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise Pack",
-      tokens: 2500,
-      price: 149.99,
-      originalPrice: 249.99,
-      discount: 40,
-      features: [
-        "2500 tokens",
-        "Unlimited access to all features",
-        "White-label options",
-        "Custom AI training",
-        "24/7 phone support",
-        "SLA guarantee",
-        "On-premise deployment",
-      ],
-      description: "For large organizations with extensive legal needs",
-    },
-  ];
+  const tokenPackages: TokenPackage[] =
+    stripePackages.length > 0
+      ? stripePackages.map((pkg, index) => ({
+          id: pkg.id,
+          name: pkg.name,
+          tokens: pkg.tokens,
+          price: (pkg.priceInCents ?? 0) / 100,
+          popular: index === 1, // Mark second package as popular
+          features: [
+            `${pkg.tokens} tokens`,
+            "All legal chat access",
+            "Document analysis",
+            "Legal research",
+          ],
+          description:
+            pkg.description || `${pkg.tokens} tokens for legal services`,
+        }))
+      : [
+          {
+            id: "starter",
+            name: "Starter Pack",
+            tokens: 100,
+            price: 9.99,
+            features: [
+              "100 tokens",
+              "Basic legal chat access",
+              "Document upload (5 tokens each)",
+              "Email support",
+            ],
+            description:
+              "Perfect for getting started with basic legal assistance",
+          },
+          {
+            id: "professional",
+            name: "Professional Pack",
+            tokens: 500,
+            price: 39.99,
+            originalPrice: 49.99,
+            discount: 20,
+            popular: true,
+            features: [
+              "500 tokens",
+              "All chat tiers access",
+              "Document analysis (5 tokens each)",
+              "Legal Chat access",
+              "Priority support",
+              "Advanced features",
+            ],
+            description: "Most popular choice for regular legal needs",
+          },
+          {
+            id: "business",
+            name: "Business Pack",
+            tokens: 1000,
+            price: 69.99,
+            originalPrice: 99.99,
+            discount: 30,
+            features: [
+              "1000 tokens",
+              "All features included",
+              "Grand Wizard access",
+              "Bulk document processing",
+              "API access",
+              "Dedicated support",
+              "Custom integrations",
+            ],
+            description: "Ideal for businesses with high legal document volume",
+          },
+          {
+            id: "enterprise",
+            name: "Enterprise Pack",
+            tokens: 2500,
+            price: 149.99,
+            originalPrice: 249.99,
+            discount: 40,
+            features: [
+              "2500 tokens",
+              "Unlimited access to all features",
+              "White-label options",
+              "Custom AI training",
+              "24/7 phone support",
+              "SLA guarantee",
+              "On-premise deployment",
+            ],
+            description: "For large organizations with extensive legal needs",
+          },
+        ];
 
   // Get feature costs from database, with fallback to defaults
   const getFeatureCost = (featureName: string): number => {
@@ -251,8 +259,11 @@ export default function TokensPage() {
 
   // Map feature pricing to display format
   const features = useMemo(() => {
-    const featureMap = new Map<string, { name: string; cost: number; description: string }>();
-    
+    const featureMap = new Map<
+      string,
+      { name: string; cost: number; description: string }
+    >();
+
     // Add features from database
     featurePricing
       .filter(fp => fp.role === "CUSTOMER" || fp.role === null)
@@ -270,7 +281,11 @@ export default function TokensPage() {
     // Fallback defaults if no pricing found
     if (featureMap.size === 0) {
       return [
-        { name: "Legal Chat", cost: 2, description: "Basic AI legal assistance" },
+        {
+          name: "Legal Chat",
+          cost: 2,
+          description: "Basic AI legal assistance",
+        },
         {
           name: "Document Analysis",
           cost: 5,
@@ -281,7 +296,11 @@ export default function TokensPage() {
           cost: 5,
           description: "Ultimate AI with master-level insights",
         },
-        { name: "File Upload", cost: 0, description: "Upload documents (free)" },
+        {
+          name: "File Upload",
+          cost: 0,
+          description: "Upload documents (free)",
+        },
         {
           name: "Consultation Request",
           cost: 0,
@@ -614,7 +633,9 @@ export default function TokensPage() {
                         <h4 className="font-semibold text-foreground">
                           {selectedPackage.name}
                         </h4>
-                        <p className="text-primary">{selectedPackage.tokens} tokens</p>
+                        <p className="text-primary">
+                          {selectedPackage.tokens} tokens
+                        </p>
                         {selectedPackage.description && (
                           <p className="text-sm text-muted-foreground mt-1">
                             {selectedPackage.description}
@@ -623,11 +644,12 @@ export default function TokensPage() {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-foreground">
-                          {formatPrice(selectedPackage.priceInCents)}
+                          {formatPrice(selectedPackage.priceInCents ?? 0)}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {formatPrice(
-                            selectedPackage.priceInCents / selectedPackage.tokens
+                            (selectedPackage.priceInCents ?? 0) /
+                              selectedPackage.tokens
                           )}{" "}
                           per token
                         </div>
@@ -662,96 +684,96 @@ export default function TokensPage() {
             {!showPaymentForm && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {tokenPackages.map(pkg => (
-                <motion.div
-                  key={pkg.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`relative ${pkg.popular ? "lg:scale-105" : ""}`}
-                >
-                  {pkg.popular && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                      <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-                        <Star className="w-3 h-3 mr-1" />
-                        Most Popular
-                      </Badge>
-                    </div>
-                  )}
-
-                  <Card
-                    className={`h-full ${
-                      pkg.popular ? "ring-2 ring-purple-500 shadow-lg" : ""
-                    }`}
+                  <motion.div
+                    key={pkg.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`relative ${pkg.popular ? "lg:scale-105" : ""}`}
                   >
-                    <CardHeader className="text-center pb-4">
-                      <div className="flex items-center justify-center mb-2">
-                        <Crown className="w-8 h-8 text-primary" />
+                    {pkg.popular && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                        <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                          <Star className="w-3 h-3 mr-1" />
+                          Most Popular
+                        </Badge>
                       </div>
-                      <CardTitle className="text-xl">{pkg.name}</CardTitle>
-                      <div className="space-y-1">
-                        <div className="text-3xl font-bold text-primary">
-                          {pkg.tokens.toLocaleString()} tokens
+                    )}
+
+                    <Card
+                      className={`h-full ${
+                        pkg.popular ? "ring-2 ring-purple-500 shadow-lg" : ""
+                      }`}
+                    >
+                      <CardHeader className="text-center pb-4">
+                        <div className="flex items-center justify-center mb-2">
+                          <Crown className="w-8 h-8 text-primary" />
                         </div>
-                        <div className="flex items-center justify-center space-x-2">
-                          <span className="text-2xl font-bold text-gray-900">
-                            ${pkg.price}
-                          </span>
-                          {pkg.originalPrice && (
-                            <span className="text-lg text-gray-500 line-through">
-                              ${pkg.originalPrice}
+                        <CardTitle className="text-xl">{pkg.name}</CardTitle>
+                        <div className="space-y-1">
+                          <div className="text-3xl font-bold text-primary">
+                            {pkg.tokens.toLocaleString()} tokens
+                          </div>
+                          <div className="flex items-center justify-center space-x-2">
+                            <span className="text-2xl font-bold text-gray-900">
+                              ${pkg.price}
                             </span>
+                            {pkg.originalPrice && (
+                              <span className="text-lg text-gray-500 line-through">
+                                ${pkg.originalPrice}
+                              </span>
+                            )}
+                          </div>
+                          {pkg.discount && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-green-100 text-green-800"
+                            >
+                              {pkg.discount}% OFF
+                            </Badge>
                           )}
                         </div>
-                        {pkg.discount && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-100 text-green-800"
-                          >
-                            {pkg.discount}% OFF
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
+                      </CardHeader>
 
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-gray-600 text-center">
-                        {pkg.description}
-                      </p>
+                      <CardContent className="space-y-4">
+                        <p className="text-sm text-gray-600 text-center">
+                          {pkg.description}
+                        </p>
 
-                      <div className="space-y-2">
-                        {pkg.features.map((feature, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center space-x-2"
-                          >
-                            <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                            <span className="text-sm text-gray-600">
-                              {feature}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                        <div className="space-y-2">
+                          {pkg.features.map((feature, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center space-x-2"
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              <span className="text-sm text-gray-600">
+                                {feature}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
 
-                      <Button
-                        className="w-full"
-                        onClick={() => handlePurchasePackage(pkg)}
-                        disabled={paymentLoading}
-                        variant={pkg.popular ? "default" : "outline"}
-                      >
-                        {paymentLoading && selectedPackage?.id === pkg.id ? (
-                          <>
-                            <Clock className="w-4 h-4 mr-2 animate-spin" />
-                            Loading...
-                          </>
-                        ) : (
-                          <>
-                            <CreditCard className="w-4 h-4 mr-2" />
-                            Purchase Now
-                          </>
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                        <Button
+                          className="w-full"
+                          onClick={() => handlePurchasePackage(pkg)}
+                          disabled={paymentLoading}
+                          variant={pkg.popular ? "default" : "outline"}
+                        >
+                          {paymentLoading && selectedPackage?.id === pkg.id ? (
+                            <>
+                              <Clock className="w-4 h-4 mr-2 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Purchase Now
+                            </>
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -873,15 +895,20 @@ export default function TokensPage() {
                                   </span>
                                   {item.count !== undefined && (
                                     <span className="text-xs text-muted-foreground ml-2">
-                                      ({item.count} {item.count === 1 ? "use" : "uses"})
+                                      ({item.count}{" "}
+                                      {item.count === 1 ? "use" : "uses"})
                                     </span>
                                   )}
                                 </div>
                                 <span className="text-sm text-muted-foreground">
-                                  {item.tokens} credits ({item.percentage.toFixed(1)}%)
+                                  {item.tokens} credits (
+                                  {item.percentage.toFixed(1)}%)
                                 </span>
                               </div>
-                              <Progress value={item.percentage} className="h-2" />
+                              <Progress
+                                value={item.percentage}
+                                className="h-2"
+                              />
                             </div>
                           );
                         })}
@@ -951,7 +978,10 @@ export default function TokensPage() {
                             {transaction.amount > 0 ? "+" : ""}
                             {Math.abs(transaction.amount)} credits
                           </div>
-                          <Badge variant="outline" className="text-xs sm:text-sm">
+                          <Badge
+                            variant="outline"
+                            className="text-xs sm:text-sm"
+                          >
                             {transaction.status}
                           </Badge>
                         </div>

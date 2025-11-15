@@ -4,4 +4,3 @@ import { handleGetFeatureSpending } from "@/lib/backend/controllers/admin/dashbo
 export async function GET(request: NextRequest) {
   return handleGetFeatureSpending(request);
 }
-

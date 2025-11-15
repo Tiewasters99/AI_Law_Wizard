@@ -58,4 +58,3 @@ export async function handleDeletePackage(
     return errorResponse(error, "Failed to delete package");
   }
 }
-

@@ -107,8 +107,6 @@ export function ClientTopBar() {
 
       {/* Right Side Actions */}
       <div className="flex items-center space-x-2 sm:space-x-3">
-
-
         {/* Notification Bell */}
         <Button
           variant="outline"

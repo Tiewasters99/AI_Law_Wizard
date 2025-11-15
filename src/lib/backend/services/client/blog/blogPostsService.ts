@@ -1,6 +1,9 @@
 // Service for client blog posts functionality
 
-import { findAllBlogs, findBlogById } from "../../../repositories/attorney/blogRepository";
+import {
+  findAllBlogs,
+  findBlogById,
+} from "../../../repositories/attorney/blogRepository";
 import { NotFoundError } from "../../../utils/errors";
 
 export interface BlogFilterOptions {
@@ -11,9 +14,7 @@ export interface BlogFilterOptions {
 /**
  * Get published blog posts for clients
  */
-export async function getPublishedBlogPosts(
-  filters: BlogFilterOptions = {}
-) {
+export async function getPublishedBlogPosts(filters: BlogFilterOptions = {}) {
   const allBlogs = await findAllBlogs();
 
   // Filter only published blogs
@@ -85,4 +86,3 @@ export async function getPublishedBlogPostById(id: string) {
     updatedAt: blog.updatedAt,
   };
 }
-

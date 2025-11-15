@@ -1,7 +1,7 @@
 // Service for admin attorney token adjustments
 
 import { adjustAttorneyTokens } from "../../../repositories/admin/attorneys/tokenAdjustmentRepository";
-import { findAttorneyById } from "../../attorneys/attorneysRepository";
+import { findAttorneyById } from "../../../repositories/admin/attorneys/attorneysRepository";
 import { ValidationError, NotFoundError } from "../../../utils/errors";
 
 /**
@@ -32,7 +32,12 @@ export async function adjustAttorneyTokenBalance(
     throw new ValidationError("Amount cannot be zero");
   }
 
-  const newBalance = await adjustAttorneyTokens(userId, amount, reason.trim(), adminId);
+  const newBalance = await adjustAttorneyTokens(
+    userId,
+    amount,
+    reason.trim(),
+    adminId
+  );
 
   return {
     success: true,
@@ -41,4 +46,3 @@ export async function adjustAttorneyTokenBalance(
     adjustment: amount,
   };
 }
-

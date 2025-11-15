@@ -128,9 +128,7 @@ export async function createNewChatSession(
 /**
  * Get a chat session by ID
  */
-export async function getChatSession(
-  sessionId: string
-): Promise<ChatSession> {
+export async function getChatSession(sessionId: string): Promise<ChatSession> {
   const session = await findChatSessionById(sessionId);
   if (!session) {
     throw new NotFoundError("Chat session");
@@ -154,11 +152,6 @@ export async function removeChatSession(sessionId: string): Promise<void> {
  */
 export function generateSessionTitle(firstMessage: string): string {
   // Take first 50 characters and clean up
-  const title = firstMessage
-    .trim()
-    .split("\n")[0]
-    .substring(0, 50)
-    .trim();
+  const title = firstMessage.trim().split("\n")[0].substring(0, 50).trim();
   return title || "New Chat";
 }
-

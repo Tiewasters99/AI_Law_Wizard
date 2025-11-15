@@ -130,4 +130,3 @@ export async function findDocumentQueriesByUserId(
   const result = await findDocumentQueries(where, 0, 1000);
   return result.queries;
 }
-

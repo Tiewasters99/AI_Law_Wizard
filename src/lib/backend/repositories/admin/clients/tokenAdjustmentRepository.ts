@@ -11,7 +11,7 @@ export async function adjustClientTokens(
   reason: string,
   adminId: string
 ) {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async tx => {
     // Get or create wallet
     let wallet = await tx.wallet.findUnique({
       where: { userId },
@@ -56,4 +56,3 @@ export async function adjustClientTokens(
     return updatedWallet.balance;
   });
 }
-

@@ -10,4 +10,3 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   return handleDownloadFile(request, session?.user?.id);
 }
-

@@ -42,7 +42,10 @@ interface PricingCalculatorProps {
   featurePricing?: FeaturePricing[];
 }
 
-export function PricingCalculator({ role, featurePricing = [] }: PricingCalculatorProps) {
+export function PricingCalculator({
+  role,
+  featurePricing = [],
+}: PricingCalculatorProps) {
   const [usage, setUsage] = useState({
     documentAnalysis: 0,
     consultations: 0,
@@ -60,16 +63,19 @@ export function PricingCalculator({ role, featurePricing = [] }: PricingCalculat
     const featureMap: Map<string, TokenCost> = new Map();
 
     // Feature icon mapping
-    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    const iconMap: Record<
+      string,
+      React.ComponentType<{ className?: string }>
+    > = {
       "document-assistant": FileText,
       "document-analysis": FileText,
-      "wizard": MessageSquare,
+      wizard: MessageSquare,
       "grand-wizard": MessageSquare,
       "legal-research": Search,
       "consultation-request": MessageSquare,
-      "analytics": BarChart3,
-      "directory": Users,
-      "chat": Zap,
+      analytics: BarChart3,
+      directory: Users,
+      chat: Zap,
     };
 
     // Add features from database
@@ -78,7 +84,7 @@ export function PricingCalculator({ role, featurePricing = [] }: PricingCalculat
       .forEach(fp => {
         const key = fp.feature.toLowerCase();
         const icon = iconMap[key] || Zap;
-        
+
         if (!featureMap.has(key)) {
           featureMap.set(key, {
             feature: fp.displayName,

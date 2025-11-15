@@ -11,7 +11,9 @@ export interface Wallet {
 /**
  * Find wallet by user ID
  */
-export async function findWalletByUserId(userId: string): Promise<Wallet | null> {
+export async function findWalletByUserId(
+  userId: string
+): Promise<Wallet | null> {
   return await prisma.wallet.findUnique({
     where: { userId },
   });
@@ -53,4 +55,3 @@ export async function createWalletWithStarterTokens(
     },
   });
 }
-

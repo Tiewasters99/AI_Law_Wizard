@@ -73,7 +73,9 @@ export function CaseSearchResults({
           <p className="text-muted-foreground font-medium">
             Searching PACER database...
           </p>
-          <p className="text-sm text-muted-foreground/70">This may take a few moments</p>
+          <p className="text-sm text-muted-foreground/70">
+            This may take a few moments
+          </p>
         </div>
       </div>
     );
@@ -114,7 +116,9 @@ export function CaseSearchResults({
             </div>
             <div className="h-6 w-px bg-border" />
             <span className="text-sm text-muted-foreground">
-              <strong className="text-foreground font-bold">{totalCount}</strong>{" "}
+              <strong className="text-foreground font-bold">
+                {totalCount}
+              </strong>{" "}
               {totalCount === 1 ? "case" : "cases"} found
             </span>
           </div>

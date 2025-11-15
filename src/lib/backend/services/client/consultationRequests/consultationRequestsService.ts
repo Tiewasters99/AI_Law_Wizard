@@ -223,10 +223,7 @@ export async function updateClientConsultationRequestStatus(
 /**
  * Mark consultation request as viewed by client
  */
-export async function markRequestAsViewed(
-  requestId: string,
-  clientId: string
-) {
+export async function markRequestAsViewed(requestId: string, clientId: string) {
   // Verify consultation request belongs to user
   const consultationRequest = await prisma.consultationRequest.findFirst({
     where: {

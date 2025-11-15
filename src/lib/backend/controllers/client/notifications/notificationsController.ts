@@ -7,9 +7,7 @@ import { successResponse, errorResponse } from "../../../utils/response";
 /**
  * Handle GET request - Get unread notification counts
  */
-export async function handleGetUnreadCounts(
-  userId: string
-): Promise<Response> {
+export async function handleGetUnreadCounts(userId: string): Promise<Response> {
   try {
     await verifyClientAccess(userId);
 
@@ -20,4 +18,3 @@ export async function handleGetUnreadCounts(
     return errorResponse(error, "Failed to fetch notification counts");
   }
 }
-

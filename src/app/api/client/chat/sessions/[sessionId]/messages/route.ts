@@ -18,4 +18,3 @@ export async function GET(
   const { sessionId } = await params;
   return handleGetChatMessages(request, session.user.id, sessionId);
 }
-

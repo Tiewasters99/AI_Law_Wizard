@@ -20,4 +20,3 @@ export async function handleGetDirectory(userId: string): Promise<Response> {
     return errorResponse(error, "Failed to fetch users");
   }
 }
-

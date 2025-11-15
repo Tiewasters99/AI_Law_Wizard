@@ -24,10 +24,15 @@ export async function handleProcessDocuments(
     if (result.success) {
       return successResponse(result);
     } else {
-      return errorResponse(new Error(result.error), result.error || "Processing failed");
+      return errorResponse(
+        new Error(result.error),
+        result.error || "Processing failed"
+      );
     }
   } catch (error) {
-    return errorResponse(error, "Internal server error during document processing");
+    return errorResponse(
+      error,
+      "Internal server error during document processing"
+    );
   }
 }
-

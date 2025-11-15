@@ -35,4 +35,3 @@ export async function handleRegister(request: NextRequest) {
     return errorResponse(error, "An error occurred during registration");
   }
 }
-

@@ -45,4 +45,3 @@ export async function deleteBlogPost(id: string) {
   await deleteBlog(id);
   return { success: true };
 }
-

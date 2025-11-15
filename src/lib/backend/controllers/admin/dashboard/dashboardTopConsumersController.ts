@@ -26,4 +26,3 @@ export async function handleGetDashboardTopConsumers(request: NextRequest) {
     return errorResponse(error, "Failed to fetch top consumers data");
   }
 }
-

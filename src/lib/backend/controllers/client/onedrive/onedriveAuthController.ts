@@ -24,4 +24,3 @@ export async function handleGetClientOneDriveAuthUrl(
     return errorResponse(error, "Failed to generate auth URL");
   }
 }
-

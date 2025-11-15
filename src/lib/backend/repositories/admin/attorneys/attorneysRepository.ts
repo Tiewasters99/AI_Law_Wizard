@@ -1,6 +1,7 @@
 // Repository for admin attorneys database operations
 
 import { prisma } from "../../../prisma";
+import type { Prisma } from "@prisma/client";
 
 export interface AttorneyListItem {
   id: string;
@@ -17,18 +18,29 @@ export interface AttorneyListItem {
   totalSpent: number;
 }
 
-type SortField = "name" | "email" | "firmName" | "specialty" | "createdAt" | "tokenBalance" | "totalSpent" | "purchaseCount";
+type SortField =
+  | "name"
+  | "email"
+  | "firmName"
+  | "specialty"
+  | "createdAt"
+  | "tokenBalance"
+  | "totalSpent"
+  | "purchaseCount";
 type SortOrder = "asc" | "desc";
 
 /**
  * Get sort orderBy for Prisma
  */
-function getOrderBy(sortBy?: SortField, sortOrder: SortOrder = "desc") {
+function getOrderBy(
+  sortBy?: SortField,
+  sortOrder: SortOrder = "desc"
+): Prisma.UserOrderByWithRelationInput {
   if (!sortBy) {
-    return { createdAt: "desc" as const };
+    return { createdAt: "desc" };
   }
 
-  const order = sortOrder === "asc" ? "asc" : "desc";
+  const order: "asc" | "desc" = sortOrder === "asc" ? "asc" : "desc";
 
   switch (sortBy) {
     case "name":
@@ -47,7 +59,7 @@ function getOrderBy(sortBy?: SortField, sortOrder: SortOrder = "desc") {
       // These require aggregation, will handle in application layer
       return { createdAt: order };
     default:
-      return { createdAt: "desc" as const };
+      return { createdAt: "desc" };
   }
 }
 
@@ -73,8 +85,12 @@ export async function findAllAttorneys(
       { name: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
       { company: { contains: search, mode: "insensitive" } },
-      { lawyerProfile: { firmName: { contains: search, mode: "insensitive" } } },
-      { lawyerProfile: { specialty: { contains: search, mode: "insensitive" } } },
+      {
+        lawyerProfile: { firmName: { contains: search, mode: "insensitive" } },
+      },
+      {
+        lawyerProfile: { specialty: { contains: search, mode: "insensitive" } },
+      },
     ];
   }
 
@@ -112,7 +128,7 @@ export async function findAllAttorneys(
     prisma.user.count({ where }),
   ]);
 
-  const formattedAttorneys: AttorneyListItem[] = attorneys.map((attorney) => ({
+  const formattedAttorneys: AttorneyListItem[] = attorneys.map(attorney => ({
     id: attorney.id,
     name: attorney.name,
     email: attorney.email,
@@ -124,14 +140,17 @@ export async function findAllAttorneys(
     createdAt: attorney.createdAt,
     tokenBalance: attorney.wallet?.balance || 0,
     purchaseCount: attorney.purchases.length,
-    totalSpent: attorney.purchases.reduce(
-      (sum, p) => sum + p.amountPaid,
-      0
-    ),
+    totalSpent: attorney.purchases.reduce((sum, p) => sum + p.amountPaid, 0),
   }));
 
   // Sort by computed fields or nested fields if needed
-  if (sortBy === "tokenBalance" || sortBy === "totalSpent" || sortBy === "purchaseCount" || sortBy === "firmName" || sortBy === "specialty") {
+  if (
+    sortBy === "tokenBalance" ||
+    sortBy === "totalSpent" ||
+    sortBy === "purchaseCount" ||
+    sortBy === "firmName" ||
+    sortBy === "specialty"
+  ) {
     formattedAttorneys.sort((a, b) => {
       let comparison = 0;
       if (sortBy === "tokenBalance") {
@@ -159,7 +178,9 @@ export async function findAllAttorneys(
 /**
  * Get attorney by ID
  */
-export async function findAttorneyById(id: string): Promise<AttorneyListItem | null> {
+export async function findAttorneyById(
+  id: string
+): Promise<AttorneyListItem | null> {
   const attorney = await prisma.user.findFirst({
     where: {
       id,
@@ -268,4 +289,3 @@ export async function deleteAttorney(id: string) {
     },
   });
 }
-

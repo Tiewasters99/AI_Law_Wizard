@@ -114,7 +114,7 @@ export const fetchTokenPackages = async (
 
   const data = await response.json();
   const packages = data.packages || [];
-  
+
   // Map packages to include priceInCents based on role
   return packages.map((pkg: any) => {
     const rolePricing = pkg.RolePricing?.find(
@@ -135,9 +135,7 @@ export const fetchWallet = async (
   role: UserRole = "ATTORNEY"
 ): Promise<Wallet> => {
   const endpoint =
-    role === "CUSTOMER"
-      ? "/api/client/tokens/balance"
-      : "/api/attorney/wallet";
+    role === "CUSTOMER" ? "/api/client/tokens/balance" : "/api/attorney/wallet";
 
   const response = await fetch(endpoint);
 
@@ -176,9 +174,7 @@ export const consumeTokens = async (
   role: UserRole = "ATTORNEY"
 ) => {
   const endpoint =
-    role === "CUSTOMER"
-      ? "/api/client/tokens/consume"
-      : "/api/attorney/wallet";
+    role === "CUSTOMER" ? "/api/client/tokens/consume" : "/api/attorney/wallet";
 
   const body =
     role === "CUSTOMER"

@@ -4,4 +4,3 @@ import { handleListClients } from "@/lib/backend/controllers/admin/clients/clien
 export async function GET(request: NextRequest) {
   return handleListClients(request);
 }
-

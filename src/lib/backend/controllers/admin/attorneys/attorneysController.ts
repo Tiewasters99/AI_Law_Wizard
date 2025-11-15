@@ -1,7 +1,11 @@
 // Controller for admin attorneys API endpoints
 
 import { NextRequest } from "next/server";
-import { requireAdminAuth, getClientIP, getUserAgent } from "../../../utils/adminAuth";
+import {
+  requireAdminAuth,
+  getClientIP,
+  getUserAgent,
+} from "../../../utils/adminAuth";
 import {
   listAttorneys,
   getAttorney,
@@ -34,9 +38,16 @@ export async function handleListAttorneys(request: NextRequest) {
       | "totalSpent"
       | "purchaseCount"
       | undefined;
-    const sortOrder = (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
+    const sortOrder =
+      (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
 
-    const result = await listAttorneys({ page, limit, search, sortBy, sortOrder });
+    const result = await listAttorneys({
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+    });
 
     return successResponse(result);
   } catch (error) {
@@ -121,4 +132,3 @@ export async function handleDeleteAttorney(request: NextRequest, id: string) {
     return errorResponse(error, "Failed to delete attorney");
   }
 }
-

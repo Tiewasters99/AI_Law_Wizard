@@ -10,7 +10,10 @@ import {
  */
 export async function getTokenUsageStats(attorneyId: string) {
   // Get total purchased
-  const totalPurchased = await aggregateTokenTransactions(attorneyId, "PURCHASE");
+  const totalPurchased = await aggregateTokenTransactions(
+    attorneyId,
+    "PURCHASE"
+  );
 
   // Get total consumed
   const totalConsumed = await aggregateTokenTransactions(
@@ -53,5 +56,3 @@ export async function getTokenUsageStats(attorneyId: string) {
     breakdown,
   };
 }
-
-

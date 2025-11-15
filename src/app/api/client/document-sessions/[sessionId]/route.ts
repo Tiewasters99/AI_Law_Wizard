@@ -3,9 +3,7 @@
 import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/backend/auth";
-import {
-  handleUpdateSession,
-} from "@/lib/backend/controllers/client/documentAnalysis/documentSessionController";
+import { handleUpdateSession } from "@/lib/backend/controllers/client/documentAnalysis/documentSessionController";
 
 export async function PATCH(
   request: NextRequest,
@@ -13,12 +11,10 @@ export async function PATCH(
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { status: 401 }
-    );
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
   }
   const { sessionId } = await params;
   return handleUpdateSession(request, session.user.id, sessionId);
 }
-

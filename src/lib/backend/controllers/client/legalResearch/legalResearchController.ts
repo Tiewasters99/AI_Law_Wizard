@@ -37,7 +37,16 @@ export async function handleLegalResearch(
     }
 
     const body = await request.json();
-    const { query, jurisdiction, caseType, model, stream, sessionId, showReasoning, newChat } = body;
+    const {
+      query,
+      jurisdiction,
+      caseType,
+      model,
+      stream,
+      sessionId,
+      showReasoning,
+      newChat,
+    } = body;
 
     // Validate input
     const validatedQuery = validateNonEmptyString(query, "Research query");
@@ -61,7 +70,10 @@ export async function handleLegalResearch(
           const fallbackSession = await createNewChatSession(userId);
           activeSessionId = fallbackSession.id;
         } catch (fallbackError) {
-          console.error("Failed to create fallback chat session:", fallbackError);
+          console.error(
+            "Failed to create fallback chat session:",
+            fallbackError
+          );
           // Continue without sessionId - messages won't be saved but request can still proceed
           activeSessionId = undefined;
         }
@@ -86,7 +98,8 @@ export async function handleLegalResearch(
             });
 
             // Send content chunks as they arrive
-            let finalResult: { fullResult: string; sessionId?: string } | null = null;
+            let finalResult: { fullResult: string; sessionId?: string } | null =
+              null;
             let result = await streamGenerator.next();
 
             while (!result.done) {
@@ -102,7 +115,7 @@ export async function handleLegalResearch(
             // Capture the final return value (fullResult)
             if (result.done && result.value) {
               finalResult = result.value;
-              
+
               // Session title will be updated after messages are saved
             }
 

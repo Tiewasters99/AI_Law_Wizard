@@ -85,4 +85,3 @@ export async function deleteChatSession(id: string): Promise<void> {
     where: { id },
   });
 }
-

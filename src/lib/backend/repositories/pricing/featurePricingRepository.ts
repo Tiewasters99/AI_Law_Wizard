@@ -63,24 +63,15 @@ export async function findAllFeaturePricing(
     return await prisma.featurePricing.findMany({
       where: {
         isActive: true,
-        OR: [
-          { role },
-          { role: null },
-        ],
+        OR: [{ role }, { role: null }],
       },
-      orderBy: [
-        { feature: "asc" },
-        { role: "asc" },
-      ],
+      orderBy: [{ feature: "asc" }, { role: "asc" }],
     });
   }
 
   return await prisma.featurePricing.findMany({
     where,
-      orderBy: [
-        { feature: "asc" },
-        { role: "asc" },
-      ],
+    orderBy: [{ feature: "asc" }, { role: "asc" }],
   });
 }
 
@@ -170,4 +161,3 @@ export async function findFeaturePricingByFeature(
     },
   });
 }
-

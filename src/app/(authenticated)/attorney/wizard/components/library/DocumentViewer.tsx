@@ -1,9 +1,15 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { X, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface DocumentViewerProps {
   fileId: string;
@@ -66,17 +72,24 @@ export function DocumentViewer({
               title={fileName}
             />
           ) : isImage ? (
-            <img
-              src={fileUrl}
-              alt={fileName}
-              className="max-w-full h-auto mx-auto"
-            />
+            <div className="flex justify-center items-center">
+              <Image
+                src={fileUrl}
+                alt={fileName}
+                width={800}
+                height={600}
+                className="max-w-full h-auto"
+                style={{ objectFit: "contain" }}
+                unoptimized
+              />
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-muted-foreground">
               <FileText className="w-16 h-16 mb-4" />
               <p className="text-lg font-medium mb-2">Document Preview</p>
               <p className="text-sm mb-4">
-                Preview not available for this file type. Please download to view.
+                Preview not available for this file type. Please download to
+                view.
               </p>
               <Button onClick={() => onDownload(fileId)}>
                 <Download className="w-4 h-4 mr-2" />
@@ -89,4 +102,3 @@ export function DocumentViewer({
     </Dialog>
   );
 }
-

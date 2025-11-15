@@ -19,4 +19,3 @@ export async function handleGetUnreadCount(userId: string): Promise<Response> {
     return errorResponse(error, "Failed to fetch unread count");
   }
 }
-

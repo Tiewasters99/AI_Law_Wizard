@@ -7,22 +7,24 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  return handleGetAttorney(request, params.id);
+  const { id } = await params;
+  return handleGetAttorney(request, id);
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  return handleUpdateAttorney(request, params.id);
+  const { id } = await params;
+  return handleUpdateAttorney(request, id);
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  return handleDeleteAttorney(request, params.id);
+  const { id } = await params;
+  return handleDeleteAttorney(request, id);
 }
-

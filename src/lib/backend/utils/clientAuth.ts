@@ -44,4 +44,3 @@ export async function isClient(userId: string): Promise<boolean> {
 
   return user?.role === "CUSTOMER";
 }
-

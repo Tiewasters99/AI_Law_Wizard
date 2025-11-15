@@ -102,7 +102,7 @@ export async function handleUpdateFeaturePricing(
       feature,
       displayName,
       tokens,
-      role: role !== undefined ? (role || null) : undefined,
+      role: role !== undefined ? role || null : undefined,
       description,
       isActive,
     });
@@ -165,4 +165,3 @@ export async function handleGetFeaturePricingByFeature(request: NextRequest) {
     return errorResponse(error, "Failed to fetch feature pricing");
   }
 }
-

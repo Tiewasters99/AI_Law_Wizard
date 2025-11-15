@@ -21,4 +21,3 @@ export async function getClientUnreadCounts(clientId: string) {
     total: notifications + messages + pendingRequests,
   };
 }
-

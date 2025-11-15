@@ -256,4 +256,3 @@ export async function getFeaturePricingByFeature(
     updatedAt: pricing.updatedAt,
   }));
 }
-

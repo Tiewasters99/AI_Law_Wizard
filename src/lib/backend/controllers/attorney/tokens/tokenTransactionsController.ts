@@ -26,5 +26,3 @@ export async function handleGetTokenTransactions(
     return errorResponse(error, "Failed to fetch transactions");
   }
 }
-
-

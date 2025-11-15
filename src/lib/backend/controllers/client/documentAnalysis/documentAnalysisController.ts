@@ -34,7 +34,13 @@ export async function handleDocumentAnalysis(
     }
 
     const body: ProcessingRequest = await request.json();
-    const { userPrompt, documentId, queryAllDocuments, sessionId, isNewConversation } = body;
+    const {
+      userPrompt,
+      documentId,
+      queryAllDocuments,
+      sessionId,
+      isNewConversation,
+    } = body;
 
     validateNonEmptyString(userPrompt, "User prompt");
 

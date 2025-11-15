@@ -2,7 +2,11 @@
 
 import { NextRequest } from "next/server";
 import { preparePurchase } from "../../services/purchase/purchaseService";
-import { successResponse, errorResponse, authenticationErrorResponse } from "../../utils/response";
+import {
+  successResponse,
+  errorResponse,
+  authenticationErrorResponse,
+} from "../../utils/response";
 import { ValidationError, NotFoundError } from "../../utils/errors";
 import { validateRequired, validateEnum } from "../../utils/validation";
 import type { Role } from "@prisma/client";
@@ -50,4 +54,3 @@ export async function handlePurchase(
     return errorResponse(error, "Failed to prepare purchase");
   }
 }
-

@@ -7,4 +7,3 @@ import { handleGetFeaturePricing } from "@/lib/backend/controllers/pricing/featu
 export async function GET(request: NextRequest) {
   return handleGetFeaturePricing(request);
 }
-

@@ -111,4 +111,3 @@ export async function handleGetSessionMessages(
     return errorResponse(error, "Failed to fetch session messages");
   }
 }
-

@@ -45,4 +45,3 @@ export async function consumeTokens(
     amount: data.amount,
   };
 }
-

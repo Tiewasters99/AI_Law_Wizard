@@ -80,8 +80,8 @@ export function TopTokenConsumers() {
             {range === "7d"
               ? "7 Days"
               : range === "30d"
-              ? "30 Days"
-              : "90 Days"}
+                ? "30 Days"
+                : "90 Days"}
           </Button>
         ))}
       </div>

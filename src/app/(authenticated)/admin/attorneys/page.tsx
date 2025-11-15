@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,15 @@ interface Attorney {
   totalSpent: number;
 }
 
-type SortField = "name" | "email" | "firmName" | "specialty" | "createdAt" | "tokenBalance" | "totalSpent" | "purchaseCount";
+type SortField =
+  | "name"
+  | "email"
+  | "firmName"
+  | "specialty"
+  | "createdAt"
+  | "tokenBalance"
+  | "totalSpent"
+  | "purchaseCount";
 type SortOrder = "asc" | "desc";
 
 export default function AttorneysPage() {
@@ -80,7 +88,7 @@ export default function AttorneysPage() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  
+
   // Edit dialog state
   const [editingAttorney, setEditingAttorney] = useState<Attorney | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -105,10 +113,12 @@ export default function AttorneysPage() {
   });
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deletingAttorneyId, setDeletingAttorneyId] = useState<string | null>(null);
+  const [deletingAttorneyId, setDeletingAttorneyId] = useState<string | null>(
+    null
+  );
   const [saving, setSaving] = useState(false);
 
-  const fetchAttorneys = async () => {
+  const fetchAttorneys = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -132,7 +142,7 @@ export default function AttorneysPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, sortBy, sortOrder, searchTerm]);
 
   // Debounced search effect
   useEffect(() => {
@@ -144,13 +154,12 @@ export default function AttorneysPage() {
     }, 500);
 
     return () => clearTimeout(debounceTimer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm]);
+  }, [searchTerm, fetchAttorneys]);
 
   // Fetch attorneys when page, pageSize, sortBy, or sortOrder changes
   useEffect(() => {
     fetchAttorneys();
-  }, [currentPage, pageSize, sortBy, sortOrder]);
+  }, [currentPage, pageSize, sortBy, sortOrder, fetchAttorneys]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -212,27 +221,30 @@ export default function AttorneysPage() {
       setSaving(true);
 
       // Update attorney details
-      const updateResponse = await fetch(`/api/admin/attorneys/${editingAttorney.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editFormData.name || null,
-          email: editFormData.email || null,
-          phone: editFormData.phone || null,
-          company: editFormData.company || null,
-          location: editFormData.location || null,
-          bio: editFormData.bio || null,
-          specialty: editFormData.specialty || null,
-          firmName: editFormData.firmName || null,
-          barLicense: editFormData.barLicense || null,
-          barNumber: editFormData.barNumber || null,
-          yearsOfExperience: editFormData.yearsOfExperience || null,
-          hourlyRate: editFormData.hourlyRate || null,
-          practiceAreas: editFormData.practiceAreas
-            ? editFormData.practiceAreas.split(",").map((s) => s.trim())
-            : [],
-        }),
-      });
+      const updateResponse = await fetch(
+        `/api/admin/attorneys/${editingAttorney.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: editFormData.name || null,
+            email: editFormData.email || null,
+            phone: editFormData.phone || null,
+            company: editFormData.company || null,
+            location: editFormData.location || null,
+            bio: editFormData.bio || null,
+            specialty: editFormData.specialty || null,
+            firmName: editFormData.firmName || null,
+            barLicense: editFormData.barLicense || null,
+            barNumber: editFormData.barNumber || null,
+            yearsOfExperience: editFormData.yearsOfExperience || null,
+            hourlyRate: editFormData.hourlyRate || null,
+            practiceAreas: editFormData.practiceAreas
+              ? editFormData.practiceAreas.split(",").map(s => s.trim())
+              : [],
+          }),
+        }
+      );
 
       if (!updateResponse.ok) {
         throw new Error("Failed to update attorney");
@@ -240,14 +252,17 @@ export default function AttorneysPage() {
 
       // Adjust tokens if amount is provided
       if (tokenAdjustment.amount !== 0 && tokenAdjustment.reason.trim()) {
-        const tokenResponse = await fetch(`/api/admin/attorneys/${editingAttorney.id}/tokens`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: tokenAdjustment.amount,
-            reason: tokenAdjustment.reason,
-          }),
-        });
+        const tokenResponse = await fetch(
+          `/api/admin/attorneys/${editingAttorney.id}/tokens`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: tokenAdjustment.amount,
+              reason: tokenAdjustment.reason,
+            }),
+          }
+        );
 
         if (!tokenResponse.ok) {
           throw new Error("Failed to adjust tokens");
@@ -259,7 +274,9 @@ export default function AttorneysPage() {
       fetchAttorneys();
     } catch (error) {
       console.error("Update error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update attorney");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update attorney"
+      );
     } finally {
       setSaving(false);
     }
@@ -275,9 +292,12 @@ export default function AttorneysPage() {
 
     try {
       setSaving(true);
-      const response = await fetch(`/api/admin/attorneys/${deletingAttorneyId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/admin/attorneys/${deletingAttorneyId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (response.ok) {
         toast.success("Attorney deleted successfully");
@@ -377,12 +397,16 @@ export default function AttorneysPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Attorneys</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Attorneys
+            </CardTitle>
             <Scale className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{total}</div>
-            <p className="text-xs text-muted-foreground">Registered attorneys</p>
+            <p className="text-xs text-muted-foreground">
+              Registered attorneys
+            </p>
           </CardContent>
         </Card>
 
@@ -408,7 +432,9 @@ export default function AttorneysPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {attorneys.reduce((sum, a) => sum + a.tokenBalance, 0).toLocaleString()}
+              {attorneys
+                .reduce((sum, a) => sum + a.tokenBalance, 0)
+                .toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">Token balance</p>
           </CardContent>
@@ -427,8 +453,8 @@ export default function AttorneysPage() {
               <Input
                 placeholder="Search by name (e.g., Jane Smith), email, firm (e.g., Smith & Associates), or specialty (e.g., Corporate Law)..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={e => setSearchTerm(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === "Enter") {
                     handleSearch();
                   }
@@ -449,7 +475,7 @@ export default function AttorneysPage() {
             <div className="w-full sm:w-48">
               <Select
                 value={pageSize.toString()}
-                onValueChange={(value) => {
+                onValueChange={value => {
                   setPageSize(parseInt(value));
                   setCurrentPage(1);
                 }}
@@ -558,16 +584,20 @@ export default function AttorneysPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {attorneys.map((attorney) => (
+                    {attorneys.map(attorney => (
                       <TableRow key={attorney.id}>
                         <TableCell className="font-medium">
                           {attorney.name || "N/A"}
                         </TableCell>
                         <TableCell>{attorney.email || "N/A"}</TableCell>
-                        <TableCell>{attorney.firmName || attorney.company || "N/A"}</TableCell>
+                        <TableCell>
+                          {attorney.firmName || attorney.company || "N/A"}
+                        </TableCell>
                         <TableCell>
                           {attorney.specialty ? (
-                            <Badge variant="secondary">{attorney.specialty}</Badge>
+                            <Badge variant="secondary">
+                              {attorney.specialty}
+                            </Badge>
                           ) : (
                             "N/A"
                           )}
@@ -613,7 +643,8 @@ export default function AttorneysPage() {
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-slate-500">
                     Showing {(currentPage - 1) * pageSize + 1} to{" "}
-                    {Math.min(currentPage * pageSize, total)} of {total} attorneys
+                    {Math.min(currentPage * pageSize, total)} of {total}{" "}
+                    attorneys
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -627,7 +658,9 @@ export default function AttorneysPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      onClick={() =>
+                        setCurrentPage(prev => Math.max(1, prev - 1))
+                      }
                       disabled={currentPage === 1}
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -639,7 +672,9 @@ export default function AttorneysPage() {
                           <span className="px-2 text-slate-500">...</span>
                         ) : (
                           <Button
-                            variant={currentPage === page ? "default" : "outline"}
+                            variant={
+                              currentPage === page ? "default" : "outline"
+                            }
                             size="sm"
                             onClick={() => setCurrentPage(page as number)}
                           >
@@ -652,7 +687,7 @@ export default function AttorneysPage() {
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                        setCurrentPage(prev => Math.min(totalPages, prev + 1))
                       }
                       disabled={currentPage === totalPages}
                     >
@@ -691,7 +726,7 @@ export default function AttorneysPage() {
                 <Input
                   id="edit-name"
                   value={editFormData.name}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditFormData({ ...editFormData, name: e.target.value })
                   }
                 />
@@ -702,7 +737,7 @@ export default function AttorneysPage() {
                   id="edit-email"
                   type="email"
                   value={editFormData.email}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditFormData({ ...editFormData, email: e.target.value })
                   }
                 />
@@ -714,7 +749,7 @@ export default function AttorneysPage() {
                 <Input
                   id="edit-phone"
                   value={editFormData.phone}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditFormData({ ...editFormData, phone: e.target.value })
                   }
                 />
@@ -724,8 +759,11 @@ export default function AttorneysPage() {
                 <Input
                   id="edit-company"
                   value={editFormData.company}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, company: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      company: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -736,8 +774,11 @@ export default function AttorneysPage() {
                 <Input
                   id="edit-specialty"
                   value={editFormData.specialty}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, specialty: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      specialty: e.target.value,
+                    })
                   }
                   placeholder="e.g., Corporate Law"
                 />
@@ -747,8 +788,11 @@ export default function AttorneysPage() {
                 <Input
                   id="edit-firm"
                   value={editFormData.firmName}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, firmName: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      firmName: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -759,8 +803,11 @@ export default function AttorneysPage() {
                 <Input
                   id="edit-bar-license"
                   value={editFormData.barLicense}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, barLicense: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      barLicense: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -769,8 +816,11 @@ export default function AttorneysPage() {
                 <Input
                   id="edit-bar-number"
                   value={editFormData.barNumber}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, barNumber: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      barNumber: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -781,8 +831,11 @@ export default function AttorneysPage() {
                 <Input
                   id="edit-location"
                   value={editFormData.location}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, location: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      location: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -792,7 +845,7 @@ export default function AttorneysPage() {
                   id="edit-years"
                   type="number"
                   value={editFormData.yearsOfExperience || ""}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditFormData({
                       ...editFormData,
                       yearsOfExperience: parseInt(e.target.value) || 0,
@@ -809,7 +862,7 @@ export default function AttorneysPage() {
                   type="number"
                   step="0.01"
                   value={editFormData.hourlyRate || ""}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditFormData({
                       ...editFormData,
                       hourlyRate: parseFloat(e.target.value) || 0,
@@ -818,12 +871,17 @@ export default function AttorneysPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-practice-areas">Practice Areas (comma-separated)</Label>
+                <Label htmlFor="edit-practice-areas">
+                  Practice Areas (comma-separated)
+                </Label>
                 <Input
                   id="edit-practice-areas"
                   value={editFormData.practiceAreas}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, practiceAreas: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      practiceAreas: e.target.value,
+                    })
                   }
                   placeholder="Corporate, Criminal, Family"
                 />
@@ -834,7 +892,7 @@ export default function AttorneysPage() {
               <Textarea
                 id="edit-bio"
                 value={editFormData.bio}
-                onChange={(e) =>
+                onChange={e =>
                   setEditFormData({ ...editFormData, bio: e.target.value })
                 }
                 rows={3}
@@ -851,7 +909,7 @@ export default function AttorneysPage() {
                     id="token-amount"
                     type="number"
                     value={tokenAdjustment.amount || ""}
-                    onChange={(e) =>
+                    onChange={e =>
                       setTokenAdjustment({
                         ...tokenAdjustment,
                         amount: parseInt(e.target.value) || 0,
@@ -860,7 +918,8 @@ export default function AttorneysPage() {
                     placeholder="0"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Current balance: {editingAttorney?.tokenBalance.toLocaleString() || 0} tokens
+                    Current balance:{" "}
+                    {editingAttorney?.tokenBalance.toLocaleString() || 0} tokens
                   </p>
                 </div>
                 <div>
@@ -868,7 +927,7 @@ export default function AttorneysPage() {
                   <Textarea
                     id="token-reason"
                     value={tokenAdjustment.reason}
-                    onChange={(e) =>
+                    onChange={e =>
                       setTokenAdjustment({
                         ...tokenAdjustment,
                         reason: e.target.value,
@@ -913,8 +972,9 @@ export default function AttorneysPage() {
           <DialogHeader>
             <DialogTitle>Delete Attorney</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this attorney? This action will soft delete the attorney
-              and they will no longer appear in the list. This action cannot be undone.
+              Are you sure you want to delete this attorney? This action will
+              soft delete the attorney and they will no longer appear in the
+              list. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

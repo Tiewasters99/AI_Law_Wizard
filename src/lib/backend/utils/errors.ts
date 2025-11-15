@@ -56,4 +56,3 @@ export class ServiceError extends AppError {
     super(message, 500, code || "SERVICE_ERROR");
   }
 }
-

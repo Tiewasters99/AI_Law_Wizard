@@ -48,4 +48,3 @@ export async function handleExportLogs(request: NextRequest) {
     return errorResponse(error, "Failed to export logs");
   }
 }
-

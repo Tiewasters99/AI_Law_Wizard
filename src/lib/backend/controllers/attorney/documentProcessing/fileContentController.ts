@@ -25,7 +25,10 @@ export async function handleGetFileContent(
       content,
     });
   } catch (error) {
-    return errorResponse(error, "Internal server error while retrieving file content");
+    return errorResponse(
+      error,
+      "Internal server error while retrieving file content"
+    );
   }
 }
 
@@ -44,18 +47,16 @@ export async function handleGetFileContentGet(
     validateRequired(fileName, "File name");
 
     // Ensure fileId and fileName are strings (not null) before passing to getFileContent
-    const content = await getFileContent(
-      fileId as string,
-      fileName as string
-    );
+    const content = await getFileContent(fileId as string, fileName as string);
 
     return successResponse({
       success: true,
       content,
     });
-    
   } catch (error) {
-    return errorResponse(error, "Internal server error while retrieving file content");
+    return errorResponse(
+      error,
+      "Internal server error while retrieving file content"
+    );
   }
 }
-

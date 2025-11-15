@@ -85,11 +85,7 @@ export async function findAdminActivityLogs(
 
     switch (filters.dateRange) {
       case "today":
-        startDate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate()
-        );
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
       case "week":
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -181,11 +177,7 @@ export async function getAllActivityLogsForExport(
 
     switch (filters.dateRange) {
       case "today":
-        startDate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate()
-        );
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
       case "week":
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -218,4 +210,3 @@ export async function getAllActivityLogsForExport(
     },
   });
 }
-

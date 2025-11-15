@@ -18,4 +18,3 @@ export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   return handleDownloadClientOneDriveFile(request, session?.user?.id);
 }
-

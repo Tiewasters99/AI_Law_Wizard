@@ -10,5 +10,3 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   return handleGetTokenUsage(session?.user?.id || "");
 }
-
-

@@ -78,13 +78,10 @@ export async function getAllSessionMessages(
 /**
  * Delete all messages for a session
  */
-export async function deleteSessionMessages(
-  sessionId: string
-): Promise<void> {
+export async function deleteSessionMessages(sessionId: string): Promise<void> {
   await prisma.documentAnalysisMessage.deleteMany({
     where: {
       sessionId,
     },
   });
 }
-

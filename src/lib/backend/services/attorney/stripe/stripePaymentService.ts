@@ -21,13 +21,18 @@ export async function createPaymentIntent(
     throw new NotFoundError("Invalid or inactive package");
   }
 
-  // Get role-specific price, fallback to base price if role pricing not found
+  // Get role-specific price - required for purchase
   const rolePricing = tokenPackage.RolePricing.find(
-    (rp) => rp.role === role && rp.isActive
+    rp => rp.role === role && rp.isActive
   );
-  const priceInCents = rolePricing
-    ? rolePricing.priceInCents
-    : tokenPackage.priceInCents;
+  
+  if (!rolePricing) {
+    throw new NotFoundError(
+      `Pricing not available for ${role} role. Please contact support.`
+    );
+  }
+  
+  const priceInCents = rolePricing.priceInCents;
 
   // Create payment intent
   const paymentIntent = await stripe.paymentIntents.create({
@@ -56,4 +61,3 @@ export async function createPaymentIntent(
     paymentIntentId: paymentIntent.id,
   };
 }
-

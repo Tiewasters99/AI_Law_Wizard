@@ -605,10 +605,13 @@ export async function performClientDocumentAnalysis(
     tokenCost = await getFeatureTokenCost("document-assistant", "CUSTOMER");
   } catch (pricingError) {
     // Fallback to default if pricing not found
-    console.error('Failed to get pricing for feature "document-assistant":', pricingError);
+    console.error(
+      'Failed to get pricing for feature "document-assistant":',
+      pricingError
+    );
     tokenCost = 5;
   }
-  
+
   try {
     await deductTokens(
       userId,

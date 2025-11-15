@@ -26,4 +26,3 @@ export async function getClientConversations(clientId: string) {
     total: formatted.length,
   };
 }
-

@@ -56,4 +56,3 @@ export function getClientIP(request: NextRequest): string {
 export function getUserAgent(request: NextRequest): string {
   return request.headers.get("user-agent") || "Unknown";
 }
-

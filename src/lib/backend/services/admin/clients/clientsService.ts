@@ -13,7 +13,14 @@ export interface ClientsListParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: "name" | "email" | "company" | "createdAt" | "tokenBalance" | "totalSpent" | "purchaseCount";
+  sortBy?:
+    | "name"
+    | "email"
+    | "company"
+    | "createdAt"
+    | "tokenBalance"
+    | "totalSpent"
+    | "purchaseCount";
   sortOrder?: "asc" | "desc";
 }
 
@@ -58,7 +65,13 @@ export async function listClients(
   const sortBy = params.sortBy;
   const sortOrder = params.sortOrder || "desc";
 
-  const { clients, total } = await findAllClients(page, limit, search, sortBy, sortOrder);
+  const { clients, total } = await findAllClients(
+    page,
+    limit,
+    search,
+    sortBy,
+    sortOrder
+  );
 
   const totalPages = Math.ceil(total / limit);
 
@@ -116,18 +129,19 @@ export async function updateClientDetails(
   }
 
   // Separate user and profile data
-  const {
-    companyName,
-    address,
-    needs,
-    ...userData
-  } = data;
+  const { companyName, address, needs, ...userData } = data;
 
   // Update user
   await updateClient(id, userData);
 
   // Update customer profile if profile data provided
-  if (companyName !== undefined || address !== undefined || needs !== undefined || data.industry !== undefined || data.phone !== undefined) {
+  if (
+    companyName !== undefined ||
+    address !== undefined ||
+    needs !== undefined ||
+    data.industry !== undefined ||
+    data.phone !== undefined
+  ) {
     await updateCustomerProfile(id, {
       companyName: companyName || data.company,
       address,
@@ -156,4 +170,3 @@ export async function deleteClientById(id: string) {
   await deleteClient(id);
   return { success: true };
 }
-

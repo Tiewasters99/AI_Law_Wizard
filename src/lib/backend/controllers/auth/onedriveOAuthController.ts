@@ -27,20 +27,21 @@ export async function handleOneDriveCallback(request: NextRequest) {
 
   // Set cookies if provided
   if (result.cookies) {
-    result.cookies.forEach((cookie: {
-      name: string;
-      value: string;
-      options: {
-        httpOnly: boolean;
-        secure: boolean;
-        sameSite: "lax" | "strict" | "none";
-        maxAge: number;
-      };
-    }) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie.options);
-    });
+    result.cookies.forEach(
+      (cookie: {
+        name: string;
+        value: string;
+        options: {
+          httpOnly: boolean;
+          secure: boolean;
+          sameSite: "lax" | "strict" | "none";
+          maxAge: number;
+        };
+      }) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, cookie.options);
+      }
+    );
   }
 
   return redirectResponse;
 }
-

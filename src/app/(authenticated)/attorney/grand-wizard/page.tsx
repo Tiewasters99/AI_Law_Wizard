@@ -24,8 +24,7 @@ export default function GrandWizardPage() {
   }
 
   // Check if user is an attorney
-  const isAttorney =
-    session?.user?.role === "ATTORNEY";
+  const isAttorney = session?.user?.role === "ATTORNEY";
 
   if (!isAttorney) {
     return (

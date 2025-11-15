@@ -35,26 +35,32 @@ export function useOneDriveAuth() {
   }, []);
 
   // Sign in to OneDrive
-  const signIn = useCallback(async (role: "attorney" | "client" = "attorney") => {
-    setIsLoading(true);
-    try {
-      const endpoint = role === "client" 
-        ? "/api/client/onedrive/auth-url"
-        : "/api/attorney/onedrive/auth-url";
-      const response = await fetch(endpoint);
-      const data = await response.json();
+  const signIn = useCallback(
+    async (role: "attorney" | "client" = "attorney") => {
+      setIsLoading(true);
+      try {
+        const endpoint =
+          role === "client"
+            ? "/api/client/onedrive/auth-url"
+            : "/api/attorney/onedrive/auth-url";
+        const response = await fetch(endpoint);
+        const data = await response.json();
 
-      if (data.success && data.authUrl) {
-        window.location.href = data.authUrl;
-      } else {
-        throw new Error(data.error || "Failed to get auth URL");
+        if (data.success && data.authUrl) {
+          window.location.href = data.authUrl;
+        } else {
+          throw new Error(data.error || "Failed to get auth URL");
+        }
+      } catch (error) {
+        console.error("Sign in error:", error);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to sign in"
+        );
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Sign in error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to sign in");
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   // Sign out from OneDrive
   const signOut = useCallback(async () => {

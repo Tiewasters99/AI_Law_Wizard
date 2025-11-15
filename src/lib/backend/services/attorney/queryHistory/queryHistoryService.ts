@@ -8,4 +8,3 @@ import { findDocumentQueriesByUserId } from "../../../repositories/attorney/docu
 export async function getQueryHistory(userId: string, search?: string) {
   return await findDocumentQueriesByUserId(userId, search);
 }
-

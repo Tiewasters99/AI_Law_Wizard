@@ -1,7 +1,11 @@
 // Controller for admin attorney token adjustments
 
 import { NextRequest } from "next/server";
-import { requireAdminAuth, getClientIP, getUserAgent } from "../../../utils/adminAuth";
+import {
+  requireAdminAuth,
+  getClientIP,
+  getUserAgent,
+} from "../../../utils/adminAuth";
 import { adjustAttorneyTokenBalance } from "../../../services/admin/attorneys/tokenAdjustmentService";
 import { createAdminActivityLog } from "../../../repositories/admin/adminActivityRepository";
 import { AdminAction } from "@/types/admin";
@@ -65,4 +69,3 @@ export async function handleAdjustAttorneyTokens(
     return errorResponse(error, "Failed to adjust attorney tokens");
   }
 }
-

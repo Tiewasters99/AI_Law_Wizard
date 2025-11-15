@@ -50,4 +50,3 @@ export async function handleCreatePackage(request: NextRequest) {
     return errorResponse(error, "Failed to create package");
   }
 }
-

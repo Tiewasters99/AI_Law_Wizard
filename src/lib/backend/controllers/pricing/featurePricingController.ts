@@ -57,4 +57,3 @@ export async function handleGetFeaturePricingByFeature(
     return errorResponse(error, "Failed to fetch feature pricing");
   }
 }
-

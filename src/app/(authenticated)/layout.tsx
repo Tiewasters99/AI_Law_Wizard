@@ -28,9 +28,7 @@ export default function AuthenticatedLayout({
     if (role === "ATTORNEY" && session?.user?.id) {
       const fetchUnreadCount = async () => {
         try {
-          const response = await fetch(
-            "/api/attorney/messages/unread-count"
-          );
+          const response = await fetch("/api/attorney/messages/unread-count");
           if (response.ok) {
             const data = await response.json();
             setUnreadCount(data.count || 0);
@@ -67,7 +65,9 @@ export default function AuthenticatedLayout({
 
   // Attorney/Lawyer layout
   if (role === "ATTORNEY") {
-    return <AttorneyLayout unreadCount={unreadCount}>{children}</AttorneyLayout>;
+    return (
+      <AttorneyLayout unreadCount={unreadCount}>{children}</AttorneyLayout>
+    );
   }
 
   // Client layout (TODO: Create ClientLayout)

@@ -137,8 +137,12 @@ export function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
           </div>
           {!isCollapsed && (
             <div>
-              <h2 className="text-lg font-semibold text-sidebar-foreground">Admin Portal</h2>
-              <p className="text-xs text-sidebar-foreground/70">System Management</p>
+              <h2 className="text-lg font-semibold text-sidebar-foreground">
+                Admin Portal
+              </h2>
+              <p className="text-xs text-sidebar-foreground/70">
+                System Management
+              </p>
             </div>
           )}
         </div>

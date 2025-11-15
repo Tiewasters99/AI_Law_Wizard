@@ -34,4 +34,3 @@ export async function handleDemoLegalResearch(
     return errorResponse(error, "Demo research failed. Please try again.");
   }
 }
-

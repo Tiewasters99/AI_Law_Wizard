@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,14 @@ interface Client {
   totalSpent: number;
 }
 
-type SortField = "name" | "email" | "company" | "createdAt" | "tokenBalance" | "totalSpent" | "purchaseCount";
+type SortField =
+  | "name"
+  | "email"
+  | "company"
+  | "createdAt"
+  | "tokenBalance"
+  | "totalSpent"
+  | "purchaseCount";
 type SortOrder = "asc" | "desc";
 
 export default function ClientsPage() {
@@ -78,7 +85,7 @@ export default function ClientsPage() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  
+
   // Edit dialog state
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -100,7 +107,7 @@ export default function ClientsPage() {
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -124,7 +131,7 @@ export default function ClientsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, sortBy, sortOrder, searchTerm]);
 
   // Debounced search effect
   useEffect(() => {
@@ -136,13 +143,12 @@ export default function ClientsPage() {
     }, 500);
 
     return () => clearTimeout(debounceTimer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm]);
+  }, [searchTerm, fetchClients]);
 
   // Fetch clients when page, pageSize, sortBy, or sortOrder changes
   useEffect(() => {
     fetchClients();
-  }, [currentPage, pageSize, sortBy, sortOrder]);
+  }, [currentPage, pageSize, sortBy, sortOrder, fetchClients]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -187,19 +193,22 @@ export default function ClientsPage() {
       setSaving(true);
 
       // Update client details
-      const updateResponse = await fetch(`/api/admin/clients/${editingClient.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editFormData.name || null,
-          email: editFormData.email || null,
-          phone: editFormData.phone || null,
-          company: editFormData.company || null,
-          industry: editFormData.industry || null,
-          location: editFormData.location || null,
-          bio: editFormData.bio || null,
-        }),
-      });
+      const updateResponse = await fetch(
+        `/api/admin/clients/${editingClient.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: editFormData.name || null,
+            email: editFormData.email || null,
+            phone: editFormData.phone || null,
+            company: editFormData.company || null,
+            industry: editFormData.industry || null,
+            location: editFormData.location || null,
+            bio: editFormData.bio || null,
+          }),
+        }
+      );
 
       if (!updateResponse.ok) {
         throw new Error("Failed to update client");
@@ -207,14 +216,17 @@ export default function ClientsPage() {
 
       // Adjust tokens if amount is provided
       if (tokenAdjustment.amount !== 0 && tokenAdjustment.reason.trim()) {
-        const tokenResponse = await fetch(`/api/admin/clients/${editingClient.id}/tokens`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: tokenAdjustment.amount,
-            reason: tokenAdjustment.reason,
-          }),
-        });
+        const tokenResponse = await fetch(
+          `/api/admin/clients/${editingClient.id}/tokens`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: tokenAdjustment.amount,
+              reason: tokenAdjustment.reason,
+            }),
+          }
+        );
 
         if (!tokenResponse.ok) {
           throw new Error("Failed to adjust tokens");
@@ -226,7 +238,9 @@ export default function ClientsPage() {
       fetchClients();
     } catch (error) {
       console.error("Update error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update client");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update client"
+      );
     } finally {
       setSaving(false);
     }
@@ -375,7 +389,9 @@ export default function ClientsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {clients.reduce((sum, c) => sum + c.tokenBalance, 0).toLocaleString()}
+              {clients
+                .reduce((sum, c) => sum + c.tokenBalance, 0)
+                .toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">Token balance</p>
           </CardContent>
@@ -394,8 +410,8 @@ export default function ClientsPage() {
               <Input
                 placeholder="Search by name (e.g., John Doe), email (e.g., john@example.com), or company..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={e => setSearchTerm(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === "Enter") {
                     handleSearch();
                   }
@@ -416,7 +432,7 @@ export default function ClientsPage() {
             <div className="w-full sm:w-48">
               <Select
                 value={pageSize.toString()}
-                onValueChange={(value) => {
+                onValueChange={value => {
                   setPageSize(parseInt(value));
                   setCurrentPage(1);
                 }}
@@ -517,7 +533,7 @@ export default function ClientsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {clients.map((client) => (
+                    {clients.map(client => (
                       <TableRow key={client.id}>
                         <TableCell className="font-medium">
                           {client.name || "N/A"}
@@ -579,7 +595,9 @@ export default function ClientsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      onClick={() =>
+                        setCurrentPage(prev => Math.max(1, prev - 1))
+                      }
                       disabled={currentPage === 1}
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -591,7 +609,9 @@ export default function ClientsPage() {
                           <span className="px-2 text-slate-500">...</span>
                         ) : (
                           <Button
-                            variant={currentPage === page ? "default" : "outline"}
+                            variant={
+                              currentPage === page ? "default" : "outline"
+                            }
                             size="sm"
                             onClick={() => setCurrentPage(page as number)}
                           >
@@ -604,7 +624,7 @@ export default function ClientsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                        setCurrentPage(prev => Math.min(totalPages, prev + 1))
                       }
                       disabled={currentPage === totalPages}
                     >
@@ -643,7 +663,7 @@ export default function ClientsPage() {
                 <Input
                   id="edit-name"
                   value={editFormData.name}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditFormData({ ...editFormData, name: e.target.value })
                   }
                 />
@@ -654,7 +674,7 @@ export default function ClientsPage() {
                   id="edit-email"
                   type="email"
                   value={editFormData.email}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditFormData({ ...editFormData, email: e.target.value })
                   }
                 />
@@ -666,7 +686,7 @@ export default function ClientsPage() {
                 <Input
                   id="edit-phone"
                   value={editFormData.phone}
-                  onChange={(e) =>
+                  onChange={e =>
                     setEditFormData({ ...editFormData, phone: e.target.value })
                   }
                 />
@@ -676,8 +696,11 @@ export default function ClientsPage() {
                 <Input
                   id="edit-company"
                   value={editFormData.company}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, company: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      company: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -688,8 +711,11 @@ export default function ClientsPage() {
                 <Input
                   id="edit-industry"
                   value={editFormData.industry}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, industry: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      industry: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -698,8 +724,11 @@ export default function ClientsPage() {
                 <Input
                   id="edit-location"
                   value={editFormData.location}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, location: e.target.value })
+                  onChange={e =>
+                    setEditFormData({
+                      ...editFormData,
+                      location: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -709,7 +738,7 @@ export default function ClientsPage() {
               <Textarea
                 id="edit-bio"
                 value={editFormData.bio}
-                onChange={(e) =>
+                onChange={e =>
                   setEditFormData({ ...editFormData, bio: e.target.value })
                 }
                 rows={3}
@@ -726,7 +755,7 @@ export default function ClientsPage() {
                     id="token-amount"
                     type="number"
                     value={tokenAdjustment.amount || ""}
-                    onChange={(e) =>
+                    onChange={e =>
                       setTokenAdjustment({
                         ...tokenAdjustment,
                         amount: parseInt(e.target.value) || 0,
@@ -735,7 +764,8 @@ export default function ClientsPage() {
                     placeholder="0"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Current balance: {editingClient?.tokenBalance.toLocaleString() || 0} tokens
+                    Current balance:{" "}
+                    {editingClient?.tokenBalance.toLocaleString() || 0} tokens
                   </p>
                 </div>
                 <div>
@@ -743,7 +773,7 @@ export default function ClientsPage() {
                   <Textarea
                     id="token-reason"
                     value={tokenAdjustment.reason}
-                    onChange={(e) =>
+                    onChange={e =>
                       setTokenAdjustment({
                         ...tokenAdjustment,
                         reason: e.target.value,
@@ -788,8 +818,9 @@ export default function ClientsPage() {
           <DialogHeader>
             <DialogTitle>Delete Client</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this client? This action will soft delete the client
-              and they will no longer appear in the list. This action cannot be undone.
+              Are you sure you want to delete this client? This action will soft
+              delete the client and they will no longer appear in the list. This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

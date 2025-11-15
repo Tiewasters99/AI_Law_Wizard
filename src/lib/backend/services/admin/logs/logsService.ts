@@ -24,4 +24,3 @@ export async function getActivityLogs(
     totalCount: total,
   };
 }
-

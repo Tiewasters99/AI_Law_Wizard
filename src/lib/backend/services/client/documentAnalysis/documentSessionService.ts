@@ -135,4 +135,3 @@ export async function deactivateSessionService(
     isActive: session.isActive,
   };
 }
-

@@ -19,14 +19,41 @@ async function detectResponseMode(
   userPrompt: string
 ): Promise<"question_answering" | "action_performance"> {
   const questionKeywords = [
-    "what", "how", "why", "when", "where", "who", "which", "explain",
-    "describe", "tell me", "show me", "give me", "find", "search",
-    "summarize", "summary", "analyze", "analysis", "extract",
+    "what",
+    "how",
+    "why",
+    "when",
+    "where",
+    "who",
+    "which",
+    "explain",
+    "describe",
+    "tell me",
+    "show me",
+    "give me",
+    "find",
+    "search",
+    "summarize",
+    "summary",
+    "analyze",
+    "analysis",
+    "extract",
   ];
 
   const actionKeywords = [
-    "edit", "modify", "change", "update", "add", "remove", "delete",
-    "create", "write", "generate", "draft", "rewrite", "reformat",
+    "edit",
+    "modify",
+    "change",
+    "update",
+    "add",
+    "remove",
+    "delete",
+    "create",
+    "write",
+    "generate",
+    "draft",
+    "rewrite",
+    "reformat",
   ];
 
   const lowerPrompt = userPrompt.toLowerCase();
@@ -67,7 +94,7 @@ async function searchRelevantFiles(
   // 1. Generate query embedding from the query string
   // 2. Use queryPineconeNamespace(namespace, queryVector, options)
   // 3. Return relevant file chunks with metadata
-  
+
   // This is a placeholder - in production would integrate with vector search
   return {
     success: true,
@@ -128,7 +155,7 @@ Provide a detailed analysis in markdown format.`,
 
   // Regular processing with vector search
   const responseMode = await detectResponseMode(request.userPrompt);
-  
+
   // Get user namespace if userId is provided
   let namespace: string | undefined;
   if (userId) {
@@ -137,7 +164,7 @@ Provide a detailed analysis in markdown format.`,
       namespace = getUserNamespace(userId, user.email);
     }
   }
-  
+
   const fileSearchResult = await searchRelevantFiles(
     request.searchQuery || request.userPrompt,
     userId,
@@ -149,8 +176,11 @@ Provide a detailed analysis in markdown format.`,
   }
 
   // Use provided model or default based on response mode
-  const finalModel = selectedModel || 
-    (responseMode === "question_answering" ? MODELS.GPT4O_MINI : MODELS.GROK_4_LATEST);
+  const finalModel =
+    selectedModel ||
+    (responseMode === "question_answering"
+      ? MODELS.GPT4O_MINI
+      : MODELS.GROK_4_LATEST);
 
   const response = await openRouterService.chat({
     model: finalModel,
@@ -204,10 +234,14 @@ Provide a detailed analysis in markdown format.`,
       fileType: file.fileType,
     })),
     confidence: 0.9,
-    operationChain: [{ operation: responseMode === "question_answering" ? "qa" : responseMode, confidence: 0.9 }],
+    operationChain: [
+      {
+        operation: responseMode === "question_answering" ? "qa" : responseMode,
+        confidence: 0.9,
+      },
+    ],
     totalSteps: 2,
     completedSteps: 2,
     responseMode,
   };
 }
-

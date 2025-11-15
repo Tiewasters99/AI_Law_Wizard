@@ -38,7 +38,9 @@ export const ProcessingIndicator: React.FC<ProcessingIndicatorProps> = ({
             </motion.div>
 
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold text-foreground">{message}</h3>
+              <h3 className="text-xl font-semibold text-foreground">
+                {message}
+              </h3>
               {totalSteps > 1 && (
                 <p className="text-primary font-medium">
                   Step {currentStep} of {totalSteps}

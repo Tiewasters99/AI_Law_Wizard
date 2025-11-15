@@ -67,4 +67,3 @@ export async function handleUpdateConsultationRequestStatus(
     return errorResponse(error, "Failed to update consultation request");
   }
 }
-

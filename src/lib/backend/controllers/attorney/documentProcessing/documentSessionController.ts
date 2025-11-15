@@ -70,7 +70,10 @@ export async function handleGetSession(
       });
     }
   } catch (error) {
-    return errorResponse(error, "Internal server error while retrieving session(s)");
+    return errorResponse(
+      error,
+      "Internal server error while retrieving session(s)"
+    );
   }
 }
 
@@ -118,4 +121,3 @@ export async function handleDeleteSession(
     return errorResponse(error, "Internal server error while deleting session");
   }
 }
-

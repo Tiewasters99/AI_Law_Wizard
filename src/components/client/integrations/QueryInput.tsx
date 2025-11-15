@@ -38,11 +38,11 @@ export function QueryInput({
             <div className="flex-1">
               <Textarea
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={e => setQuery(e.target.value)}
                 placeholder="Ask a question about your documents..."
                 className="min-h-[60px] max-h-[120px] resize-none text-base"
                 disabled={isLoading || disabled}
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                     handleSubmit(e);
                   }
@@ -80,4 +80,3 @@ export function QueryInput({
     </Card>
   );
 }
-

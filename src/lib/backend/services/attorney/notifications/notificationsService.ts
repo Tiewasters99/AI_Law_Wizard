@@ -8,4 +8,3 @@ import { countUnreadNotifications } from "../../../repositories/attorney/notific
 export async function getUnreadNotificationCount(userId: string) {
   return await countUnreadNotifications(userId);
 }
-

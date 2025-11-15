@@ -41,5 +41,3 @@ export async function getTokenTransactions(
     total: transactions.length,
   };
 }
-
-

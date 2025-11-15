@@ -187,7 +187,9 @@ export function ActiveCasePanel({
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full gap-4">
                 <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-muted-foreground">Loading case information...</p>
+                <p className="text-muted-foreground">
+                  Loading case information...
+                </p>
               </div>
             ) : !caseDetails && !docket ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
@@ -262,7 +264,9 @@ export function ActiveCasePanel({
                           <h3 className="text-lg font-semibold text-foreground mb-2">
                             Error Loading Docket
                           </h3>
-                          <p className="text-muted-foreground mb-4">{docketError}</p>
+                          <p className="text-muted-foreground mb-4">
+                            {docketError}
+                          </p>
                           <Button onClick={handleFetchDocket} variant="outline">
                             Try Again
                           </Button>
@@ -273,9 +277,7 @@ export function ActiveCasePanel({
                         <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                         <p className="mb-4">No docket data available</p>
                         {sessionToken && (
-                          <Button
-                            onClick={handleFetchDocket}
-                          >
+                          <Button onClick={handleFetchDocket}>
                             <FileText className="w-4 h-4 mr-2" />
                             Load Docket Report
                           </Button>
@@ -337,7 +339,9 @@ export function ActiveCasePanel({
                     </span>
                   </div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-muted-foreground">Court:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Court:
+                    </span>
                     <span className="text-sm font-semibold">
                       {feeEstimate.court.toUpperCase()}
                     </span>

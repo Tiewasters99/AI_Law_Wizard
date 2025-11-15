@@ -1,7 +1,11 @@
 // Controller for admin dashboard statistics
 
 import { NextRequest } from "next/server";
-import { requireAdminAuth, getClientIP, getUserAgent } from "../../../utils/adminAuth";
+import {
+  requireAdminAuth,
+  getClientIP,
+  getUserAgent,
+} from "../../../utils/adminAuth";
 import { getDashboardStats } from "../../../services/admin/dashboard/dashboardStatsService";
 import { createAdminActivityLog } from "../../../repositories/admin/adminActivityRepository";
 import { AdminAction } from "@/types/admin";
@@ -34,4 +38,3 @@ export async function handleGetDashboardStats(request: NextRequest) {
     return errorResponse(error, "Failed to fetch dashboard statistics");
   }
 }
-

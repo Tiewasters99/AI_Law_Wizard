@@ -47,4 +47,3 @@ export async function exportActivityLogsAsCSV(
 
   return csvContent;
 }
-

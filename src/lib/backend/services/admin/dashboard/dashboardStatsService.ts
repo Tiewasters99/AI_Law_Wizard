@@ -39,7 +39,10 @@ export async function getDashboardStats() {
   endOfLastMonth.setDate(0);
   endOfLastMonth.setHours(23, 59, 59, 999);
 
-  const lastMonthRevenue = await getRevenueStats(startOfLastMonth, endOfLastMonth);
+  const lastMonthRevenue = await getRevenueStats(
+    startOfLastMonth,
+    endOfLastMonth
+  );
 
   // Calculate percentage changes (mock data for user and feature changes)
   const userChange = 5; // Mock: 5% increase
@@ -47,8 +50,8 @@ export async function getDashboardStats() {
   const tokenChange = 12; // Mock: 12% increase
   const revenueChange = lastMonthRevenue.amount
     ? Math.round(
-        ((thisMonthRevenue.amount || 0) - lastMonthRevenue.amount) /
-          lastMonthRevenue.amount *
+        (((thisMonthRevenue.amount || 0) - lastMonthRevenue.amount) /
+          lastMonthRevenue.amount) *
           100
       )
     : 0;
@@ -83,4 +86,3 @@ export async function getDashboardStats() {
     trends,
   };
 }
-

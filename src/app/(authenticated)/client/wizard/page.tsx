@@ -144,7 +144,9 @@ export default function WizardPage() {
   useEffect(() => {
     const fetchTokenCost = async () => {
       try {
-        const response = await fetch("/api/pricing/feature-pricing?feature=wizard&role=CUSTOMER");
+        const response = await fetch(
+          "/api/pricing/feature-pricing?feature=wizard&role=CUSTOMER"
+        );
         if (response.ok) {
           const data = await response.json();
           if (data.pricing?.tokens) {
@@ -450,6 +452,7 @@ export default function WizardPage() {
     showReasoning,
     isLoading,
     balance,
+    tokenCost,
     refetchBalance,
   ]);
 

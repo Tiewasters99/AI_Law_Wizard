@@ -81,7 +81,7 @@ export async function performClientLegalResearch(
         jurisdiction: request.jurisdiction,
         caseType: request.caseType,
       });
-      
+
       // Update session title from first user message if needed
       try {
         const session = await getChatSession(request.sessionId);
@@ -113,9 +113,10 @@ export async function performClientLegalResearch(
     );
   } catch (error) {
     console.error("Legal research processing error:", error);
-    processingError = error instanceof Error
-      ? error
-      : new Error("Failed to perform legal research");
+    processingError =
+      error instanceof Error
+        ? error
+        : new Error("Failed to perform legal research");
     result = `Error: ${processingError.message}`;
   }
 
@@ -147,16 +148,20 @@ export async function performClientLegalResearch(
 
   // Consume tokens after successful research
   // Determine feature based on model: grand-wizard uses gemini-2.5-pro, wizard uses basic models
-  const isGrandWizard = model.includes("gemini-2.5-pro") || model.includes("gemini-2.0");
+  const isGrandWizard =
+    model.includes("gemini-2.5-pro") || model.includes("gemini-2.0");
   const feature = isGrandWizard ? "grand-wizard" : "wizard";
-  
+
   // Get token cost from database
   let tokenCost: number;
   try {
     tokenCost = await getFeatureTokenCost(feature, "CUSTOMER");
   } catch (pricingError) {
     // Fallback to default if pricing not found
-    console.error(`Failed to get pricing for feature "${feature}":`, pricingError);
+    console.error(
+      `Failed to get pricing for feature "${feature}":`,
+      pricingError
+    );
     tokenCost = isGrandWizard ? 5 : 2;
   }
 
@@ -246,7 +251,7 @@ export async function* streamClientLegalResearch(
         jurisdiction: request.jurisdiction,
         caseType: request.caseType,
       });
-      
+
       // Update session title from first user message if needed
       try {
         const session = await getChatSession(request.sessionId);
@@ -281,9 +286,10 @@ export async function* streamClientLegalResearch(
     }
   } catch (error) {
     console.error("Legal research streaming error:", error);
-    streamingError = error instanceof Error
-      ? error
-      : new Error("Failed to stream legal research");
+    streamingError =
+      error instanceof Error
+        ? error
+        : new Error("Failed to stream legal research");
     // Re-throw after saving what we can
   }
 
@@ -319,16 +325,20 @@ export async function* streamClientLegalResearch(
 
   // Consume tokens after successful streaming research
   // Determine feature based on model: grand-wizard uses gemini-2.5-pro, wizard uses basic models
-  const isGrandWizard = model.includes("gemini-2.5-pro") || model.includes("gemini-2.0");
+  const isGrandWizard =
+    model.includes("gemini-2.5-pro") || model.includes("gemini-2.0");
   const feature = isGrandWizard ? "grand-wizard" : "wizard";
-  
+
   // Get token cost from database
   let tokenCost: number;
   try {
     tokenCost = await getFeatureTokenCost(feature, "CUSTOMER");
   } catch (pricingError) {
     // Fallback to default if pricing not found
-    console.error(`Failed to get pricing for feature "${feature}":`, pricingError);
+    console.error(
+      `Failed to get pricing for feature "${feature}":`,
+      pricingError
+    );
     tokenCost = isGrandWizard ? 5 : 2;
   }
 

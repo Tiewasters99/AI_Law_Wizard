@@ -61,4 +61,3 @@ export async function handleDeleteRolePricing(
     return errorResponse(error, "Failed to delete role pricing");
   }
 }
-

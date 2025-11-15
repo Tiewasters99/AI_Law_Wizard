@@ -1,6 +1,7 @@
 // Repository for admin clients database operations
 
 import { prisma } from "../../../prisma";
+import type { Prisma } from "@prisma/client";
 
 export interface ClientListItem {
   id: string;
@@ -15,18 +16,28 @@ export interface ClientListItem {
   totalSpent: number;
 }
 
-type SortField = "name" | "email" | "company" | "createdAt" | "tokenBalance" | "totalSpent" | "purchaseCount";
+type SortField =
+  | "name"
+  | "email"
+  | "company"
+  | "createdAt"
+  | "tokenBalance"
+  | "totalSpent"
+  | "purchaseCount";
 type SortOrder = "asc" | "desc";
 
 /**
  * Get sort orderBy for Prisma
  */
-function getOrderBy(sortBy?: SortField, sortOrder: SortOrder = "desc") {
+function getOrderBy(
+  sortBy?: SortField,
+  sortOrder: SortOrder = "desc"
+): Prisma.UserOrderByWithRelationInput {
   if (!sortBy) {
-    return { createdAt: "desc" as const };
+    return { createdAt: "desc" };
   }
 
-  const order = sortOrder === "asc" ? "asc" : "desc";
+  const order: "asc" | "desc" = sortOrder === "asc" ? "asc" : "desc";
 
   switch (sortBy) {
     case "name":
@@ -45,7 +56,7 @@ function getOrderBy(sortBy?: SortField, sortOrder: SortOrder = "desc") {
       // These require aggregation, will handle in application layer
       return { createdAt: order };
     default:
-      return { createdAt: "desc" as const };
+      return { createdAt: "desc" };
   }
 }
 
@@ -101,7 +112,7 @@ export async function findAllClients(
     prisma.user.count({ where }),
   ]);
 
-  const formattedClients: ClientListItem[] = clients.map((client) => ({
+  const formattedClients: ClientListItem[] = clients.map(client => ({
     id: client.id,
     name: client.name,
     email: client.email,
@@ -111,14 +122,15 @@ export async function findAllClients(
     createdAt: client.createdAt,
     tokenBalance: client.wallet?.balance || 0,
     purchaseCount: client.purchases.length,
-    totalSpent: client.purchases.reduce(
-      (sum, p) => sum + p.amountPaid,
-      0
-    ),
+    totalSpent: client.purchases.reduce((sum, p) => sum + p.amountPaid, 0),
   }));
 
   // Sort by computed fields if needed (tokenBalance, totalSpent, purchaseCount)
-  if (sortBy === "tokenBalance" || sortBy === "totalSpent" || sortBy === "purchaseCount") {
+  if (
+    sortBy === "tokenBalance" ||
+    sortBy === "totalSpent" ||
+    sortBy === "purchaseCount"
+  ) {
     formattedClients.sort((a, b) => {
       let comparison = 0;
       if (sortBy === "tokenBalance") {
@@ -138,7 +150,9 @@ export async function findAllClients(
 /**
  * Get client by ID
  */
-export async function findClientById(id: string): Promise<ClientListItem | null> {
+export async function findClientById(
+  id: string
+): Promise<ClientListItem | null> {
   const client = await prisma.user.findFirst({
     where: {
       id,
@@ -242,4 +256,3 @@ export async function deleteClient(id: string) {
     },
   });
 }
-

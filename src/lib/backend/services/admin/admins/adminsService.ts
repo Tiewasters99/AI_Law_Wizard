@@ -8,4 +8,3 @@ import { findAllAdmins } from "../../../repositories/admin/adminRepository";
 export async function listAdmins() {
   return await findAllAdmins();
 }
-

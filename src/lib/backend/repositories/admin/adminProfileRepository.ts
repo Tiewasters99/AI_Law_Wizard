@@ -11,4 +11,3 @@ export async function findAdminByEmail(email: string): Promise<Admin | null> {
     where: { email },
   });
 }
-

@@ -24,7 +24,7 @@ export async function getFeatureSpending(): Promise<FeatureSpending[]> {
   // Group by feature and sum tokens (amount is negative for consumption, so we use absolute value)
   const featureMap = new Map<string, number>();
 
-  transactions.forEach((transaction) => {
+  transactions.forEach(transaction => {
     const feature = transaction.feature || "Unspecified";
     const tokens = Math.abs(transaction.amount);
     featureMap.set(feature, (featureMap.get(feature) || 0) + tokens);
@@ -40,4 +40,3 @@ export async function getFeatureSpending(): Promise<FeatureSpending[]> {
 
   return result;
 }
-

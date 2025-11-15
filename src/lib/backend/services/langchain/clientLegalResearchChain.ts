@@ -1,7 +1,12 @@
 // LangChain-style service for client legal research with scratchpad reasoning
 // Uses OpenRouter service with LangChain message format for structured reasoning
 
-import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from "@langchain/core/messages";
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  BaseMessage,
+} from "@langchain/core/messages";
 import { openRouterService } from "../openRouterService";
 
 /**
@@ -13,10 +18,9 @@ function convertToOpenRouterMessages(messages: BaseMessage[]): Array<{
 }> {
   return messages.map(msg => {
     // Convert content to string - handle both string and complex content types
-    const content = typeof msg.content === "string" 
-      ? msg.content 
-      : String(msg.content);
-    
+    const content =
+      typeof msg.content === "string" ? msg.content : String(msg.content);
+
     if (msg instanceof SystemMessage) {
       return { role: "system" as const, content };
     } else if (msg instanceof HumanMessage) {
@@ -86,7 +90,9 @@ function buildResearchMessages(
   history: BaseMessage[],
   showReasoning: boolean
 ): Array<{ role: "system" | "user" | "assistant"; content: string }> {
-  const systemPrompt = showReasoning ? REASONING_SYSTEM_PROMPT : BASE_SYSTEM_PROMPT;
+  const systemPrompt = showReasoning
+    ? REASONING_SYSTEM_PROMPT
+    : BASE_SYSTEM_PROMPT;
   const messages: BaseMessage[] = [
     new SystemMessage(systemPrompt),
     ...history,
@@ -126,9 +132,13 @@ export async function invokeLegalResearchChain(
   try {
     // Convert history to LangChain messages
     const langChainHistory = convertHistoryToLangChainMessages(history);
-    
+
     // Build messages with system prompt and reasoning instructions
-    const messages = buildResearchMessages(query, langChainHistory, showReasoning);
+    const messages = buildResearchMessages(
+      query,
+      langChainHistory,
+      showReasoning
+    );
 
     // Use OpenRouter service with LangChain-structured messages
     const response = await openRouterService.chat({
@@ -166,9 +176,13 @@ export async function* streamLegalResearchChain(
   try {
     // Convert history to LangChain messages
     const langChainHistory = convertHistoryToLangChainMessages(history);
-    
+
     // Build messages with system prompt and reasoning instructions
-    const messages = buildResearchMessages(query, langChainHistory, showReasoning);
+    const messages = buildResearchMessages(
+      query,
+      langChainHistory,
+      showReasoning
+    );
 
     // Use OpenRouter streaming service with LangChain-structured messages
     let fullContent = "";
@@ -197,4 +211,3 @@ export async function* streamLegalResearchChain(
       : new Error("Failed to get streaming response from AI model");
   }
 }
-

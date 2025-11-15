@@ -93,7 +93,9 @@ export function MarkdownRenderer({
             </a>
           ),
           strong: ({ children }) => (
-            <strong className="font-semibold text-foreground">{children}</strong>
+            <strong className="font-semibold text-foreground">
+              {children}
+            </strong>
           ),
           em: ({ children }) => (
             <em className="italic text-muted-foreground">{children}</em>

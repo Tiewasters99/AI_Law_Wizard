@@ -105,4 +105,3 @@ Please provide comprehensive legal research for this query, including relevant c
     practiceArea: request.practiceArea || "general",
   };
 }
-

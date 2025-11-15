@@ -142,7 +142,9 @@ export default function GrandWizardPage() {
   useEffect(() => {
     const fetchTokenCost = async () => {
       try {
-        const response = await fetch("/api/pricing/feature-pricing?feature=grand-wizard&role=CUSTOMER");
+        const response = await fetch(
+          "/api/pricing/feature-pricing?feature=grand-wizard&role=CUSTOMER"
+        );
         if (response.ok) {
           const data = await response.json();
           if (data.pricing?.tokens) {
@@ -456,6 +458,7 @@ export default function GrandWizardPage() {
     showReasoning,
     isLoading,
     balance,
+    tokenCost,
     refetchBalance,
   ]);
 

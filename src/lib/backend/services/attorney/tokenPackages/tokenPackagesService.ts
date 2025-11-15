@@ -1,7 +1,7 @@
 // Service for attorney token packages functionality
 
 import { findActivePackages } from "../../../repositories/pricing/tokenPackageRepository";
-import { prisma } from "../../../prisma";
+import { createPackage } from "../../../repositories/pricing/tokenPackageRepository";
 
 /**
  * Get all active token packages
@@ -12,20 +12,16 @@ export async function getTokenPackages() {
 
 /**
  * Create a new token package (admin/attorney function)
+ * Note: Pricing must be added separately via RolePricing
  */
 export async function createTokenPackage(data: {
   name: string;
   tokens: number;
-  priceInCents: number;
   description?: string;
 }) {
-  return await prisma.tokenPackage.create({
-    data: {
-      name: data.name,
-      tokens: data.tokens,
-      priceInCents: data.priceInCents,
-      description: data.description,
-    },
+  return await createPackage({
+    name: data.name,
+    tokens: data.tokens,
+    description: data.description,
   });
 }
-

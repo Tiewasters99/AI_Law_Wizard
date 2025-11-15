@@ -13,10 +13,7 @@ import {
 /**
  * Send a message in a conversation
  */
-export async function sendMessage(
-  data: CreateMessageData,
-  attorneyId: string
-) {
+export async function sendMessage(data: CreateMessageData, attorneyId: string) {
   // Verify conversation exists and attorney has access
   const conversation = await findConversationById(data.conversationId);
 
@@ -43,4 +40,3 @@ export async function sendMessage(
 export async function getTotalUnreadMessageCount(attorneyId: string) {
   return await countTotalUnreadMessagesForAttorney(attorneyId);
 }
-

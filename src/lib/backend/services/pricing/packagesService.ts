@@ -38,9 +38,7 @@ export async function getActivePackages(
     .filter(pkg => {
       if (role) {
         // If role is specified, only return packages with active pricing for that role
-        return pkg.RolePricing.some(
-          (rp) => rp.role === role && rp.isActive
-        );
+        return pkg.RolePricing.some(rp => rp.role === role && rp.isActive);
       }
       // If no role specified, return all packages with any role pricing
       return pkg.RolePricing.length > 0;
@@ -48,7 +46,7 @@ export async function getActivePackages(
     .map(pkg => {
       // Get role-specific price if role is provided
       const rolePricing = role
-        ? pkg.RolePricing.find((rp) => rp.role === role && rp.isActive)
+        ? pkg.RolePricing.find(rp => rp.role === role && rp.isActive)
         : null;
 
       return {

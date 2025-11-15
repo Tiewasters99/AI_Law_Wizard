@@ -28,4 +28,3 @@ export async function handleGetQueryHistory(
     return errorResponse(error, "Failed to fetch query history");
   }
 }
-

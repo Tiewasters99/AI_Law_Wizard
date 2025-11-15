@@ -21,4 +21,3 @@ export async function handleGetPayments(request: NextRequest) {
     return errorResponse(error, "Failed to fetch payment statistics");
   }
 }
-

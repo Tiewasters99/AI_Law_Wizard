@@ -27,4 +27,3 @@ export async function getTokenBalance(clientId: string) {
     totalConsumed: Math.abs(totalConsumed || 0),
   };
 }
-

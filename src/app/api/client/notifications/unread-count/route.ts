@@ -9,7 +9,7 @@ import { handleGetUnreadCounts } from "@/lib/backend/controllers/client/notifica
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     // Ensure we always return a valid JSON response
     if (!session?.user?.id) {
       return NextResponse.json(

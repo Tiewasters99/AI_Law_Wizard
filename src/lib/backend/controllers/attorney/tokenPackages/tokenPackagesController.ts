@@ -23,6 +23,7 @@ export async function handleGetTokenPackages(): Promise<Response> {
 
 /**
  * Handle POST request - Create token package
+ * Note: Pricing must be added separately via RolePricing API
  */
 export async function handleCreateTokenPackage(
   request: NextRequest,
@@ -32,18 +33,15 @@ export async function handleCreateTokenPackage(
     await verifyAttorneyAccess(userId);
 
     const body = await request.json();
-    const { name, tokens, priceInCents, description } = body;
+    const { name, tokens, description } = body;
 
     validateRequired(name, "Name");
     validateRequired(tokens, "Tokens");
-    validateRequired(priceInCents, "Price");
     validateRange(tokens, 1, 1000000, "Tokens");
-    validateRange(priceInCents, 1, 100000000, "Price in cents");
 
     const tokenPackage = await createTokenPackage({
       name,
       tokens,
-      priceInCents,
       description,
     });
 
@@ -52,4 +50,3 @@ export async function handleCreateTokenPackage(
     return errorResponse(error, "Failed to create token package");
   }
 }
-

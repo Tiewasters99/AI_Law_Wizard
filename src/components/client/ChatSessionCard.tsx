@@ -37,7 +37,7 @@ export function ChatSessionCard({
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
     if (isNaN(d.getTime())) return "Invalid date";
-    
+
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -48,7 +48,7 @@ export function ChatSessionCard({
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-    
+
     return new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
@@ -66,12 +66,14 @@ export function ChatSessionCard({
 
   const displayTitle = session.title || "Untitled Chat";
   const preview = session.lastMessage
-    ? session.lastMessage.substring(0, 100) + (session.lastMessage.length > 100 ? "..." : "")
+    ? session.lastMessage.substring(0, 100) +
+      (session.lastMessage.length > 100 ? "..." : "")
     : "No messages yet";
 
-  const chatPage = session.chatType === "grand-wizard" 
-    ? "/client/grand-wizard" 
-    : "/client/wizard";
+  const chatPage =
+    session.chatType === "grand-wizard"
+      ? "/client/grand-wizard"
+      : "/client/wizard";
 
   return (
     <motion.div
@@ -115,7 +117,10 @@ export function ChatSessionCard({
                     <span>{formatDate(session.updatedAt)}</span>
                   </div>
                   {session.messageCount !== undefined && (
-                    <span>{session.messageCount} message{session.messageCount !== 1 ? "s" : ""}</span>
+                    <span>
+                      {session.messageCount} message
+                      {session.messageCount !== 1 ? "s" : ""}
+                    </span>
                   )}
                 </div>
               </div>
@@ -140,4 +145,3 @@ export function ChatSessionCard({
     </motion.div>
   );
 }
-

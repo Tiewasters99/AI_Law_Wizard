@@ -9,8 +9,10 @@ interface AnalysisHeaderProps {
 
 export const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({ model }) => {
   const isAdvanced = model?.includes("gemini-2.5-pro");
-  const title = isAdvanced ? "Advanced AI Document Analysis" : "AI Document Analysis";
-  const description = isAdvanced 
+  const title = isAdvanced
+    ? "Advanced AI Document Analysis"
+    : "AI Document Analysis";
+  const description = isAdvanced
     ? "Premium legal document processing powered by Gemini 2.5 Pro"
     : "Advanced legal document processing powered by AI";
   const Icon = isAdvanced ? Crown : Brain;
@@ -42,9 +44,7 @@ export const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({ model }) => {
           </h1>
           <Sparkles className="w-5 h-5 text-yellow-500" />
         </div>
-        <p className="text-sm text-gray-600">
-          {description}
-        </p>
+        <p className="text-sm text-gray-600">{description}</p>
       </div>
     </motion.div>
   );

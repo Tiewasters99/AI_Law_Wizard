@@ -175,4 +175,3 @@ export async function handleGetChatMessages(
     return errorResponse(error, "Failed to fetch chat messages");
   }
 }
-

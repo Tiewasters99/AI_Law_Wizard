@@ -15,4 +15,3 @@ export async function POST(req: NextRequest) {
     session?.user?.role as Role | undefined
   );
 }
-

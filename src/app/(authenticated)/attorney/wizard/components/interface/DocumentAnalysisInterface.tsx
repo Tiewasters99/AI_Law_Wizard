@@ -153,11 +153,18 @@ export const DocumentAnalysisInterface: React.FC<
     toast.info("Starting Analysis - Processing your request...");
 
     // Start processing
-    await startProcessing({ 
+    await startProcessing({
       userPrompt: userPrompt.trim(),
       ...(model && { model }),
     });
-  }, [isProcessing, userPrompt, model, onBeforeStart, clearState, startProcessing]);
+  }, [
+    isProcessing,
+    userPrompt,
+    model,
+    onBeforeStart,
+    clearState,
+    startProcessing,
+  ]);
 
   // Handle new analysis
   const handleNewAnalysis = useCallback(() => {

@@ -157,15 +157,15 @@ export default function BlogPostDetailPage() {
         <div className="text-center max-w-md px-4">
           <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">
-            {error === "Blog post not found" ? "Blog Post Not Found" : "Error Loading Blog Post"}
+            {error === "Blog post not found"
+              ? "Blog Post Not Found"
+              : "Error Loading Blog Post"}
           </h3>
           <p className="text-muted-foreground mb-4">
-            {error || "The blog post you're looking for doesn't exist or is no longer available."}
+            {error ||
+              "The blog post you're looking for doesn't exist or is no longer available."}
           </p>
-          <Button
-            onClick={() => router.push("/client/blog")}
-            variant="outline"
-          >
+          <Button onClick={() => router.push("/client/blog")} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Blog
           </Button>
@@ -213,10 +213,7 @@ export default function BlogPostDetailPage() {
               {/* Title and Meta */}
               <div className="space-y-4">
                 {categoryInfo && (
-                  <Badge
-                    variant="outline"
-                    className={categoryInfo.color}
-                  >
+                  <Badge variant="outline" className={categoryInfo.color}>
                     {categoryInfo.name}
                   </Badge>
                 )}
@@ -246,7 +243,9 @@ export default function BlogPostDetailPage() {
                     <div className="flex items-center space-x-1">
                       <Clock className="w-4 h-4" />
                       <span>
-                        {blogPost.readTime || Math.ceil((blogPost.content?.length || 0) / 200)} min read
+                        {blogPost.readTime ||
+                          Math.ceil((blogPost.content?.length || 0) / 200)}{" "}
+                        min read
                       </span>
                     </div>
                     <div className="flex items-center space-x-1">
@@ -264,11 +263,7 @@ export default function BlogPostDetailPage() {
               {blogPost.tags && blogPost.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
                   {blogPost.tags.map(tag => (
-                    <Badge
-                      key={tag}
-                      variant="outline"
-                      className="text-xs"
-                    >
+                    <Badge key={tag} variant="outline" className="text-xs">
                       #{tag}
                     </Badge>
                   ))}
@@ -309,4 +304,3 @@ export default function BlogPostDetailPage() {
     </div>
   );
 }
-

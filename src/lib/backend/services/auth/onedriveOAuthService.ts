@@ -34,9 +34,8 @@ export async function handleOneDriveOAuthCallback(
   params: OAuthCallbackParams,
   state?: string | null
 ): Promise<OAuthResult> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
   // Determine redirect URL based on state (role)
   const isClient = state === "client";
   const successUrl = isClient
@@ -164,4 +163,3 @@ export async function handleOneDriveOAuthCallback(
     };
   }
 }
-

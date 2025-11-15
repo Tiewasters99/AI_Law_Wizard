@@ -172,9 +172,7 @@ export default function AdminDashboard() {
                   ? formatCurrency(paymentStats.averagePurchase)
                   : "$0.00"}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Per transaction
-              </p>
+              <p className="text-xs text-muted-foreground">Per transaction</p>
             </CardContent>
           </Card>
         </div>
@@ -207,7 +205,7 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {featureSpending.map((item) => (
+                  {featureSpending.map(item => (
                     <TableRow key={item.feature}>
                       <TableCell className="font-medium">
                         {item.feature}

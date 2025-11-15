@@ -8,4 +8,3 @@ import { getPaymentStats } from "../../../repositories/admin/dashboard/paymentsR
 export async function getPayments() {
   return await getPaymentStats();
 }
-

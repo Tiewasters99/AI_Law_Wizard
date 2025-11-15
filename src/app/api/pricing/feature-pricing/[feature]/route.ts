@@ -16,4 +16,3 @@ export async function GET(
 
   return handleGetFeaturePricingByFeature(modifiedRequest);
 }
-

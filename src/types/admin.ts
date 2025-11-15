@@ -110,7 +110,10 @@ export type AdminAction =
   | "PACKAGE_DELETED"
   | "TOKEN_ADJUSTMENT"
   | "ROLE_PRICING_CREATED"
-  | "ROLE_PRICING_UPDATED";
+  | "ROLE_PRICING_UPDATED"
+  | "FEATURE_PRICING_CREATED"
+  | "FEATURE_PRICING_UPDATED"
+  | "FEATURE_PRICING_DELETED";
 
 export interface DashboardStats {
   users: {

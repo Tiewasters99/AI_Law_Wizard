@@ -15,4 +15,3 @@ export async function getAdminProfile(email: string) {
 
   return admin;
 }
-

@@ -50,4 +50,3 @@ export async function handleGetBlogPost(
     return errorResponse(error, "Failed to fetch blog post");
   }
 }
-

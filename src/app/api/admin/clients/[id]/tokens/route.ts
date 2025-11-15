@@ -3,8 +3,8 @@ import { handleAdjustClientTokens } from "@/lib/backend/controllers/admin/client
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  return handleAdjustClientTokens(request, params.id);
+  const { id } = await params;
+  return handleAdjustClientTokens(request, id);
 }
-

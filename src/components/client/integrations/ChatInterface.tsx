@@ -47,7 +47,7 @@ export function ChatInterface({
           </div>
         ) : (
           <div className="space-y-1">
-            {messages.map((message) => (
+            {messages.map(message => (
               <ChatMessage
                 key={message.id}
                 id={message.id}
@@ -76,4 +76,3 @@ export function ChatInterface({
     </div>
   );
 }
-

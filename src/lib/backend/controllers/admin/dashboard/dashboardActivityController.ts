@@ -26,4 +26,3 @@ export async function handleGetDashboardActivity(request: NextRequest) {
     return errorResponse(error, "Failed to fetch activity data");
   }
 }
-

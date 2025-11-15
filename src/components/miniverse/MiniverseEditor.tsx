@@ -34,44 +34,47 @@ export const MiniverseEditor: React.FC = () => {
     URL.revokeObjectURL(url);
   }, [exportConfig]);
 
-  const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleImport = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-    // Validate file type
-    if (!file.name.endsWith(".json")) {
-      alert("Please select a JSON file.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const jsonString = e.target?.result as string;
-        if (jsonString) {
-          const success = importConfig(jsonString);
-          if (success) {
-            alert("Configuration imported successfully!");
-            // Reset file input
-            if (event.target) {
-              event.target.value = "";
-            }
-          } else {
-            alert(
-              "Failed to import configuration. Please check the file format."
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Import error:", error);
-        alert("Error reading file. Please try again.");
+      // Validate file type
+      if (!file.name.endsWith(".json")) {
+        alert("Please select a JSON file.");
+        return;
       }
-    };
-    reader.onerror = () => {
-      alert("Error reading file. Please try again.");
-    };
-    reader.readAsText(file);
-  }, [importConfig]);
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const jsonString = e.target?.result as string;
+          if (jsonString) {
+            const success = importConfig(jsonString);
+            if (success) {
+              alert("Configuration imported successfully!");
+              // Reset file input
+              if (event.target) {
+                event.target.value = "";
+              }
+            } else {
+              alert(
+                "Failed to import configuration. Please check the file format."
+              );
+            }
+          }
+        } catch (error) {
+          console.error("Import error:", error);
+          alert("Error reading file. Please try again.");
+        }
+      };
+      reader.onerror = () => {
+        alert("Error reading file. Please try again.");
+      };
+      reader.readAsText(file);
+    },
+    [importConfig]
+  );
 
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
@@ -82,11 +85,7 @@ export const MiniverseEditor: React.FC = () => {
   }, [setViewMode]);
 
   const handleResetConfig = useCallback(() => {
-    if (
-      confirm(
-        "Are you sure you want to reset to default configuration?"
-      )
-    ) {
+    if (confirm("Are you sure you want to reset to default configuration?")) {
       resetConfig();
     }
   }, [resetConfig]);

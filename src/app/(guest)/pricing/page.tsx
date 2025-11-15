@@ -80,7 +80,6 @@ export default function PricingPage() {
       setLoading(true);
       setError(null);
 
-      
       // TODO: Implement proper token package seeding/management system
       // This should replace the mock data with real database integration
       // Fetch token packages from backend
@@ -95,20 +94,20 @@ export default function PricingPage() {
       }
 
       const responseData = await packagesResponse.json();
-      
+
       // Extract packages array from response (API returns { packages: [...] })
-      const packages = Array.isArray(responseData.packages) 
-        ? responseData.packages 
-        : Array.isArray(responseData) 
-        ? responseData 
-        : [];
+      const packages = Array.isArray(responseData.packages)
+        ? responseData.packages
+        : Array.isArray(responseData)
+          ? responseData
+          : [];
 
       // Fetch feature pricing
       let featurePricing: FeaturePricing[] = [];
       if (featurePricingResponse.ok) {
         const featureData = await featurePricingResponse.json();
-        featurePricing = Array.isArray(featureData.pricing) 
-          ? featureData.pricing 
+        featurePricing = Array.isArray(featureData.pricing)
+          ? featureData.pricing
           : [];
       }
 
@@ -167,17 +166,14 @@ export default function PricingPage() {
     }
     // Authenticated users can purchase
     // Redirect to purchase flow based on role
-    const redirectPath = selectedRole === "ATTORNEY" 
-      ? `/attorney/tokens` 
-      : `/client/tokens`;
+    const redirectPath =
+      selectedRole === "ATTORNEY" ? `/attorney/tokens` : `/client/tokens`;
     window.location.href = redirectPath;
   };
 
   if (loading) {
     return (
-      <div
-        className="min-h-screen bg-background"
-      >
+      <div className="min-h-screen bg-background">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-foreground">Loading pricing information...</p>
@@ -188,9 +184,7 @@ export default function PricingPage() {
 
   if (error) {
     return (
-      <div
-        className="min-h-screen bg-background"
-      >
+      <div className="min-h-screen bg-background">
         <Alert className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
@@ -206,9 +200,7 @@ export default function PricingPage() {
   const { packages, attorneyFeatures, clientFeatures } = pricingData;
 
   return (
-    <div
-      className="min-h-screen bg-background"
-    >
+    <div className="min-h-screen bg-background">
       {/* Header Section */}
       <div className="bg-primary text-primary-foreground py-16">
         <div className="container mx-auto px-4 text-center">
@@ -265,12 +257,20 @@ export default function PricingPage() {
             isAuthenticated={!!session}
             onSignIn={handleSignIn}
           />
-          
+
           {!session && (
             <Alert className="mt-8 max-w-2xl mx-auto">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                You must <Button variant="link" onClick={handleSignIn} className="p-0 h-auto">sign up</Button> to purchase token packages. Guest users can view pricing only.
+                You must{" "}
+                <Button
+                  variant="link"
+                  onClick={handleSignIn}
+                  className="p-0 h-auto"
+                >
+                  sign up
+                </Button>{" "}
+                to purchase token packages. Guest users can view pricing only.
               </AlertDescription>
             </Alert>
           )}
@@ -280,7 +280,10 @@ export default function PricingPage() {
       {/* Pricing Calculator */}
       <div className="py-16 bg-background">
         <div className="container mx-auto px-4">
-          <PricingCalculator role={selectedRole} featurePricing={pricingData?.featurePricing || []} />
+          <PricingCalculator
+            role={selectedRole}
+            featurePricing={pricingData?.featurePricing || []}
+          />
         </div>
       </div>
 
@@ -293,21 +296,13 @@ export default function PricingPage() {
             transition={{ duration: 0.6, delay: 0.6 }}
             className="text-center mb-12"
           >
-            <h2
-              className="text-foreground"
-            >
-              Frequently Asked Questions
-            </h2>
+            <h2 className="text-foreground">Frequently Asked Questions</h2>
           </motion.div>
 
           <div className="max-w-3xl mx-auto space-y-6">
             <Card>
               <CardContent className="pt-6">
-                <h3
-                  className="text-foreground"
-                >
-                  How do tokens work?
-                </h3>
+                <h3 className="text-foreground">How do tokens work?</h3>
                 <p className="text-muted-foreground">
                   Tokens are consumed when you use AI-powered features like
                   document analysis, legal research, or consultation requests.
@@ -319,11 +314,7 @@ export default function PricingPage() {
 
             <Card>
               <CardContent className="pt-6">
-                <h3
-                  className="text-foreground"
-                >
-                  Do tokens expire?
-                </h3>
+                <h3 className="text-foreground">Do tokens expire?</h3>
                 <p className="text-muted-foreground">
                   No, your tokens never expire. You can use them at your own
                   pace, whether that&apos;s over days, weeks, or months.
@@ -333,9 +324,7 @@ export default function PricingPage() {
 
             <Card>
               <CardContent className="pt-6">
-                <h3
-                  className="text-foreground"
-                >
+                <h3 className="text-foreground">
                   Can I switch between attorney and client plans?
                 </h3>
                 <p className="text-muted-foreground">
@@ -348,9 +337,7 @@ export default function PricingPage() {
 
             <Card>
               <CardContent className="pt-6">
-                <h3
-                  className="text-foreground"
-                >
+                <h3 className="text-foreground">
                   What payment methods do you accept?
                 </h3>
                 <p className="text-muted-foreground">

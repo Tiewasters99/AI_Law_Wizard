@@ -43,4 +43,3 @@ export async function handleGetDashboardTokenUsage(request: NextRequest) {
     return errorResponse(error, "Failed to fetch token usage data");
   }
 }
-

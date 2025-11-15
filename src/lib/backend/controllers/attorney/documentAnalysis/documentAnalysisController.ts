@@ -39,7 +39,10 @@ export async function handleDocumentAnalysis(
 
     const result = await performDocumentAnalysis(userId, body);
 
-    const headers = getRateLimitHeaders(rateLimit.remaining, rateLimit.resetTime);
+    const headers = getRateLimitHeaders(
+      rateLimit.remaining,
+      rateLimit.resetTime
+    );
     return successResponse(result, 200, { headers });
   } catch (error) {
     return errorResponse(error, "Document analysis failed");
@@ -68,4 +71,3 @@ export async function handleGetDocumentAnalysisHistory(
     return errorResponse(error, "Failed to fetch query history");
   }
 }
-

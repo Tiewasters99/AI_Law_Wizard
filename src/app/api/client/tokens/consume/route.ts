@@ -16,4 +16,3 @@ export async function POST(request: NextRequest) {
   }
   return handleConsumeTokens(request, session.user.id);
 }
-

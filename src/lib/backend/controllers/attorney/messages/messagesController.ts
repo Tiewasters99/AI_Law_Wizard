@@ -7,7 +7,10 @@ import {
   getTotalUnreadMessageCount,
 } from "../../../services/attorney/messages/messagesService";
 import { successResponse, errorResponse } from "../../../utils/response";
-import { validateRequired, validateNonEmptyString } from "../../../utils/validation";
+import {
+  validateRequired,
+  validateNonEmptyString,
+} from "../../../utils/validation";
 
 /**
  * Handle POST request - Send a message
@@ -60,4 +63,3 @@ export async function handleGetUnreadMessageCount(
     return errorResponse(error, "Failed to fetch unread message count");
   }
 }
-

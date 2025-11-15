@@ -39,7 +39,7 @@ export function QueryHistory({
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredQueries = queries.filter(
-    (q) =>
+    q =>
       q.query.toLowerCase().includes(searchQuery.toLowerCase()) ||
       q.result.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -93,7 +93,7 @@ export function QueryHistory({
           <Input
             placeholder="Search history..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             className="pl-10 text-sm"
           />
         </div>
@@ -104,14 +104,18 @@ export function QueryHistory({
             <div className="flex items-center justify-center py-8">
               <div className="text-center space-y-2">
                 <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-sm text-muted-foreground">Loading history...</p>
+                <p className="text-sm text-muted-foreground">
+                  Loading history...
+                </p>
               </div>
             </div>
           ) : filteredQueries.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
-                {searchQuery ? "No queries match your search" : "No queries yet"}
+                {searchQuery
+                  ? "No queries match your search"
+                  : "No queries yet"}
               </p>
               {!searchQuery && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -130,12 +134,14 @@ export function QueryHistory({
                     <Separator className="flex-1" />
                   </div>
                   <div className="space-y-3">
-                    {groupQueries.map((query) => (
+                    {groupQueries.map(query => (
                       <div key={query.id} className="relative group">
                         <div
                           className="cursor-pointer"
                           onClick={() => {
-                            setExpandedId(expandedId === query.id ? null : query.id);
+                            setExpandedId(
+                              expandedId === query.id ? null : query.id
+                            );
                             onQueryClick?.(query.query);
                           }}
                         >
@@ -153,11 +159,15 @@ export function QueryHistory({
                                   <Badge variant="outline" className="text-xs">
                                     {query.tokensUsed} tokens
                                   </Badge>
-                                  {query.sources && query.sources.length > 0 && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      {query.sources.length} sources
-                                    </Badge>
-                                  )}
+                                  {query.sources &&
+                                    query.sources.length > 0 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs"
+                                      >
+                                        {query.sources.length} sources
+                                      </Badge>
+                                    )}
                                 </div>
                               </div>
                               {onDelete && (
@@ -165,7 +175,7 @@ export function QueryHistory({
                                   variant="ghost"
                                   size="sm"
                                   className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0"
-                                  onClick={(e) => {
+                                  onClick={e => {
                                     e.stopPropagation();
                                     onDelete(query.id);
                                   }}
@@ -200,4 +210,3 @@ export function QueryHistory({
     </Card>
   );
 }
-

@@ -17,11 +17,10 @@ export async function handleGetPackages(
     const role = searchParams.get("role") as Role | null;
 
     const packages = await getActivePackages(role || undefined);
-    
+
     // Return in format expected by frontend: { packages: [...] }
     return successResponse({ packages });
   } catch (error) {
     return errorResponse(error, "Failed to fetch pricing packages");
   }
 }
-

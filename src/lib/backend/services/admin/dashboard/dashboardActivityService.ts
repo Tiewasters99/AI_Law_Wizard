@@ -8,4 +8,3 @@ import { getRecentActivityLogs } from "../../../repositories/admin/adminActivity
 export async function getRecentActivity(limit: number = 20) {
   return await getRecentActivityLogs(limit);
 }
-

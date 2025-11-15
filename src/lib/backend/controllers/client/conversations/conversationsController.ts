@@ -20,4 +20,3 @@ export async function handleGetConversations(
     return errorResponse(error, "Failed to fetch conversations");
   }
 }
-

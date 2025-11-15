@@ -58,4 +58,3 @@ export async function getFileContent(
   // If no file found, return a placeholder
   return `Content for ${fileName} is not available. This file was processed but content could not be extracted.`;
 }
-

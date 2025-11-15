@@ -35,4 +35,3 @@ export async function handleGetRolePricing(request: NextRequest) {
     return errorResponse(error, "Failed to check role pricing");
   }
 }
-

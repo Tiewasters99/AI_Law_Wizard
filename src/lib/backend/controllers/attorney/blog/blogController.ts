@@ -65,7 +65,10 @@ export async function handleUpdateBlog(
     const { id, title, content } = body;
 
     if (!id) {
-      return errorResponse(new Error("Blog ID is required"), "Validation failed");
+      return errorResponse(
+        new Error("Blog ID is required"),
+        "Validation failed"
+      );
     }
 
     const validatedTitle = validateNonEmptyString(title, "Title");
@@ -96,7 +99,10 @@ export async function handleDeleteBlog(
     const id = searchParams.get("id");
 
     if (!id) {
-      return errorResponse(new Error("Blog ID is required"), "Validation failed");
+      return errorResponse(
+        new Error("Blog ID is required"),
+        "Validation failed"
+      );
     }
 
     await deleteBlogPost(id);
@@ -105,4 +111,3 @@ export async function handleDeleteBlog(
     return errorResponse(error, "Failed to delete blog");
   }
 }
-

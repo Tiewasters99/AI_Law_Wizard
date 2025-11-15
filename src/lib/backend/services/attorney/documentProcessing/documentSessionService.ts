@@ -83,10 +83,7 @@ export async function getAllDocumentSessions() {
 /**
  * Update a session
  */
-export async function updateDocumentSession(
-  sessionId: string,
-  updates: any
-) {
+export async function updateDocumentSession(sessionId: string, updates: any) {
   await updateChatSession(sessionId, { metadata: updates });
   return { sessionId };
 }
@@ -98,4 +95,3 @@ export async function deleteDocumentSession(sessionId: string) {
   await deleteChatSession(sessionId);
   return { success: true };
 }
-

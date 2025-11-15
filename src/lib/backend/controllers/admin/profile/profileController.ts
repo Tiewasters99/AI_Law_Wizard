@@ -21,4 +21,3 @@ export async function handleGetProfile(request: NextRequest) {
     return errorResponse(error, "Failed to fetch admin profile");
   }
 }
-

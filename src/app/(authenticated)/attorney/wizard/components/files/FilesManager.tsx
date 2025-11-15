@@ -41,18 +41,18 @@ interface FilesManagerProps {
 }
 
 const getFileIcon = (fileType: string, isFolder: boolean = false) => {
-  if (isFolder) return <FileText className="w-5 h-5 text-blue-500" />;
+  if (isFolder) return <FileText className="w-5 h-5 text-blue-500" aria-label="Folder" />;
   if (fileType.includes("pdf"))
-    return <FileText className="w-5 h-5 text-red-500" />;
+    return <FileText className="w-5 h-5 text-red-500" aria-label="PDF file" />;
   if (fileType.includes("image"))
-    return <Image className="w-5 h-5 text-blue-500" />;
+    return <Image className="w-5 h-5 text-blue-500" aria-label="Image file" />;
   if (fileType.includes("video"))
-    return <Video className="w-5 h-5 text-purple-500" />;
+    return <Video className="w-5 h-5 text-purple-500" aria-label="Video file" />;
   if (fileType.includes("audio"))
-    return <Music className="w-5 h-5 text-green-500" />;
+    return <Music className="w-5 h-5 text-green-500" aria-label="Audio file" />;
   if (fileType.includes("zip") || fileType.includes("rar"))
-    return <Archive className="w-5 h-5 text-orange-500" />;
-  return <FileText className="w-5 h-5 text-gray-500" />;
+    return <Archive className="w-5 h-5 text-orange-500" aria-label="Archive file" />;
+  return <FileText className="w-5 h-5 text-gray-500" aria-label="File" />;
 };
 
 const formatFileSize = (bytes: number) => {
@@ -138,7 +138,7 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ className }) => {
         setLoading(false);
       }
     },
-    [isAuthenticated, currentFolder, searchTerm]
+    [isAuthenticated, currentFolder, searchTerm, checkSyncStatus]
   );
 
   // Check sync status for files
@@ -527,6 +527,3 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ className }) => {
     </Card>
   );
 };
-
-
-

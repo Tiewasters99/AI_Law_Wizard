@@ -76,7 +76,9 @@ function ToastComponent({ toast, onRemove }: ToastProps) {
               </p>
             )}
             {toast.description && (
-              <p className="mt-1 text-sm text-muted-foreground">{toast.description}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {toast.description}
+              </p>
             )}
           </div>
           <div className="ml-4 flex-shrink-0 flex">

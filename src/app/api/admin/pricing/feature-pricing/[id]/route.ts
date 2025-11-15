@@ -31,4 +31,3 @@ export async function DELETE(
   const { id } = await params;
   return handleDeleteFeaturePricing(request, { params: { id } });
 }
-

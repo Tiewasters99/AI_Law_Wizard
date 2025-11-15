@@ -1,7 +1,11 @@
 // Controller for admin client token adjustments
 
 import { NextRequest } from "next/server";
-import { requireAdminAuth, getClientIP, getUserAgent } from "../../../utils/adminAuth";
+import {
+  requireAdminAuth,
+  getClientIP,
+  getUserAgent,
+} from "../../../utils/adminAuth";
 import { adjustClientTokenBalance } from "../../../services/admin/clients/tokenAdjustmentService";
 import { createAdminActivityLog } from "../../../repositories/admin/adminActivityRepository";
 import { AdminAction } from "@/types/admin";
@@ -65,4 +69,3 @@ export async function handleAdjustClientTokens(
     return errorResponse(error, "Failed to adjust client tokens");
   }
 }
-

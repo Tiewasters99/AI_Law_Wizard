@@ -53,7 +53,9 @@ export const AnalysisInput: React.FC<AnalysisInputProps> = ({
               className="text-base resize-none p-4"
               disabled={isProcessing}
             />
-            <p className="text-xs text-muted-foreground">Press Ctrl+Enter to submit</p>
+            <p className="text-xs text-muted-foreground">
+              Press Ctrl+Enter to submit
+            </p>
           </div>
 
           <Button

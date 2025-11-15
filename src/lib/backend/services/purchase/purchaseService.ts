@@ -46,11 +46,18 @@ export async function preparePurchase(
     throw new ValidationError("Package is not available");
   }
 
-  // Get role-specific price
-  const rolePricing = packageData.RolePricing[0];
-  const priceInCents = rolePricing
-    ? rolePricing.priceInCents
-    : packageData.priceInCents;
+  // Get role-specific price - required for purchase
+  const rolePricing = packageData.RolePricing.find(
+    rp => rp.role === request.role && rp.isActive
+  );
+  
+  if (!rolePricing) {
+    throw new NotFoundError(
+      `Pricing not available for ${request.role} role. Please contact support.`
+    );
+  }
+  
+  const priceInCents = rolePricing.priceInCents;
 
   // Get user's wallet
   const user = await findUserByEmailWithWallet(request.userEmail);

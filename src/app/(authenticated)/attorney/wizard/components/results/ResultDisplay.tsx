@@ -29,7 +29,6 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
   onContinueChat,
   onNewAnalysis,
 }) => {
-
   const handleCopy = () => {
     navigator.clipboard.writeText(result);
     toast.success("Result copied to clipboard");
@@ -95,24 +94,15 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
               <MessageSquare className="w-4 h-4 mr-2" />
               Continue Chat
             </Button>
-            <Button
-              onClick={handleCopy}
-              variant="outline"
-            >
+            <Button onClick={handleCopy} variant="outline">
               <Copy className="w-4 h-4 mr-2" />
               Copy
             </Button>
-            <Button
-              onClick={handleDownload}
-              variant="outline"
-            >
+            <Button onClick={handleDownload} variant="outline">
               <Download className="w-4 h-4 mr-2" />
               Download
             </Button>
-            <Button
-              onClick={onNewAnalysis}
-              variant="outline"
-            >
+            <Button onClick={onNewAnalysis} variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" />
               New Analysis
             </Button>

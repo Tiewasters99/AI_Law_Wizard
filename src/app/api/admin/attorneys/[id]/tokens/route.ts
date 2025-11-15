@@ -3,8 +3,8 @@ import { handleAdjustAttorneyTokens } from "@/lib/backend/controllers/admin/atto
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  return handleAdjustAttorneyTokens(request, params.id);
+  const { id } = await params;
+  return handleAdjustAttorneyTokens(request, id);
 }
-

@@ -31,4 +31,3 @@ export async function getPaymentStats(): Promise<PaymentStats> {
     averagePurchase: Math.round(result._avg.amountPaid || 0),
   };
 }
-

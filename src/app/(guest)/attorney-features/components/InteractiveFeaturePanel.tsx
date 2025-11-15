@@ -92,9 +92,7 @@ export function InteractiveFeaturePanel({
             className="fixed right-0 top-0 h-full w-full sm:w-4/5 md:w-2/3 lg:w-1/2 xl:w-2/5 bg-white shadow-2xl z-50 flex flex-col"
           >
             {/* Panel Header */}
-            <div
-              className="text-white p-4 sm:p-6 flex-shrink-0 bg-primary text-primary-foreground shadow-md"
-            >
+            <div className="text-white p-4 sm:p-6 flex-shrink-0 bg-primary text-primary-foreground shadow-md">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                   <div
@@ -195,9 +193,7 @@ export function InteractiveFeaturePanel({
                   {children}
                 </div>
               ) : (
-                <div
-                  className="rounded-lg p-4 sm:p-8 min-h-[300px] sm:min-h-[400px] flex items-center justify-center bg-accent/80"
-                >
+                <div className="rounded-lg p-4 sm:p-8 min-h-[300px] sm:min-h-[400px] flex items-center justify-center bg-accent/80">
                   <div className="text-center max-w-md px-4">
                     <div
                       className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6"

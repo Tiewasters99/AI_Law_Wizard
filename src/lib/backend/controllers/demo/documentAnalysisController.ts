@@ -34,4 +34,3 @@ export async function handleDemoDocumentAnalysis(
     return errorResponse(error, "Demo analysis failed. Please try again.");
   }
 }
-

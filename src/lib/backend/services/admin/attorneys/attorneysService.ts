@@ -13,7 +13,15 @@ export interface AttorneysListParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: "name" | "email" | "firmName" | "specialty" | "createdAt" | "tokenBalance" | "totalSpent" | "purchaseCount";
+  sortBy?:
+    | "name"
+    | "email"
+    | "firmName"
+    | "specialty"
+    | "createdAt"
+    | "tokenBalance"
+    | "totalSpent"
+    | "purchaseCount";
   sortOrder?: "asc" | "desc";
 }
 
@@ -60,7 +68,13 @@ export async function listAttorneys(
   const sortBy = params.sortBy;
   const sortOrder = params.sortOrder || "desc";
 
-  const { attorneys, total } = await findAllAttorneys(page, limit, search, sortBy, sortOrder);
+  const { attorneys, total } = await findAllAttorneys(
+    page,
+    limit,
+    search,
+    sortBy,
+    sortOrder
+  );
 
   const totalPages = Math.ceil(total / limit);
 
@@ -179,4 +193,3 @@ export async function deleteAttorneyById(id: string) {
   await deleteAttorney(id);
   return { success: true };
 }
-

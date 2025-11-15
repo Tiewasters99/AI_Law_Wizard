@@ -96,7 +96,9 @@ export function PacerHeader({
                 <h1 className="text-lg font-bold text-foreground">
                   Docket Genie
                 </h1>
-                <p className="text-xs text-muted-foreground">PACER Integration</p>
+                <p className="text-xs text-muted-foreground">
+                  PACER Integration
+                </p>
               </div>
             </div>
 
@@ -105,7 +107,9 @@ export function PacerHeader({
               <nav className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
                 {breadcrumbs.map((crumb, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    {index > 0 && <span className="text-muted-foreground/50">/</span>}
+                    {index > 0 && (
+                      <span className="text-muted-foreground/50">/</span>
+                    )}
                     {crumb.onClick ? (
                       <button
                         onClick={crumb.onClick}

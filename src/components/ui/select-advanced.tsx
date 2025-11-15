@@ -11,7 +11,9 @@ interface SelectContextType {
   setOpen: (open: boolean) => void;
 }
 
-const SelectContext = React.createContext<SelectContextType | undefined>(undefined);
+const SelectContext = React.createContext<SelectContextType | undefined>(
+  undefined
+);
 
 const useSelect = () => {
   const context = React.useContext(SelectContext);
@@ -37,7 +39,8 @@ const Select = ({ value, onValueChange, children }: SelectProps) => {
   );
 };
 
-interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface SelectTriggerProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
@@ -86,7 +89,7 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
     React.useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         const target = event.target as Element;
-        if (!target.closest('[data-select]')) {
+        if (!target.closest("[data-select]")) {
           setOpen(false);
         }
       };
@@ -157,10 +160,4 @@ const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
 
 SelectItem.displayName = "SelectItem";
 
-export {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-};
+export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem };

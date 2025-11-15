@@ -64,7 +64,9 @@ export default function TokensPage() {
   useEffect(() => {
     const loadFeaturePricing = async () => {
       try {
-        const response = await fetch("/api/pricing/feature-pricing?role=ATTORNEY");
+        const response = await fetch(
+          "/api/pricing/feature-pricing?role=ATTORNEY"
+        );
         if (response.ok) {
           const data = await response.json();
           const pricing = Array.isArray(data.pricing) ? data.pricing : [];
@@ -80,8 +82,11 @@ export default function TokensPage() {
 
   // Map feature pricing to display format
   const features = useMemo(() => {
-    const featureMap = new Map<string, { name: string; cost: number; description: string }>();
-    
+    const featureMap = new Map<
+      string,
+      { name: string; cost: number; description: string }
+    >();
+
     // Add features from database
     featurePricing
       .filter(fp => fp.role === "ATTORNEY" || fp.role === null)

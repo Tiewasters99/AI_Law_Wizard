@@ -119,4 +119,3 @@ export async function createUser(data: CreateUserData) {
     },
   });
 }
-

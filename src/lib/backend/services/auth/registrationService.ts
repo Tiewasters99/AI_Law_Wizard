@@ -4,9 +4,7 @@ import {
   findUserByEmail,
   createUser,
 } from "@/lib/backend/repositories/common/userRepository";
-import {
-  createWalletWithStarterTokens,
-} from "@/lib/backend/repositories/purchase/walletRepository";
+import { createWalletWithStarterTokens } from "@/lib/backend/repositories/purchase/walletRepository";
 import {
   validateRequired,
   validateEmail,
@@ -88,4 +86,3 @@ export async function registerUser(
     role: user.role,
   };
 }
-

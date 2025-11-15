@@ -222,6 +222,3 @@ export const useQueryHistoryStore = create<QueryHistoryState>()(
     { name: "QueryHistoryStore" }
   )
 );
-
-
-

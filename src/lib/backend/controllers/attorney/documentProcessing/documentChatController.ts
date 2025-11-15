@@ -6,7 +6,10 @@ import {
   getChatSession,
 } from "../../../services/attorney/documentProcessing/documentChatService";
 import { successResponse, errorResponse } from "../../../utils/response";
-import { validateNonEmptyString, validateRequired } from "../../../utils/validation";
+import {
+  validateNonEmptyString,
+  validateRequired,
+} from "../../../utils/validation";
 
 /**
  * Handle POST request - Process chat message
@@ -47,10 +50,7 @@ export async function handleGetChatSession(
     const session = await getChatSession(sessionId!);
 
     if (!session) {
-      return errorResponse(
-        new Error("Session not found"),
-        "Session not found"
-      );
+      return errorResponse(new Error("Session not found"), "Session not found");
     }
 
     return successResponse({
@@ -61,4 +61,3 @@ export async function handleGetChatSession(
     return errorResponse(error, "Internal server error");
   }
 }
-

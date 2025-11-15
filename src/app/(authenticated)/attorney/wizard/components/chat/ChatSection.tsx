@@ -117,9 +117,7 @@ export const ChatSection: React.FC<ChatSectionProps> = ({
           className="rounded-2xl bg-background border shadow-lg overflow-hidden"
         >
           {/* Header */}
-          <div
-            className="flex items-center justify-between p-4 border-b bg-accent/50"
-          >
+          <div className="flex items-center justify-between p-4 border-b bg-accent/50">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />

@@ -141,7 +141,9 @@ export default function UpgradeModal({
                     {BENEFITS.map((benefit, idx) => (
                       <div key={idx} className="flex items-start space-x-2">
                         <CheckCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-foreground">{benefit}</span>
+                        <span className="text-sm text-foreground">
+                          {benefit}
+                        </span>
                       </div>
                     ))}
                   </div>

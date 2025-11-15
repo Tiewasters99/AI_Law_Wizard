@@ -4,4 +4,3 @@ import { handleListAttorneys } from "@/lib/backend/controllers/admin/attorneys/a
 export async function GET(request: NextRequest) {
   return handleListAttorneys(request);
 }
-

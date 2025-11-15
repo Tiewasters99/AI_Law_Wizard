@@ -38,4 +38,3 @@ export async function handleConsumeTokens(
     return errorResponse(error, "Failed to consume tokens");
   }
 }
-

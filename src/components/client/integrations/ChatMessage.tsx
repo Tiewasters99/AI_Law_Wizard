@@ -10,7 +10,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Copy, ChevronDown, ChevronUp, FileText, User, Bot } from "lucide-react";
+import {
+  Copy,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  User,
+  Bot,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { QuerySource } from "@/types/api";
 import { MessageRole } from "@prisma/client";
@@ -59,7 +66,9 @@ export function ChatMessage({
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
-      <div className={`max-w-[85%] sm:max-w-[75%] ${isUser ? "order-2" : "order-1"}`}>
+      <div
+        className={`max-w-[85%] sm:max-w-[75%] ${isUser ? "order-2" : "order-1"}`}
+      >
         <Card className={isUser ? "bg-primary text-primary-foreground" : ""}>
           <CardContent className="p-3 sm:p-4 space-y-2">
             {/* Header */}
@@ -93,7 +102,7 @@ export function ChatMessage({
             {/* Actions and Sources (only for assistant messages) */}
             {!isUser && (
               <>
-                {(sources && sources.length > 0) && (
+                {sources && sources.length > 0 && (
                   <div className="space-y-2 pt-2">
                     <Collapsible
                       open={isSourcesOpen}
@@ -169,4 +178,3 @@ export function ChatMessage({
     </div>
   );
 }
-

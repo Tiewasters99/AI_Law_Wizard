@@ -43,4 +43,3 @@ export async function handleGetLogs(request: NextRequest) {
     return errorResponse(error, "Failed to fetch logs");
   }
 }
-

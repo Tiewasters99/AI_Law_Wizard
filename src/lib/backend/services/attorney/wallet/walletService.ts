@@ -1,6 +1,9 @@
 // Service for attorney wallet functionality
 
-import { findOrCreateWallet, findWalletByUserId } from "../../../repositories/purchase/walletRepository";
+import {
+  findOrCreateWallet,
+  findWalletByUserId,
+} from "../../../repositories/purchase/walletRepository";
 import { createTokenTransaction } from "../../../repositories/attorney/tokenTransactionRepository";
 import { prisma } from "../../../prisma";
 import { NotFoundError, ValidationError } from "../../../utils/errors";
@@ -75,4 +78,3 @@ export async function consumeTokens(
 
   return updatedWallet;
 }
-
