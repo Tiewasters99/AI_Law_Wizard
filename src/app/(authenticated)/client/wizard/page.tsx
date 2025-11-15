@@ -117,13 +117,11 @@ function InsufficientCreditsModal({
   );
 }
 
-const WIZARD_TOKEN_REQUIREMENT = 2;
-const WIZARD_TOKEN_COST = 2;
-
 export default function WizardPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [tokenCost, setTokenCost] = useState(2); // Default fallback
   const {
     balance,
     loading: balanceLoading,
@@ -141,6 +139,25 @@ export default function WizardPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch token cost from database
+  useEffect(() => {
+    const fetchTokenCost = async () => {
+      try {
+        const response = await fetch("/api/pricing/feature-pricing?feature=wizard&role=CUSTOMER");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.pricing?.tokens) {
+            setTokenCost(data.pricing.tokens);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch token cost:", error);
+        // Keep default fallback
+      }
+    };
+    fetchTokenCost();
+  }, []);
 
   // Load session from database when sessionId query param is present
   useEffect(() => {
@@ -277,7 +294,7 @@ export default function WizardPage() {
     if (!userId) return;
 
     // Check if user has sufficient balance
-    if (balance < WIZARD_TOKEN_COST) {
+    if (balance < tokenCost) {
       setShowInsufficientCreditsModal(true);
       return;
     }
@@ -529,7 +546,7 @@ export default function WizardPage() {
 
   return (
     <TokenGuard
-      requiredTokens={WIZARD_TOKEN_REQUIREMENT}
+      requiredTokens={tokenCost}
       feature="Legal Chat"
       description="Premium AI legal assistant with enhanced capabilities"
       balance={balance}
@@ -676,7 +693,7 @@ export default function WizardPage() {
           onClose={() => setShowInsufficientCreditsModal(false)}
           onPurchase={handlePurchaseCredits}
           balance={balance}
-          required={WIZARD_TOKEN_COST}
+          required={tokenCost}
         />
       </div>
     </TokenGuard>

@@ -14,18 +14,21 @@ export async function listPackages() {
 }
 
 /**
- * Create a new token package
+ * Create a new token package (without pricing - pricing must be added separately via RolePricing)
  */
 export async function createPackage(data: {
   name: string;
   tokens: number;
-  priceInCents: number;
   description?: string | null;
   isActive?: boolean;
 }) {
   // Validate required fields
-  if (!data.name || !data.tokens || data.priceInCents === undefined) {
-    throw new ValidationError("Name, tokens, and price are required");
+  if (!data.name || !data.tokens) {
+    throw new ValidationError("Name and tokens are required");
+  }
+
+  if (data.tokens <= 0) {
+    throw new ValidationError("Tokens must be greater than 0");
   }
 
   return await createPackageRepo(data);

@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Users,
   Scale,
-  ToggleLeft,
   DollarSign,
   FileText,
   Settings,
@@ -58,8 +57,8 @@ const adminNavigation: Record<string, NavigationSection> = {
     icon: Users,
     items: [
       {
-        label: "Customers",
-        href: "/admin/customers",
+        label: "Clients",
+        href: "/admin/clients",
         icon: Users,
       },
       {
@@ -73,11 +72,6 @@ const adminNavigation: Record<string, NavigationSection> = {
     label: "System Management",
     icon: Settings,
     items: [
-      {
-        label: "Feature Management",
-        href: "/admin/features",
-        icon: ToggleLeft,
-      },
       {
         label: "Pricing Management",
         href: "/admin/pricing",

@@ -31,6 +31,42 @@ interface TokenPurchaseProps {
   showWallet?: boolean;
 }
 
+// Static packages fallback (same as client side)
+const staticPackages: TokenPackage[] = [
+  {
+    id: "starter",
+    name: "Starter Pack",
+    tokens: 100,
+    priceInCents: 999,
+    description: "Perfect for getting started with basic legal assistance",
+    isActive: true,
+  },
+  {
+    id: "professional",
+    name: "Professional Pack",
+    tokens: 500,
+    priceInCents: 3999,
+    description: "Most popular choice for regular legal needs",
+    isActive: true,
+  },
+  {
+    id: "business",
+    name: "Business Pack",
+    tokens: 1000,
+    priceInCents: 6999,
+    description: "Ideal for businesses with high legal document volume",
+    isActive: true,
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise Pack",
+    tokens: 2500,
+    priceInCents: 14999,
+    description: "For large organizations with extensive legal needs",
+    isActive: true,
+  },
+];
+
 export const TokenPurchase = ({
   onSuccess,
   showWallet = true,
@@ -54,72 +90,39 @@ export const TokenPurchase = ({
   useEffect(() => {
     // Get primary color from theme on mount and theme changes
     setPrimaryColorHex(getPrimaryColorHex());
-    
+
     // Listen for theme changes
     const observer = new MutationObserver(() => {
       setPrimaryColorHex(getPrimaryColorHex());
     });
-    
+
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class'],
+      attributeFilter: ["class"],
     });
-    
+
     return () => observer.disconnect();
   }, []);
-
-  // Static packages fallback (same as client side)
-  const staticPackages: TokenPackage[] = [
-    {
-      id: "starter",
-      name: "Starter Pack",
-      tokens: 100,
-      priceInCents: 999,
-      description: "Perfect for getting started with basic legal assistance",
-      isActive: true,
-    },
-    {
-      id: "professional",
-      name: "Professional Pack",
-      tokens: 500,
-      priceInCents: 3999,
-      description: "Most popular choice for regular legal needs",
-      isActive: true,
-    },
-    {
-      id: "business",
-      name: "Business Pack",
-      tokens: 1000,
-      priceInCents: 6999,
-      description: "Ideal for businesses with high legal document volume",
-      isActive: true,
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise Pack",
-      tokens: 2500,
-      priceInCents: 14999,
-      description: "For large organizations with extensive legal needs",
-      isActive: true,
-    },
-  ];
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [packagesData, walletData] = await Promise.all([
-        fetchTokenPackages(),
-        fetchWallet(),
+        fetchTokenPackages("ATTORNEY"), // Explicitly fetch ATTORNEY role packages from unified pricing API
+        fetchWallet("ATTORNEY"), // Explicitly fetch ATTORNEY wallet
       ]);
       // Use API packages if available, otherwise use static fallback
       setPackages(packagesData.length > 0 ? packagesData : staticPackages);
       setWallet(walletData);
     } catch (err) {
       // On error, use static packages as fallback
-      console.error("Failed to load packages from API, using static fallback:", err);
+      console.error(
+        "Failed to load packages from API, using static fallback:",
+        err
+      );
       setPackages(staticPackages);
       try {
-        const walletData = await fetchWallet();
+        const walletData = await fetchWallet("ATTORNEY");
         setWallet(walletData);
       } catch (walletErr) {
         setError(err instanceof Error ? err.message : "Failed to load data");
@@ -140,7 +143,7 @@ export const TokenPurchase = ({
     setPaymentLoading(true);
 
     try {
-      const { clientSecret } = await createPaymentIntent(pkg.id);
+      const { clientSecret } = await createPaymentIntent(pkg.id, "ATTORNEY"); // Explicitly use ATTORNEY role
       setPaymentClientSecret(clientSecret);
       setShowPaymentForm(true);
     } catch (err) {
@@ -160,7 +163,7 @@ export const TokenPurchase = ({
 
       // Refresh wallet data
       try {
-        const updatedWallet = await fetchWallet();
+        const updatedWallet = await fetchWallet("ATTORNEY");
         setWallet(updatedWallet);
         onSuccess?.(tokens);
       } catch (err) {
@@ -189,7 +192,9 @@ export const TokenPurchase = ({
         <h3 className="text-lg font-semibold text-foreground mb-2">
           Authentication Required
         </h3>
-        <p className="text-muted-foreground mb-4">Please sign in to purchase tokens</p>
+        <p className="text-muted-foreground mb-4">
+          Please sign in to purchase tokens
+        </p>
         <Button onClick={() => router.push("/login")}>Sign In</Button>
       </div>
     );
@@ -248,13 +253,14 @@ export const TokenPurchase = ({
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-foreground">
-                  {formatPrice(selectedPackage.priceInCents)}
+                  {formatPrice(selectedPackage.priceInCents ?? 0)}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {formatPrice(
-                    selectedPackage.priceInCents / selectedPackage.tokens
-                  )}{" "}
-                  per token
+                  {selectedPackage.priceInCents && selectedPackage.tokens
+                    ? `${formatPrice(
+                        selectedPackage.priceInCents / selectedPackage.tokens
+                      )} per token`
+                    : ""}
                 </div>
               </div>
             </div>
@@ -302,8 +308,12 @@ export const TokenPurchase = ({
                   <Coins className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-primary-foreground/80 text-sm">Available Tokens</p>
-                  <p className="text-2xl font-bold">{wallet.balance ?? wallet.tokens ?? 0}</p>
+                  <p className="text-primary-foreground/80 text-sm">
+                    Available Tokens
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {wallet.balance ?? wallet.tokens ?? 0}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
@@ -366,10 +376,12 @@ export const TokenPurchase = ({
               <CardContent className="text-center">
                 <div className="mb-4">
                   <div className="text-3xl font-bold text-foreground">
-                    {formatPrice(pkg.priceInCents)}
+                    {formatPrice(pkg.priceInCents ?? 0)}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {formatPrice(pkg.priceInCents / pkg.tokens)} per token
+                    {pkg.priceInCents && pkg.tokens
+                      ? `${formatPrice(pkg.priceInCents / pkg.tokens)} per token`
+                      : ""}
                   </div>
                 </div>
 

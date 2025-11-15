@@ -30,6 +30,7 @@ import {
 import { JobStatus, MessageRole } from "@prisma/client";
 import { ValidationError } from "../../../utils/errors";
 import { deductTokens } from "../../../tokenService";
+import { getFeatureTokenCost } from "../../pricing/featurePricingService";
 import type {
   ProcessingRequest,
   ProcessingResponse,
@@ -598,12 +599,20 @@ export async function performClientDocumentAnalysis(
     };
   });
 
-  // Consume tokens after successful query (5 tokens per query)
-  const DOCUMENT_QUERY_TOKEN_COST = 5;
+  // Consume tokens after successful query - get cost from database
+  let tokenCost: number;
+  try {
+    tokenCost = await getFeatureTokenCost("document-assistant", "CUSTOMER");
+  } catch (pricingError) {
+    // Fallback to default if pricing not found
+    console.error('Failed to get pricing for feature "document-assistant":', pricingError);
+    tokenCost = 5;
+  }
+  
   try {
     await deductTokens(
       userId,
-      DOCUMENT_QUERY_TOKEN_COST,
+      tokenCost,
       "Document Assistant query",
       "document-assistant",
       {

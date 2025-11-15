@@ -115,10 +115,8 @@ function InsufficientCreditsModal({
   );
 }
 
-const GRAND_WIZARD_TOKEN_REQUIREMENT = 5;
-const GRAND_WIZARD_TOKEN_COST = 5;
-
 export default function GrandWizardPage() {
+  const [tokenCost, setTokenCost] = useState(5); // Default fallback
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -139,6 +137,25 @@ export default function GrandWizardPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch token cost from database
+  useEffect(() => {
+    const fetchTokenCost = async () => {
+      try {
+        const response = await fetch("/api/pricing/feature-pricing?feature=grand-wizard&role=CUSTOMER");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.pricing?.tokens) {
+            setTokenCost(data.pricing.tokens);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch token cost:", error);
+        // Keep default fallback
+      }
+    };
+    fetchTokenCost();
+  }, []);
 
   // Load session from database when sessionId query param is present
   useEffect(() => {
@@ -275,7 +292,7 @@ export default function GrandWizardPage() {
     if (!userId) return;
 
     // Check if user has sufficient balance
-    if (balance < GRAND_WIZARD_TOKEN_COST) {
+    if (balance < tokenCost) {
       setShowInsufficientCreditsModal(true);
       return;
     }
@@ -533,7 +550,7 @@ export default function GrandWizardPage() {
 
   return (
     <TokenGuard
-      requiredTokens={GRAND_WIZARD_TOKEN_REQUIREMENT}
+      requiredTokens={tokenCost}
       feature="Grand Legal Chat"
       description="Ultimate AI legal assistant with master-level capabilities"
       balance={balance}
@@ -682,7 +699,7 @@ export default function GrandWizardPage() {
           onClose={() => setShowInsufficientCreditsModal(false)}
           onPurchase={handlePurchaseCredits}
           balance={balance}
-          required={GRAND_WIZARD_TOKEN_COST}
+          required={tokenCost}
         />
       </div>
     </TokenGuard>

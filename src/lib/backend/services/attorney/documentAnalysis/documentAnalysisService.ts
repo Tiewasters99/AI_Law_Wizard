@@ -5,6 +5,7 @@ import { createDocumentQuery, findDocumentQueries } from "../../../repositories/
 import { findUserById } from "../../../repositories/common/userRepository";
 import { getUserNamespace } from "../../../config/pineconeConfig";
 import { deductTokens } from "../../../tokenService";
+import { getFeatureTokenCost } from "../../pricing/featurePricingService";
 import type { ProcessingRequest, ProcessingResponse } from "@/types/api";
 
 const ATTORNEY_SYSTEM_PROMPT = `You are a professional legal AI assistant for licensed attorneys. Provide comprehensive legal analysis and document processing.
@@ -77,11 +78,20 @@ export async function performDocumentAnalysis(
   }
 
   // Track token usage for attorneys (track only, don't deduct from balance)
-  const DOCUMENT_ANALYSIS_TOKEN_COST = 5;
+  // Get token cost from database
+  let tokenCost: number;
+  try {
+    tokenCost = await getFeatureTokenCost("wizard", "ATTORNEY");
+  } catch (pricingError) {
+    // Fallback to default if pricing not found
+    console.error('Failed to get pricing for feature "wizard" (ATTORNEY):', pricingError);
+    tokenCost = 5;
+  }
+  
   try {
     await deductTokens(
       userId,
-      DOCUMENT_ANALYSIS_TOKEN_COST,
+      tokenCost,
       "Document Analysis (Attorney)",
       "wizard",
       {

@@ -21,15 +21,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+interface RolePricing {
+  id: string;
+  role: "ATTORNEY" | "CUSTOMER";
+  priceInCents: number;
+  isActive: boolean;
+}
+
 interface TokenPackage {
   id: string;
   name: string;
   tokens: number;
-  priceInCents: number;
-  originalPriceInCents?: number;
-  hasRoleDiscount?: boolean;
   description?: string;
   isActive: boolean;
+  RolePricing: RolePricing[];
 }
 
 interface PricingComparisonProps {
@@ -151,112 +156,109 @@ export function PricingComparison({
 
       {/* Pricing Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {packages.map((pkg, index) => {
-          const isPopular = index === 1; // Mark middle package as popular
-          const hasDiscount = pkg.hasRoleDiscount && pkg.originalPriceInCents;
+        {packages
+          .filter(pkg => {
+            // Only show packages with pricing for the selected role
+            return pkg.RolePricing?.some(rp => rp.role === role && rp.isActive);
+          })
+          .map((pkg, index) => {
+            const isPopular = index === 1; // Mark middle package as popular
+            const rolePricing = pkg.RolePricing?.find(rp => rp.role === role && rp.isActive);
+            const priceInCents = rolePricing?.priceInCents || 0;
 
-          return (
-            <motion.div
-              key={pkg.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 * index }}
-              className="relative"
-            >
-              {isPopular && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                  <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-3 py-1">
-                    <Star className="w-3 h-3 mr-1" />
-                    Most Popular
-                  </Badge>
-                </div>
-              )}
-
-              <Card
-                className={`h-full transition-all duration-300 hover:shadow-lg ${
-                  isPopular ? "ring-2 ring-primary" : ""
-                }`}
+            return (
+              <motion.div
+                key={pkg.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 * index }}
+                className="relative"
               >
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-lg font-bold text-foreground">
-                    {pkg.name}
-                  </CardTitle>
-                  <div className="mt-4">
-                    <div className="flex items-center justify-center gap-2">
-                      {hasDiscount && (
-                        <span className="text-lg text-muted-foreground line-through">
-                          ${formatPrice(pkg.originalPriceInCents!)}
-                        </span>
-                      )}
+                {isPopular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                    <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-3 py-1">
+                      <Star className="w-3 h-3 mr-1" />
+                      Most Popular
+                    </Badge>
+                  </div>
+                )}
+
+                <Card
+                  className={`h-full transition-all duration-300 hover:shadow-lg ${
+                    isPopular ? "ring-2 ring-primary" : ""
+                  }`}
+                >
+                  <CardHeader className="text-center pb-4">
+                    <CardTitle className="text-lg font-bold text-foreground">
+                      {pkg.name}
+                    </CardTitle>
+                    <div className="mt-4">
                       <div className="text-3xl font-bold text-primary">
-                        ${formatPrice(pkg.priceInCents)}
+                        ${formatPrice(priceInCents)}
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {pkg.tokens.toLocaleString()} tokens
+                      </div>
+                      {pkg.RolePricing && pkg.RolePricing.length > 0 && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {role === "ATTORNEY" ? "Attorney" : "Client"} pricing
+                        </div>
+                      )}
+                    </div>
+                    {pkg.description && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {pkg.description}
+                      </p>
+                    )}
+                  </CardHeader>
+
+                  <CardContent className="pt-0">
+                    <div className="space-y-2 mb-6">
+                      <div className="flex items-center text-sm">
+                        <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
+                        <span>{pkg.tokens.toLocaleString()} tokens included</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
+                        <span>All {role.toLowerCase()} features</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
+                        <span>Priority support</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
+                        <span>No expiration date</span>
                       </div>
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {pkg.tokens.toLocaleString()} tokens
-                    </div>
-                    {hasDiscount && (
-                      <Badge
-                        variant="outline"
-                        className="mt-2 text-chart-1 border-chart-1"
-                      >
-                        {role} Discount Applied
-                      </Badge>
-                    )}
-                  </div>
-                  {pkg.description && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {pkg.description}
-                    </p>
-                  )}
-                </CardHeader>
 
-                <CardContent className="pt-0">
-                  <div className="space-y-2 mb-6">
-                    <div className="flex items-center text-sm">
-                      <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
-                      <span>{pkg.tokens.toLocaleString()} tokens included</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
-                      <span>All {role.toLowerCase()} features</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
-                      <span>Priority support</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <CheckCircle className="w-4 h-4 text-chart-1 mr-2 flex-shrink-0" />
-                      <span>No expiration date</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={() => onSelectPackage(pkg)}
-                    className={`w-full ${
-                      isPopular
-                        ? "bg-primary hover:bg-primary/90"
-                        : ""
-                    }`}
-                    size="lg"
-                  >
-                    {isAuthenticated ? (
-                      <>
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        Purchase Now
-                      </>
-                    ) : (
-                      <>
-                        <ArrowRight className="w-4 h-4 mr-2" />
-                        Sign In to Purchase
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
+                    <Button
+                      onClick={() => onSelectPackage(pkg)}
+                      className={`w-full ${
+                        isPopular
+                          ? "bg-primary hover:bg-primary/90"
+                          : ""
+                      }`}
+                      size="lg"
+                      disabled={!isAuthenticated}
+                    >
+                      {isAuthenticated ? (
+                        <>
+                          <DollarSign className="w-4 h-4 mr-2" />
+                          Purchase Now
+                        </>
+                      ) : (
+                        <>
+                          <ArrowRight className="w-4 h-4 mr-2" />
+                          Sign Up to Purchase
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
       </div>
 
       {/* Additional Info */}

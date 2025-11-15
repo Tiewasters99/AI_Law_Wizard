@@ -7,7 +7,6 @@ export interface TokenPackageWithRolePricing {
   id: string;
   name: string;
   tokens: number;
-  priceInCents: number;
   description: string | null;
   isActive: boolean;
   RolePricing: Array<{
@@ -34,7 +33,7 @@ export async function findActivePackages(): Promise<TokenPackageWithRolePricing[
       },
     },
     orderBy: {
-      priceInCents: "asc",
+      tokens: "asc",
     },
   });
 }
@@ -78,7 +77,7 @@ export async function findActivePackagesByRole(
       },
     },
     orderBy: {
-      priceInCents: "asc",
+      tokens: "asc",
     },
   });
 }
@@ -112,12 +111,11 @@ export async function findPackageById(
 }
 
 /**
- * Create a new token package with default role pricing
+ * Create a new token package (without pricing - pricing must be added separately via RolePricing)
  */
 export async function createPackage(data: {
   name: string;
   tokens: number;
-  priceInCents: number;
   description?: string | null;
   isActive?: boolean;
 }): Promise<TokenPackageWithRolePricing> {
@@ -125,23 +123,8 @@ export async function createPackage(data: {
     data: {
       name: data.name,
       tokens: data.tokens,
-      priceInCents: data.priceInCents,
       description: data.description || null,
       isActive: data.isActive ?? true,
-      RolePricing: {
-        create: [
-          {
-            role: "ATTORNEY",
-            priceInCents: data.priceInCents,
-            isActive: true,
-          },
-          {
-            role: "CUSTOMER",
-            priceInCents: data.priceInCents,
-            isActive: true,
-          },
-        ],
-      },
     },
     include: {
       RolePricing: true,
@@ -157,7 +140,6 @@ export async function updatePackage(
   data: {
     name?: string;
     tokens?: number;
-    priceInCents?: number;
     description?: string | null;
     isActive?: boolean;
   }
@@ -172,11 +154,12 @@ export async function updatePackage(
 }
 
 /**
- * Delete a token package
+ * Soft delete a token package (sets isActive to false)
  */
 export async function deletePackage(id: string): Promise<void> {
-  await prisma.tokenPackage.delete({
+  await prisma.tokenPackage.update({
     where: { id },
+    data: { isActive: false },
   });
 }
 

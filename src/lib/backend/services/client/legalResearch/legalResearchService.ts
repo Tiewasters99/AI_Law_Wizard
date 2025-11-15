@@ -14,6 +14,8 @@ import {
   generateSessionTitle,
 } from "../chat/chatService";
 import { deductTokens } from "../../../tokenService";
+import { getFeatureTokenCost } from "../../pricing/featurePricingService";
+import type { Role } from "@prisma/client";
 
 // Prompts are now handled by the LangChain chain in clientLegalResearchChain.ts
 
@@ -147,7 +149,16 @@ export async function performClientLegalResearch(
   // Determine feature based on model: grand-wizard uses gemini-2.5-pro, wizard uses basic models
   const isGrandWizard = model.includes("gemini-2.5-pro") || model.includes("gemini-2.0");
   const feature = isGrandWizard ? "grand-wizard" : "wizard";
-  const tokenCost = isGrandWizard ? 5 : 2;
+  
+  // Get token cost from database
+  let tokenCost: number;
+  try {
+    tokenCost = await getFeatureTokenCost(feature, "CUSTOMER");
+  } catch (pricingError) {
+    // Fallback to default if pricing not found
+    console.error(`Failed to get pricing for feature "${feature}":`, pricingError);
+    tokenCost = isGrandWizard ? 5 : 2;
+  }
 
   try {
     await deductTokens(
@@ -310,7 +321,16 @@ export async function* streamClientLegalResearch(
   // Determine feature based on model: grand-wizard uses gemini-2.5-pro, wizard uses basic models
   const isGrandWizard = model.includes("gemini-2.5-pro") || model.includes("gemini-2.0");
   const feature = isGrandWizard ? "grand-wizard" : "wizard";
-  const tokenCost = isGrandWizard ? 5 : 2;
+  
+  // Get token cost from database
+  let tokenCost: number;
+  try {
+    tokenCost = await getFeatureTokenCost(feature, "CUSTOMER");
+  } catch (pricingError) {
+    // Fallback to default if pricing not found
+    console.error(`Failed to get pricing for feature "${feature}":`, pricingError);
+    tokenCost = isGrandWizard ? 5 : 2;
+  }
 
   try {
     await deductTokens(

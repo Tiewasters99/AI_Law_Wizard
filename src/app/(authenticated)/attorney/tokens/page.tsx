@@ -58,29 +58,72 @@ export default function TokensPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("packages");
+  const [featurePricing, setFeaturePricing] = useState<any[]>([]);
 
-  const features = [
-    {
-      name: "Document Analysis (Wizard)",
-      cost: 5,
-      description: "AI-powered document queries and analysis",
-    },
-    {
-      name: "Advanced Analysis (Grand Wizard)",
-      cost: 10,
-      description: "Ultimate AI with master-level insights",
-    },
-    {
-      name: "Legal Research",
-      cost: 3,
-      description: "Comprehensive legal research queries",
-    },
-    {
-      name: "Document Processing",
-      cost: 2,
-      description: "Document upload and processing",
-    },
-  ];
+  // Load feature pricing from API
+  useEffect(() => {
+    const loadFeaturePricing = async () => {
+      try {
+        const response = await fetch("/api/pricing/feature-pricing?role=ATTORNEY");
+        if (response.ok) {
+          const data = await response.json();
+          const pricing = Array.isArray(data.pricing) ? data.pricing : [];
+          setFeaturePricing(pricing);
+        }
+      } catch (error) {
+        console.error("Failed to load feature pricing:", error);
+        // Don't show error, just use fallback
+      }
+    };
+    loadFeaturePricing();
+  }, []);
+
+  // Map feature pricing to display format
+  const features = useMemo(() => {
+    const featureMap = new Map<string, { name: string; cost: number; description: string }>();
+    
+    // Add features from database
+    featurePricing
+      .filter(fp => fp.role === "ATTORNEY" || fp.role === null)
+      .forEach(fp => {
+        const key = fp.feature;
+        if (!featureMap.has(key)) {
+          featureMap.set(key, {
+            name: fp.displayName,
+            cost: fp.tokens,
+            description: fp.description || `${fp.displayName} feature`,
+          });
+        }
+      });
+
+    // Fallback defaults if no pricing found
+    if (featureMap.size === 0) {
+      return [
+        {
+          name: "Document Analysis (Wizard)",
+          cost: 5,
+          description: "AI-powered document queries and analysis",
+        },
+        {
+          name: "Advanced Analysis (Grand Wizard)",
+          cost: 10,
+          description: "Ultimate AI with master-level insights",
+        },
+        {
+          name: "Legal Research",
+          cost: 3,
+          description: "Comprehensive legal research queries",
+        },
+        {
+          name: "Document Processing",
+          cost: 2,
+          description: "Document upload and processing",
+        },
+      ];
+    }
+
+    return Array.from(featureMap.values());
+  }, [featurePricing]);
 
   const fetchTokenData = useCallback(async () => {
     try {

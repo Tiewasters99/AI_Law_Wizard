@@ -27,11 +27,22 @@ interface TokenCost {
   description: string;
 }
 
-interface PricingCalculatorProps {
-  role: "ATTORNEY" | "CUSTOMER";
+interface FeaturePricing {
+  id: string;
+  feature: string;
+  displayName: string;
+  tokens: number;
+  role: "ATTORNEY" | "CUSTOMER" | null;
+  description?: string | null;
+  isActive: boolean;
 }
 
-export function PricingCalculator({ role }: PricingCalculatorProps) {
+interface PricingCalculatorProps {
+  role: "ATTORNEY" | "CUSTOMER";
+  featurePricing?: FeaturePricing[];
+}
+
+export function PricingCalculator({ role, featurePricing = [] }: PricingCalculatorProps) {
   const [usage, setUsage] = useState({
     documentAnalysis: 0,
     consultations: 0,
@@ -44,47 +55,84 @@ export function PricingCalculator({ role }: PricingCalculatorProps) {
   const [totalCost, setTotalCost] = useState(0);
   const [recommendedPackage, setRecommendedPackage] = useState<string>("");
 
-  const tokenCosts: TokenCost[] = useMemo(
-    () => [
-      {
-        feature: "Document Analysis",
-        costPerUse: role === "ATTORNEY" ? 5 : 3,
-        icon: FileText,
-        description: "AI-powered document review and analysis",
-      },
-      {
-        feature: "Legal Consultations",
-        costPerUse: role === "ATTORNEY" ? 10 : 5,
-        icon: MessageSquare,
-        description: "Professional legal consultation sessions",
-      },
-      {
-        feature: "Legal Research",
-        costPerUse: role === "ATTORNEY" ? 3 : 2,
-        icon: Search,
-        description: "Case law and statute research",
-      },
-      {
-        feature: "Analytics & Reports",
-        costPerUse: role === "ATTORNEY" ? 2 : 1,
-        icon: BarChart3,
-        description: "Usage analytics and performance reports",
-      },
-      {
-        feature: "Directory Access",
-        costPerUse: role === "ATTORNEY" ? 1 : 1,
-        icon: Users,
-        description: "Attorney/client directory searches",
-      },
-      {
-        feature: "AI Chat",
-        costPerUse: role === "ATTORNEY" ? 1 : 1,
-        icon: Zap,
-        description: "General AI-powered chat interactions",
-      },
-    ],
-    [role]
-  );
+  // Map feature pricing from database to calculator format
+  const tokenCosts: TokenCost[] = useMemo(() => {
+    const featureMap: Map<string, TokenCost> = new Map();
+
+    // Feature icon mapping
+    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+      "document-assistant": FileText,
+      "document-analysis": FileText,
+      "wizard": MessageSquare,
+      "grand-wizard": MessageSquare,
+      "legal-research": Search,
+      "consultation-request": MessageSquare,
+      "analytics": BarChart3,
+      "directory": Users,
+      "chat": Zap,
+    };
+
+    // Add features from database
+    featurePricing
+      .filter(fp => (fp.role === role || fp.role === null) && fp.isActive)
+      .forEach(fp => {
+        const key = fp.feature.toLowerCase();
+        const icon = iconMap[key] || Zap;
+        
+        if (!featureMap.has(key)) {
+          featureMap.set(key, {
+            feature: fp.displayName,
+            costPerUse: fp.tokens,
+            icon,
+            description: fp.description || `${fp.displayName} feature`,
+          });
+        }
+      });
+
+    // Fallback defaults if no pricing found
+    if (featureMap.size === 0) {
+      return [
+        {
+          feature: "Document Analysis",
+          costPerUse: role === "ATTORNEY" ? 5 : 3,
+          icon: FileText,
+          description: "AI-powered document review and analysis",
+        },
+        {
+          feature: "Legal Consultations",
+          costPerUse: role === "ATTORNEY" ? 10 : 5,
+          icon: MessageSquare,
+          description: "Professional legal consultation sessions",
+        },
+        {
+          feature: "Legal Research",
+          costPerUse: role === "ATTORNEY" ? 3 : 2,
+          icon: Search,
+          description: "Case law and statute research",
+        },
+        {
+          feature: "Analytics & Reports",
+          costPerUse: role === "ATTORNEY" ? 2 : 1,
+          icon: BarChart3,
+          description: "Usage analytics and performance reports",
+        },
+        {
+          feature: "Directory Access",
+          costPerUse: 1,
+          icon: Users,
+          description: "Attorney/client directory searches",
+        },
+        {
+          feature: "AI Chat",
+          costPerUse: role === "ATTORNEY" ? 5 : 2,
+          icon: Zap,
+          description: "General AI-powered chat interactions",
+        },
+      ];
+    }
+
+    return Array.from(featureMap.values());
+  }, [role, featurePricing]);
 
   useEffect(() => {
     const total = Object.entries(usage).reduce((sum, [key, value]) => {

@@ -11,13 +11,22 @@ export const getStripe = () => {
   return stripePromise;
 };
 
+export interface RolePricing {
+  id: string;
+  role: "ATTORNEY" | "CUSTOMER";
+  priceInCents: number;
+  isActive: boolean;
+}
+
 export interface TokenPackage {
   id: string;
   name: string;
   tokens: number;
-  priceInCents: number;
   description?: string;
   isActive: boolean;
+  RolePricing?: RolePricing[];
+  // For backward compatibility and convenience, include priceInCents based on role
+  priceInCents?: number;
 }
 
 export interface Wallet {
@@ -104,7 +113,18 @@ export const fetchTokenPackages = async (
   }
 
   const data = await response.json();
-  return data.packages || [];
+  const packages = data.packages || [];
+  
+  // Map packages to include priceInCents based on role
+  return packages.map((pkg: any) => {
+    const rolePricing = pkg.RolePricing?.find(
+      (rp: RolePricing) => rp.role === role && rp.isActive
+    );
+    return {
+      ...pkg,
+      priceInCents: rolePricing?.priceInCents || 0,
+    };
+  });
 };
 
 /**

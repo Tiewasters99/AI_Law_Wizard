@@ -33,12 +33,11 @@ export async function handleCreatePackage(request: NextRequest) {
     await requireAdminAuth(request);
 
     const body = await request.json();
-    const { name, tokens, priceInCents, description, isActive } = body;
+    const { name, tokens, description, isActive } = body;
 
     const newPackage = await createPackage({
       name,
       tokens,
-      priceInCents,
       description,
       isActive,
     });

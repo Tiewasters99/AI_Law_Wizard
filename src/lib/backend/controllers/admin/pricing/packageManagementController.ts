@@ -20,12 +20,11 @@ export async function handleUpdatePackage(
     await requireAdminAuth(request);
 
     const body = await request.json();
-    const { name, tokens, priceInCents, description, isActive } = body;
+    const { name, tokens, description, isActive } = body;
 
     const updatedPackage = await updatePackage(packageId, {
       name,
       tokens,
-      priceInCents,
       description,
       isActive,
     });

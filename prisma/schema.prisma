@@ -307,8 +307,9 @@ model User {
   location String?
   bio      String? @db.Text
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete timestamp
 
   // Relations
   accounts                     Account[]
@@ -455,14 +456,13 @@ model TokenTransaction {
 
 // Token packages configuration for admin
 model TokenPackage {
-  id           String   @id @default(cuid())
-  name         String
-  tokens       Int
-  priceInCents Int // Price in cents (e.g., 1000 = $10.00)
-  description  String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  tokens      Int
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   purchases   Purchase[]
@@ -651,6 +651,9 @@ enum AdminAction {
   TOKEN_ADJUSTMENT
   ROLE_PRICING_CREATED
   ROLE_PRICING_UPDATED
+  FEATURE_PRICING_CREATED
+  FEATURE_PRICING_UPDATED
+  FEATURE_PRICING_DELETED
 }
 
 // Feature Management Models
@@ -697,7 +700,7 @@ model RolePricing {
   id           String       @id @default(cuid())
   role         Role // ATTORNEY or CUSTOMER
   packageId    String
-  priceInCents Int // Override price for this role
+  priceInCents Int // Price for this role in cents (e.g., 1000 = $10.00)
   isActive     Boolean      @default(true)
   package      TokenPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
   createdAt    DateTime     @default(now())
@@ -705,4 +708,22 @@ model RolePricing {
 
   @@unique([role, packageId])
   @@map("role_pricing")
+}
+
+// Feature pricing for token costs per action/feature
+model FeaturePricing {
+  id          String   @id @default(cuid())
+  feature     String // e.g., 'document-assistant', 'wizard', 'grand-wizard', 'consultation-request'
+  displayName String // e.g., 'Document Analysis', 'Legal Chat', 'Grand Wizard'
+  tokens      Int // Token cost per use
+  role        Role? // Optional: if null, applies to all roles. Otherwise role-specific pricing
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([feature, role])
+  @@index([feature])
+  @@index([role])
+  @@map("feature_pricing")
 }

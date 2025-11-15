@@ -33,7 +33,6 @@ interface TokenPackage {
   id: string;
   name: string;
   tokens: number;
-  priceInCents: number;
   description?: string;
   isActive: boolean;
   RolePricing: RolePricing[];
@@ -46,10 +45,21 @@ interface RolePricing {
   isActive: boolean;
 }
 
+interface FeaturePricing {
+  id: string;
+  feature: string;
+  displayName: string;
+  tokens: number;
+  role: "ATTORNEY" | "CUSTOMER" | null;
+  description?: string | null;
+  isActive: boolean;
+}
+
 interface PricingData {
   packages: TokenPackage[];
   attorneyFeatures: string[];
   clientFeatures: string[];
+  featurePricing: FeaturePricing[];
 }
 
 export default function PricingPage() {
@@ -74,10 +84,16 @@ export default function PricingPage() {
       // TODO: Implement proper token package seeding/management system
       // This should replace the mock data with real database integration
       // Fetch token packages from backend
-      const packagesResponse = await fetch("/api/pricing/packages");
+      // Fetch packages for both roles
+      const [packagesResponse, featurePricingResponse] = await Promise.all([
+        fetch("/api/pricing/packages"),
+        fetch("/api/pricing/feature-pricing"),
+      ]);
+
       if (!packagesResponse.ok) {
         throw new Error("Failed to fetch pricing packages");
       }
+
       const responseData = await packagesResponse.json();
       
       // Extract packages array from response (API returns { packages: [...] })
@@ -86,6 +102,15 @@ export default function PricingPage() {
         : Array.isArray(responseData) 
         ? responseData 
         : [];
+
+      // Fetch feature pricing
+      let featurePricing: FeaturePricing[] = [];
+      if (featurePricingResponse.ok) {
+        const featureData = await featurePricingResponse.json();
+        featurePricing = Array.isArray(featureData.pricing) 
+          ? featureData.pricing 
+          : [];
+      }
 
       // Define feature lists for each role
       const attorneyFeatures = [
@@ -114,6 +139,7 @@ export default function PricingPage() {
         packages: packages.filter((pkg: TokenPackage) => pkg.isActive),
         attorneyFeatures,
         clientFeatures,
+        featurePricing,
       });
     } catch (err) {
       console.error("Error fetching pricing data:", err);
@@ -134,12 +160,17 @@ export default function PricingPage() {
   };
 
   const handleSelectPackage = (pkg: TokenPackage) => {
+    // Guest users cannot purchase - redirect to sign up
     if (!session) {
-      handleSignIn();
+      window.location.href = `/auth/register?role=${selectedRole}`;
       return;
     }
-    // Redirect to purchase flow
-    window.location.href = `/purchase?package=${pkg.id}&role=${selectedRole}`;
+    // Authenticated users can purchase
+    // Redirect to purchase flow based on role
+    const redirectPath = selectedRole === "ATTORNEY" 
+      ? `/attorney/tokens` 
+      : `/client/tokens`;
+    window.location.href = redirectPath;
   };
 
   if (loading) {
@@ -234,13 +265,22 @@ export default function PricingPage() {
             isAuthenticated={!!session}
             onSignIn={handleSignIn}
           />
+          
+          {!session && (
+            <Alert className="mt-8 max-w-2xl mx-auto">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                You must <Button variant="link" onClick={handleSignIn} className="p-0 h-auto">sign up</Button> to purchase token packages. Guest users can view pricing only.
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       </div>
 
       {/* Pricing Calculator */}
       <div className="py-16 bg-background">
         <div className="container mx-auto px-4">
-          <PricingCalculator role={selectedRole} />
+          <PricingCalculator role={selectedRole} featurePricing={pricingData?.featurePricing || []} />
         </div>
       </div>
 

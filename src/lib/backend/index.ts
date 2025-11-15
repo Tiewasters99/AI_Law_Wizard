@@ -143,9 +143,6 @@ export * from "./controllers/admin/dashboard/dashboardStatsController";
 export * from "./controllers/admin/dashboard/dashboardActivityController";
 export * from "./controllers/admin/dashboard/dashboardTokenUsageController";
 export * from "./controllers/admin/dashboard/dashboardTopConsumersController";
-export * from "./controllers/admin/features/featuresController";
-export * from "./controllers/admin/features/featureToggleController";
-export * from "./controllers/admin/features/featureCheckController";
 export {
   handleListPackages as handleAdminListPackages,
   handleCreatePackage as handleAdminCreatePackage,
@@ -224,9 +221,6 @@ export * from "./services/admin/dashboard/dashboardStatsService";
 export * from "./services/admin/dashboard/dashboardActivityService";
 export * from "./services/admin/dashboard/dashboardTokenUsageService";
 export * from "./services/admin/dashboard/dashboardTopConsumersService";
-export * from "./services/admin/features/featuresService";
-export * from "./services/admin/features/featureToggleService";
-export * from "./services/admin/features/featureCheckService";
 export {
   listPackages as listAdminPackages,
   createPackage as createAdminPackage,

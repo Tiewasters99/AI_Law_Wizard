@@ -98,6 +98,7 @@ export default function TokensPage() {
   const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [primaryColorHex, setPrimaryColorHex] = useState("#2563eb");
+  const [featurePricing, setFeaturePricing] = useState<any[]>([]);
 
   // Load real token packages from API
   useEffect(() => {
@@ -114,6 +115,24 @@ export default function TokensPage() {
       loadPackages();
     }
   }, [session?.user]);
+
+  // Load feature pricing from API
+  useEffect(() => {
+    const loadFeaturePricing = async () => {
+      try {
+        const response = await fetch("/api/pricing/feature-pricing?role=CUSTOMER");
+        if (response.ok) {
+          const data = await response.json();
+          const pricing = Array.isArray(data.pricing) ? data.pricing : [];
+          setFeaturePricing(pricing);
+        }
+      } catch (error) {
+        console.error("Failed to load feature pricing:", error);
+        // Don't show error, just use fallback
+      }
+    };
+    loadFeaturePricing();
+  }, []);
 
   useEffect(() => {
     // Get primary color from theme on mount and theme changes
@@ -218,30 +237,61 @@ export default function TokensPage() {
     },
   ];
 
-  const features = [
-    { name: "Legal Chat", cost: 1, description: "Basic AI legal assistance" },
-    {
-      name: "Document Analysis",
-      cost: 5,
-      description: "AI-powered document queries",
-    },
-    {
-      name: "Legal Chat",
-      cost: 2,
-      description: "Premium AI with enhanced capabilities",
-    },
-    {
-      name: "Grand Wizard",
-      cost: 5,
-      description: "Ultimate AI with master-level insights",
-    },
-    { name: "File Upload", cost: 0, description: "Upload documents (free)" },
-    {
-      name: "Attorney Request",
-      cost: 0,
-      description: "Send consultation requests (free)",
-    },
-  ];
+  // Get feature costs from database, with fallback to defaults
+  const getFeatureCost = (featureName: string): number => {
+    const pricing = featurePricing.find(
+      fp =>
+        (fp.feature === featureName.toLowerCase() ||
+          fp.displayName.toLowerCase() === featureName.toLowerCase()) &&
+        (fp.role === "CUSTOMER" || fp.role === null) &&
+        fp.isActive
+    );
+    return pricing ? pricing.tokens : 0;
+  };
+
+  // Map feature pricing to display format
+  const features = useMemo(() => {
+    const featureMap = new Map<string, { name: string; cost: number; description: string }>();
+    
+    // Add features from database
+    featurePricing
+      .filter(fp => fp.role === "CUSTOMER" || fp.role === null)
+      .forEach(fp => {
+        const key = fp.feature;
+        if (!featureMap.has(key)) {
+          featureMap.set(key, {
+            name: fp.displayName,
+            cost: fp.tokens,
+            description: fp.description || `${fp.displayName} feature`,
+          });
+        }
+      });
+
+    // Fallback defaults if no pricing found
+    if (featureMap.size === 0) {
+      return [
+        { name: "Legal Chat", cost: 2, description: "Basic AI legal assistance" },
+        {
+          name: "Document Analysis",
+          cost: 5,
+          description: "AI-powered document queries",
+        },
+        {
+          name: "Grand Wizard",
+          cost: 5,
+          description: "Ultimate AI with master-level insights",
+        },
+        { name: "File Upload", cost: 0, description: "Upload documents (free)" },
+        {
+          name: "Consultation Request",
+          cost: 0,
+          description: "Send consultation requests (free)",
+        },
+      ];
+    }
+
+    return Array.from(featureMap.values());
+  }, [featurePricing]);
 
   const fetchTokenData = useCallback(async () => {
     try {

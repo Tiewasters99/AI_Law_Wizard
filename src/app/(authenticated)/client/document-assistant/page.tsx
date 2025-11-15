@@ -38,7 +38,7 @@ interface ChatMessage {
   sources?: QuerySource[];
 }
 
-const DOCUMENT_QUERY_TOKEN_COST = 5;
+// Token cost will be fetched from database
 
 // Insufficient Credits Modal Component (inline)
 function InsufficientCreditsModal({
@@ -79,6 +79,7 @@ function InsufficientCreditsModal({
 }
 
 export default function DocumentAssistantPage() {
+  const [tokenCost, setTokenCost] = useState(5); // Default fallback
   const { data: session } = useSession();
   const router = useRouter();
   const {
@@ -127,6 +128,25 @@ export default function DocumentAssistantPage() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // Fetch token cost from database
+  useEffect(() => {
+    const fetchTokenCost = async () => {
+      try {
+        const response = await fetch("/api/pricing/feature-pricing?feature=document-assistant&role=CUSTOMER");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.pricing?.tokens) {
+            setTokenCost(data.pricing.tokens);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch token cost:", error);
+        // Keep default fallback
+      }
+    };
+    fetchTokenCost();
   }, []);
 
   // Load session messages
@@ -239,7 +259,7 @@ export default function DocumentAssistantPage() {
       if (!userId) return;
 
       // Check if user has sufficient balance
-      if (balance < DOCUMENT_QUERY_TOKEN_COST) {
+      if (balance < tokenCost) {
         setShowInsufficientCreditsModal(true);
         return;
       }
@@ -460,7 +480,7 @@ export default function DocumentAssistantPage() {
             <QueryInput
               onSubmit={handleDocumentQuery}
               isLoading={isQueryLoading}
-              tokenCost={DOCUMENT_QUERY_TOKEN_COST}
+              tokenCost={tokenCost}
               disabled={!hasDocuments}
             />
           </div>
@@ -472,7 +492,7 @@ export default function DocumentAssistantPage() {
         onClose={() => setShowInsufficientCreditsModal(false)}
         onPurchase={handlePurchaseCredits}
         balance={balance}
-        required={DOCUMENT_QUERY_TOKEN_COST}
+        required={tokenCost}
       />
     </div>
   );

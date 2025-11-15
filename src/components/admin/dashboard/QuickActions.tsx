@@ -7,7 +7,6 @@ import {
   Plus,
   Users,
   Scale,
-  ToggleLeft,
   DollarSign,
   FileText,
   Settings,
@@ -29,13 +28,6 @@ const quickActions: QuickAction[] = [
     icon: Plus,
     href: "/admin/users/new",
     variant: "default",
-  },
-  {
-    label: "Manage Features",
-    description: "Enable or disable system features",
-    icon: ToggleLeft,
-    href: "/admin/features",
-    variant: "outline",
   },
   {
     label: "Update Pricing",

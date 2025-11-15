@@ -14,9 +14,8 @@ export default withAuth(
       "/attorney/dashboard": ["ATTORNEY"],
       "/admin": ["ADMIN"],
       "/admin/dashboard": ["ADMIN"],
-      "/admin/customers": ["ADMIN"],
+      "/admin/clients": ["ADMIN"],
       "/admin/attorneys": ["ADMIN"],
-      "/admin/features": ["ADMIN"],
       "/admin/pricing": ["ADMIN"],
     };
 
