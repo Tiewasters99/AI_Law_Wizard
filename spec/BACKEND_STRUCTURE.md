@@ -27,12 +27,12 @@ Each layer has distinct responsibilities and must not violate separation of conc
 
 ### Layer Responsibilities Summary
 
-| Layer | Responsibility | Location |
-|-------|---------------|----------|
-| **API Route** | HTTP handling, routing | `src/app/api/[role]/[resource]/route.ts` |
+| Layer          | Responsibility                        | Location                                         |
+| -------------- | ------------------------------------- | ------------------------------------------------ |
+| **API Route**  | HTTP handling, routing                | `src/app/api/[role]/[resource]/route.ts`         |
 | **Controller** | Auth, validation, response formatting | `src/lib/backend/controllers/[role]/[resource]/` |
-| **Service** | Business logic, orchestration | `src/lib/backend/services/[role]/[resource]/` |
-| **Repository** | Database operations | `src/lib/backend/repositories/[domain]/` |
+| **Service**    | Business logic, orchestration         | `src/lib/backend/services/[role]/[resource]/`    |
+| **Repository** | Database operations                   | `src/lib/backend/repositories/[domain]/`         |
 
 ---
 
@@ -87,6 +87,7 @@ src/app/api/
 **File**: `src/app/api/[role]/[resource]/route.ts`
 
 **Structure**:
+
 ```typescript
 import { NextRequest } from "next/server";
 import { handleAction } from "@/lib/backend/controllers/[role]/[resource]/[resource]Controller";
@@ -109,6 +110,7 @@ export async function DELETE(request: NextRequest) {
 ```
 
 **Rules**:
+
 - ✅ Minimal logic - only route to controller
 - ✅ Export HTTP method handlers
 - ❌ No business logic
@@ -178,6 +180,7 @@ src/lib/backend/controllers/
 **File**: `src/lib/backend/controllers/[role]/[resource]/[resource]Controller.ts`
 
 **Structure**:
+
 ```typescript
 import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
@@ -221,18 +224,21 @@ export async function handleGetResource(
 ### Authentication Utilities
 
 **Client**:
+
 ```typescript
 import { verifyClientAccess } from "../../../utils/clientAuth";
 const user = await verifyClientAccess(session?.user?.id);
 ```
 
 **Attorney**:
+
 ```typescript
 import { verifyAttorneyAccess } from "../../../utils/attorneyAuth";
 const user = await verifyAttorneyAccess(session?.user?.id);
 ```
 
 **Admin**:
+
 ```typescript
 import { requireAdminAuth } from "../../../utils/adminAuth";
 const admin = await requireAdminAuth(request);
@@ -293,6 +299,7 @@ src/lib/backend/services/
 **File**: `src/lib/backend/services/[role]/[resource]/[resource]Service.ts`
 
 **Structure**:
+
 ```typescript
 import { findResourceById } from "../../../repositories/[domain]/[resource]Repository";
 import { findRelatedResource } from "../../../repositories/[domain]/relatedRepository";
@@ -394,6 +401,7 @@ src/lib/backend/repositories/
 **File**: `src/lib/backend/repositories/[domain]/[resource]Repository.ts`
 
 **Structure**:
+
 ```typescript
 import { prisma } from "../../prisma";
 
@@ -445,6 +453,7 @@ export async function deleteResource(id: string) {
 ### Common Prisma Patterns
 
 **Finding Records**:
+
 ```typescript
 // Single record
 const user = await prisma.user.findUnique({
@@ -461,6 +470,7 @@ const conversations = await prisma.conversation.findMany({
 ```
 
 **Creating Records**:
+
 ```typescript
 const user = await prisma.user.create({
   data: {
@@ -478,6 +488,7 @@ const user = await prisma.user.create({
 ```
 
 **Updating Records**:
+
 ```typescript
 const updated = await prisma.user.update({
   where: { id: userId },
@@ -489,6 +500,7 @@ const updated = await prisma.user.update({
 ```
 
 **Aggregations**:
+
 ```typescript
 const stats = await prisma.tokenTransaction.aggregate({
   where: { userId, type: "PURCHASE" },
@@ -514,6 +526,7 @@ const stats = await prisma.tokenTransaction.aggregate({
 **Location**: `src/lib/backend/utils/[role]Auth.ts`
 
 **Client Auth** (`clientAuth.ts`):
+
 ```typescript
 export async function verifyClientAccess(
   userId: string | undefined
@@ -540,6 +553,7 @@ export async function verifyClientAccess(
 ```
 
 **Attorney Auth** (`attorneyAuth.ts`):
+
 ```typescript
 export async function verifyAttorneyAccess(
   userId: string | undefined
@@ -549,6 +563,7 @@ export async function verifyAttorneyAccess(
 ```
 
 **Admin Auth** (`adminAuth.ts`):
+
 ```typescript
 export async function requireAdminAuth(request: NextRequest): Promise<Admin> {
   const session = await getServerSession(authOptions);
@@ -572,6 +587,7 @@ export async function requireAdminAuth(request: NextRequest): Promise<Admin> {
 ### Authorization Patterns
 
 **Role-Based Authorization**:
+
 ```typescript
 // In controller
 const session = await getServerSession(authOptions);
@@ -581,6 +597,7 @@ if (session.user.role !== "CUSTOMER") {
 ```
 
 **Resource Ownership**:
+
 ```typescript
 // In service
 const resource = await findResourceById(resourceId);
@@ -598,6 +615,7 @@ if (resource.userId !== userId) {
 **Location**: `src/lib/backend/utils/errors.ts`
 
 **Error Hierarchy**:
+
 ```typescript
 export class AppError extends Error {
   constructor(
@@ -643,6 +661,7 @@ export class ConflictError extends AppError {
 ### Error Handling Pattern
 
 **In Services**:
+
 ```typescript
 // Throw custom errors
 if (!data) {
@@ -655,6 +674,7 @@ if (!resource) {
 ```
 
 **In Controllers**:
+
 ```typescript
 // Catch and format errors
 try {
@@ -674,6 +694,7 @@ try {
 **Location**: `src/lib/backend/utils/response.ts`
 
 **Success Response**:
+
 ```typescript
 export function successResponse<T>(
   data: T,
@@ -684,6 +705,7 @@ export function successResponse<T>(
 ```
 
 **Error Response**:
+
 ```typescript
 export function errorResponse(
   error: unknown,
@@ -695,7 +717,7 @@ export function errorResponse(
       { status: error.statusCode }
     );
   }
-  
+
   return NextResponse.json(
     { error: defaultMessage, code: "INTERNAL_ERROR" },
     { status: 500 }
@@ -704,6 +726,7 @@ export function errorResponse(
 ```
 
 **Validation Error Response**:
+
 ```typescript
 export function validationErrorResponse(message: string): NextResponse {
   return NextResponse.json(
@@ -716,6 +739,7 @@ export function validationErrorResponse(message: string): NextResponse {
 ### Response Format
 
 **Success Response**:
+
 ```json
 {
   "resource": { ... },
@@ -724,6 +748,7 @@ export function validationErrorResponse(message: string): NextResponse {
 ```
 
 **Error Response**:
+
 ```json
 {
   "error": "Error message",
@@ -740,6 +765,7 @@ export function validationErrorResponse(message: string): NextResponse {
 **Location**: `src/lib/backend/services/openRouterService.ts`
 
 **Usage**:
+
 ```typescript
 import { openRouterService } from "../services/openRouterService";
 
@@ -756,6 +782,7 @@ const response = await openRouterService.chat({
 **Location**: `src/lib/backend/stripeService.ts`
 
 **Usage**:
+
 ```typescript
 import { stripe } from "../stripeServer";
 
@@ -771,6 +798,7 @@ const paymentIntent = await stripe.paymentIntents.create({
 **Location**: `src/lib/backend/services/onedriveService.ts`
 
 **Usage**:
+
 ```typescript
 import { oneDriveService } from "../services/onedriveService";
 
@@ -799,21 +827,25 @@ const uploadUrl = await oneDriveService.getUploadUrl(accessToken, fileName);
 ### Import Patterns
 
 **From Controllers**:
+
 ```typescript
 import { handleAction } from "@/lib/backend/controllers/[role]/[resource]/[resource]Controller";
 ```
 
 **From Services**:
+
 ```typescript
 import { getResource } from "../../../services/[role]/[resource]/[resource]Service";
 ```
 
 **From Repositories**:
+
 ```typescript
 import { findResourceById } from "../../../repositories/[domain]/[resource]Repository";
 ```
 
 **From Utils**:
+
 ```typescript
 import { successResponse, errorResponse } from "../../../utils/response";
 import { verifyClientAccess } from "../../../utils/clientAuth";
@@ -855,4 +887,3 @@ import { verifyClientAccess } from "../../../utils/clientAuth";
 
 **Last Updated**: January 2025  
 **Version**: 1.0
-

@@ -96,6 +96,7 @@ declare module "next-auth" {
 - **APIs**: `/api/client/*`
 
 **Capabilities**:
+
 - Document analysis
 - Legal research
 - Attorney consultation requests
@@ -110,6 +111,7 @@ declare module "next-auth" {
 - **APIs**: `/api/attorney/*`
 
 **Capabilities**:
+
 - Advanced document processing
 - Legal research with citations
 - Blog management
@@ -126,6 +128,7 @@ declare module "next-auth" {
 - **Authentication**: Separate admin authentication system
 
 **Capabilities**:
+
 - User management (clients, attorneys)
 - Pricing management
 - Feature flags
@@ -227,7 +230,9 @@ export default withAuth(
         if (!requiredRoles.includes(userRole)) {
           // Redirect based on user's actual role
           if (userRole === "ATTORNEY") {
-            return NextResponse.redirect(new URL("/attorney/dashboard", req.url));
+            return NextResponse.redirect(
+              new URL("/attorney/dashboard", req.url)
+            );
           } else {
             return NextResponse.redirect(new URL("/client/dashboard", req.url));
           }
@@ -255,9 +260,7 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|public).*)"],
 };
 ```
 
@@ -381,18 +384,12 @@ export async function GET(request: NextRequest) {
     // 1. Authentication Check
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 2. Role Check
     if (session.user.role !== "CUSTOMER") {
-      return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // 3. Delegate to Controller
@@ -416,10 +413,10 @@ import { verifyClientAccess } from "../../../utils/clientAuth";
 export async function handleGetResource(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     // Use authentication utility
     await verifyClientAccess(session?.user?.id);
-    
+
     // Proceed with business logic
     const resource = await getResource();
     return successResponse({ resource });
@@ -676,6 +673,7 @@ model Admin {
 ### Admin Route Protection
 
 **Middleware**:
+
 ```typescript
 if (pathname.startsWith("/admin")) {
   if (!token || !token.isAdmin) {
@@ -685,6 +683,7 @@ if (pathname.startsWith("/admin")) {
 ```
 
 **Controller**:
+
 ```typescript
 import { requireAdminAuth } from "../../../utils/adminAuth";
 const admin = await requireAdminAuth(request);
@@ -733,10 +732,7 @@ if (conversation.clientId !== userId) {
 
 // Attorney can access conversations they're part of
 const conversation = await findConversationById(conversationId);
-if (
-  conversation.clientId !== userId &&
-  conversation.attorneyId !== userId
-) {
+if (conversation.clientId !== userId && conversation.attorneyId !== userId) {
   throw new AuthorizationError("Access denied");
 }
 ```
@@ -841,4 +837,3 @@ if (user.role !== "ATTORNEY" && user.role !== "CUSTOMER") {
 
 **Last Updated**: January 2025  
 **Version**: 1.0
-

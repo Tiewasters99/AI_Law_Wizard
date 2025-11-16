@@ -44,5 +44,3 @@ export async function handleCreateUser(request: NextRequest) {
     return errorResponse(error, "Failed to create user");
   }
 }
-
-

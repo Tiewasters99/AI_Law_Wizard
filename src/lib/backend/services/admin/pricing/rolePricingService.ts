@@ -27,7 +27,7 @@ export async function getRolePricing(
 
   // Return role-specific price
   const rolePricing = packageData.RolePricing[0];
-  
+
   if (!rolePricing) {
     throw new NotFoundError(`Role pricing for ${role} on package ${packageId}`);
   }

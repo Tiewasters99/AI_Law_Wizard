@@ -81,4 +81,3 @@ export async function createUserAsAdmin(
     role: user.role as "CUSTOMER" | "ATTORNEY",
   };
 }
-

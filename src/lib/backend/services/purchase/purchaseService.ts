@@ -50,13 +50,13 @@ export async function preparePurchase(
   const rolePricing = packageData.RolePricing.find(
     rp => rp.role === request.role && rp.isActive
   );
-  
+
   if (!rolePricing) {
     throw new NotFoundError(
       `Pricing not available for ${request.role} role. Please contact support.`
     );
   }
-  
+
   const priceInCents = rolePricing.priceInCents;
 
   // Get user's wallet

@@ -51,11 +51,15 @@ const getFileIcon = (fileType: string) => {
   if (fileType.includes("image"))
     return <Image className="w-5 h-5 text-blue-500" aria-label="Image file" />;
   if (fileType.includes("video"))
-    return <Video className="w-5 h-5 text-purple-500" aria-label="Video file" />;
+    return (
+      <Video className="w-5 h-5 text-purple-500" aria-label="Video file" />
+    );
   if (fileType.includes("audio"))
     return <Music className="w-5 h-5 text-green-500" aria-label="Audio file" />;
   if (fileType.includes("zip") || fileType.includes("rar"))
-    return <Archive className="w-5 h-5 text-orange-500" aria-label="Archive file" />;
+    return (
+      <Archive className="w-5 h-5 text-orange-500" aria-label="Archive file" />
+    );
   return <FileText className="w-5 h-5 text-gray-500" aria-label="File" />;
 };
 

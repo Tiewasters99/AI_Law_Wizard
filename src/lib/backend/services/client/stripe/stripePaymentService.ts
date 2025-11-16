@@ -25,13 +25,13 @@ export async function createPaymentIntent(
   const rolePricing = tokenPackage.RolePricing.find(
     rp => rp.role === role && rp.isActive
   );
-  
+
   if (!rolePricing) {
     throw new NotFoundError(
       `Pricing not available for ${role} role. Please contact support.`
     );
   }
-  
+
   const priceInCents = rolePricing.priceInCents;
 
   // Create payment intent

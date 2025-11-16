@@ -110,7 +110,9 @@ export default function ClientDashboard() {
                     // Streaming complete; redirect to wizard with sessionId
                     if (data.sessionId) {
                       localStorage.removeItem("legalChatMessages");
-                      router.replace(`/client/wizard?sessionId=${data.sessionId}`);
+                      router.replace(
+                        `/client/wizard?sessionId=${data.sessionId}`
+                      );
                     } else {
                       // Fallback: go to wizard without session (should rarely happen)
                       router.replace("/client/wizard");

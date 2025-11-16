@@ -55,6 +55,7 @@ Route groups (folders in parentheses) organize pages without affecting URL struc
 - `(public)`: Public landing and marketing pages
 
 **URL Structure**: Route groups don't appear in URLs
+
 - File: `src/app/(authenticated)/client/dashboard/page.tsx`
 - URL: `/client/dashboard` (not `/(authenticated)/client/dashboard`)
 
@@ -67,6 +68,7 @@ Route groups (folders in parentheses) organize pages without affecting URL struc
 **Purpose**: Protected pages requiring user authentication
 
 **Structure**:
+
 ```
 src/app/(authenticated)/
 ├── layout.tsx          # Authenticated layout wrapper
@@ -88,6 +90,7 @@ src/app/(authenticated)/
 ```
 
 **Layout Flow**:
+
 1. Root layout (`src/app/layout.tsx`)
 2. Authenticated layout (`src/app/(authenticated)/layout.tsx`)
 3. Role-specific layout (`src/app/(authenticated)/[role]/layout.tsx`)
@@ -98,6 +101,7 @@ src/app/(authenticated)/
 **Purpose**: Public pages accessible without authentication
 
 **Structure**:
+
 ```
 src/app/(guest)/
 ├── blog/
@@ -110,6 +114,7 @@ src/app/(guest)/
 **Purpose**: Public landing and marketing pages
 
 **Structure**:
+
 ```
 src/app/(public)/
 └── page.tsx            # Landing page
@@ -128,6 +133,7 @@ Pages are organized by user role under `(authenticated)`:
 **Location**: `src/app/(authenticated)/client/`
 
 **Pages**:
+
 - `/client/dashboard` - Client dashboard
 - `/client/wizard` - Document analysis wizard
 - `/client/grand-wizard` - Advanced AI assistant
@@ -140,6 +146,7 @@ Pages are organized by user role under `(authenticated)`:
 - `/client/miniverse` - 3D visualization
 
 **File Structure**:
+
 ```
 src/app/(authenticated)/client/
 ├── layout.tsx
@@ -159,6 +166,7 @@ src/app/(authenticated)/client/
 **Location**: `src/app/(authenticated)/attorney/`
 
 **Pages**:
+
 - `/attorney/dashboard` - Attorney dashboard
 - `/attorney/wizard` - Document processing wizard
 - `/attorney/grand-wizard` - Advanced AI assistant
@@ -173,6 +181,7 @@ src/app/(authenticated)/client/
 - `/attorney/docket-genie` - Docket management
 
 **File Structure**:
+
 ```
 src/app/(authenticated)/attorney/
 ├── layout.tsx
@@ -192,6 +201,7 @@ src/app/(authenticated)/attorney/
 **Location**: `src/app/(authenticated)/admin/`
 
 **Pages**:
+
 - `/admin/dashboard` - Admin dashboard
 - `/admin/clients` - Client management
 - `/admin/attorneys` - Attorney management
@@ -201,6 +211,7 @@ src/app/(authenticated)/attorney/
 - `/admin/users/new` - Create new user
 
 **File Structure**:
+
 ```
 src/app/(authenticated)/admin/
 ├── layout.tsx
@@ -215,6 +226,7 @@ src/app/(authenticated)/admin/
 ### Page Component Pattern
 
 **Server Component** (default):
+
 ```typescript
 // src/app/(authenticated)/client/dashboard/page.tsx
 import { getServerSession } from "next-auth";
@@ -222,10 +234,10 @@ import { authOptions } from "@/lib/backend/auth";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  
+
   // Server-side data fetching
   const data = await fetchDashboardData(session.user.id);
-  
+
   return (
     <div>
       <h1>Dashboard</h1>
@@ -236,6 +248,7 @@ export default async function DashboardPage() {
 ```
 
 **Client Component** (when needed):
+
 ```typescript
 // src/app/(authenticated)/client/wizard/page.tsx
 "use client";
@@ -244,7 +257,7 @@ import { useState } from "react";
 
 export default function WizardPage() {
   const [state, setState] = useState();
-  
+
   return (
     <div>
       {/* Interactive UI */}
@@ -295,6 +308,7 @@ src/components/
 **Purpose**: Reusable, theme-aware components from shadcn/ui
 
 **Examples**:
+
 - `Button` - Primary, secondary, destructive variants
 - `Card` - Container component
 - `Badge` - Status indicators
@@ -302,6 +316,7 @@ src/components/
 - `Dialog` - Modal dialogs
 
 **Usage**:
+
 ```typescript
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -318,11 +333,13 @@ import { Card } from "@/components/ui/card";
 **Purpose**: Components specific to a user role
 
 **Examples**:
+
 - `ClientSidebar` - Client navigation sidebar
 - `AttorneyLayout` - Attorney page layout
 - `AdminSidebar` - Admin navigation sidebar
 
 **Usage**:
+
 ```typescript
 import { ClientSidebar } from "@/components/client/ClientSidebar";
 ```
@@ -334,12 +351,14 @@ import { ClientSidebar } from "@/components/client/ClientSidebar";
 **Purpose**: Components for specific features
 
 **Examples**:
+
 - `src/components/attorney/tokens/PaymentForm.tsx`
 - `src/components/client/wizard/DocumentUpload.tsx`
 
 ### Component Patterns
 
 #### Server Component
+
 ```typescript
 // No "use client" directive
 import { getServerSession } from "next-auth";
@@ -351,6 +370,7 @@ export default async function ServerComponent() {
 ```
 
 #### Client Component
+
 ```typescript
 "use client";
 
@@ -363,6 +383,7 @@ export default function ClientComponent() {
 ```
 
 #### Layout Component
+
 ```typescript
 "use client";
 
@@ -406,12 +427,14 @@ export default function Layout({ children }: LayoutProps) {
 **File**: `src/app/layout.tsx`
 
 **Responsibilities**:
+
 - HTML structure (`<html>`, `<body>`)
 - Global providers (SessionProvider, ThemeProvider)
 - Global styles
 - Metadata
 
 **Structure**:
+
 ```typescript
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
@@ -438,12 +461,14 @@ export default function RootLayout({
 **File**: `src/app/(authenticated)/layout.tsx`
 
 **Responsibilities**:
+
 - Check authentication status
 - Redirect unauthenticated users
 - Route to role-specific layouts
 - Fetch role-specific data (e.g., unread counts)
 
 **Structure**:
+
 ```typescript
 "use client";
 
@@ -487,12 +512,14 @@ export default function AuthenticatedLayout({
 **File**: `src/app/(authenticated)/client/layout.tsx`
 
 **Features**:
+
 - Client sidebar navigation
 - Client top bar
 - Mobile-responsive sidebar
 - Unread message counts
 
 **Structure**:
+
 ```typescript
 "use client";
 
@@ -525,6 +552,7 @@ export default function ClientLayout({
 **Component**: `src/components/attorney/layout/AttorneyLayout.tsx`
 
 **Features**:
+
 - Attorney sidebar navigation
 - Attorney top bar
 - Unread message counts
@@ -534,12 +562,14 @@ export default function ClientLayout({
 **File**: `src/app/(authenticated)/admin/layout.tsx`
 
 **Features**:
+
 - Admin sidebar navigation
 - Admin top bar
 - Admin authentication check
 - Loading states
 
 **Structure**:
+
 ```typescript
 "use client";
 
@@ -608,10 +638,10 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>(set => ({
   user: null,
   isAuthenticated: false,
-  setUser: (user) =>
+  setUser: user =>
     set({
       user,
       isAuthenticated: !!user,
@@ -620,6 +650,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 ```
 
 **Usage**:
+
 ```typescript
 "use client";
 
@@ -689,6 +720,7 @@ module.exports = {
 ```
 
 **Rules**:
+
 - ✅ Use CSS variable classes (`bg-primary`, `text-foreground`)
 - ✅ Use Tailwind spacing scale (`p-4`, `gap-4`)
 - ✅ Use consistent border radius (`rounded-xl`)
@@ -722,12 +754,14 @@ module.exports = {
 ### Import Patterns
 
 **Absolute Imports** (preferred):
+
 ```typescript
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/authStore";
 ```
 
 **Relative Imports** (for co-located files):
+
 ```typescript
 import { SubComponent } from "./SubComponent";
 ```
@@ -826,4 +860,3 @@ const response = await fetch("/api/client/profile", {
 
 **Last Updated**: January 2025  
 **Version**: 1.0
-

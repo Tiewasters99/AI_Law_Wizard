@@ -4,5 +4,3 @@ import { handleCreateUser } from "@/lib/backend/controllers/admin/users/usersCon
 export async function POST(request: NextRequest) {
   return handleCreateUser(request);
 }
-
-

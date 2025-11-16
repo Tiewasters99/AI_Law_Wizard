@@ -17,7 +17,9 @@ interface NotificationsPopoverProps {
   withBadge?: boolean;
 }
 
-export function NotificationsPopover({ withBadge = true }: NotificationsPopoverProps) {
+export function NotificationsPopover({
+  withBadge = true,
+}: NotificationsPopoverProps) {
   const { counts, refetch } = useNotifications();
 
   return (
@@ -79,5 +81,3 @@ export function NotificationsPopover({ withBadge = true }: NotificationsPopoverP
     </DropdownMenu>
   );
 }
-
-
