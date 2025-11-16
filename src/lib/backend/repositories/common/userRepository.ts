@@ -103,6 +103,8 @@ export interface CreateUserData {
   password: string;
   name: string;
   role: "CUSTOMER" | "ATTORNEY";
+  phone?: string;
+  company?: string;
 }
 
 /**
@@ -116,6 +118,8 @@ export async function createUser(data: CreateUserData) {
       name: data.name,
       role: data.role,
       profileComplete: true,
+      phone: data.phone,
+      company: data.company,
     },
   });
 }

@@ -89,6 +89,21 @@ export async function findEmbeddingJobByOneDriveId(
 }
 
 /**
+ * Find embedding job by ID and userId (ensure attorneys access their own jobs)
+ */
+export async function findEmbeddingJobByIdAndUserId(
+  id: string,
+  userId: string
+): Promise<EmbeddingJob | null> {
+  return await prisma.embeddingJob.findFirst({
+    where: {
+      id,
+      userId,
+    },
+  });
+}
+
+/**
  * Update embedding job status
  */
 export async function updateEmbeddingJobStatus(
@@ -185,6 +200,21 @@ export async function findEmbeddingChunksByJobId(jobId: string) {
       embeddingId: true,
     },
   });
+}
+
+/**
+ * Find all completed embedding jobs for a specific user
+ */
+export async function findCompletedEmbeddingJobsByUserId(
+  userId: string
+): Promise<EmbeddingJob[]> {
+  return (await prisma.embeddingJob.findMany({
+    where: {
+      userId,
+      status: JobStatus.COMPLETED,
+    },
+    orderBy: { createdAt: "desc" },
+  })) as EmbeddingJob[];
 }
 
 /**

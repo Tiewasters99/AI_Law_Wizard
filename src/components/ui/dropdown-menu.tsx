@@ -60,7 +60,7 @@ const DropdownMenuTrigger = React.forwardRef<
   HTMLButtonElement,
   DropdownMenuTriggerProps
 >(({ className, children, asChild, onClick, ...props }, ref) => {
-  const { isOpen, setIsOpen } = (props as any) || {};
+  const { isOpen, setIsOpen, ...restProps } = (props as any) || {};
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -84,7 +84,7 @@ const DropdownMenuTrigger = React.forwardRef<
         className
       )}
       onClick={handleClick}
-      {...props}
+      {...restProps}
     >
       {children}
     </button>
@@ -97,7 +97,7 @@ const DropdownMenuContent = React.forwardRef<
   HTMLDivElement,
   DropdownMenuContentProps
 >(({ className, children, align = "end", ...props }, ref) => {
-  const { isOpen } = (props as any) || {};
+  const { isOpen, ...restProps } = (props as any) || {};
 
   if (!isOpen) return null;
 
@@ -111,7 +111,7 @@ const DropdownMenuContent = React.forwardRef<
         className
       )}
       onClick={e => e.stopPropagation()}
-      {...props}
+      {...restProps}
     >
       {children}
     </div>
