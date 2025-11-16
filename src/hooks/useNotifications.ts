@@ -122,14 +122,19 @@ export function useNotifications() {
     fetchCounts();
   }, [fetchCounts]);
 
-  // Set up polling for real-time updates
+  // Optional: allow other components to trigger a refresh without props
   useEffect(() => {
-    if (!session?.user?.id) return;
-
-    const interval = setInterval(fetchCounts, 30000); // Poll every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [session?.user?.id, fetchCounts]);
+    const handleOpen = () => {
+      fetchCounts();
+    };
+    window.addEventListener("notifications:open", handleOpen as EventListener);
+    return () => {
+      window.removeEventListener(
+        "notifications:open",
+        handleOpen as EventListener
+      );
+    };
+  }, [fetchCounts]);
 
   return {
     counts,
