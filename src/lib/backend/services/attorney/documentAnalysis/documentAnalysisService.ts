@@ -308,7 +308,7 @@ export async function performDocumentAnalysis(
     confidence: sources.length > 0 ? 0.92 : 0.95,
     operationChain: [
       {
-        operation: sources.length > 0 ? "analysis_rag" : "analysis",
+        operation: "analysis",
         confidence: sources.length > 0 ? 0.92 : 0.95,
       },
     ],
