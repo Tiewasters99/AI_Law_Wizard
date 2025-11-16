@@ -21,6 +21,8 @@ import {
   Crown,
   Plus,
   Brain,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +32,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 // Message type definition
 interface Message {
@@ -37,6 +44,7 @@ interface Message {
   content: string;
   role: "user" | "assistant";
   timestamp: Date;
+  reasoning?: string;
 }
 
 // Token Guard Component (inline)
@@ -136,6 +144,9 @@ export default function WizardPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showReasoning, setShowReasoning] = useState(false);
+  const [openReasoning, setOpenReasoning] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -159,6 +170,66 @@ export default function WizardPage() {
       }
     };
     fetchTokenCost();
+  }, []);
+
+  // Hydrate from localStorage when no sessionId is present (handoff from dashboard)
+  useEffect(() => {
+    // If a sessionId exists, we rely on DB-backed loading instead
+    if (searchParams.get("sessionId")) return;
+    try {
+      const raw =
+        typeof window !== "undefined"
+          ? localStorage.getItem("legalChatMessages")
+          : null;
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Array<{
+        id: string;
+        content: string;
+        role: "user" | "assistant";
+        timestamp: string | Date;
+      }>;
+      const mapped: Message[] = parsed.map(m => ({
+        id: m.id,
+        content: m.content,
+        role: m.role,
+        timestamp: new Date(m.timestamp as any),
+      }));
+      setMessages(mapped);
+    } catch {
+      // Ignore malformed localStorage content
+    }
+  }, [searchParams]);
+
+  // Live update messages during streaming started from dashboard via custom event
+  useEffect(() => {
+    const handler = () => {
+      try {
+        const raw =
+          typeof window !== "undefined"
+            ? localStorage.getItem("legalChatMessages")
+            : null;
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as Array<{
+          id: string;
+          content: string;
+          role: "user" | "assistant";
+          timestamp: string | Date;
+        }>;
+        const mapped: Message[] = parsed.map(m => ({
+          id: m.id,
+          content: m.content,
+          role: m.role,
+          timestamp: new Date(m.timestamp as any),
+        }));
+        setMessages(mapped);
+      } catch {
+        // Ignore malformed updates
+      }
+    };
+    window.addEventListener("chat-update", handler);
+    return () => {
+      window.removeEventListener("chat-update", handler);
+    };
   }, []);
 
   // Load session from database when sessionId query param is present
@@ -249,12 +320,27 @@ export default function WizardPage() {
         // API returns { success: true, messages: [...], session: {...} } - check both structures for compatibility
         const messages = messagesData.messages || messagesData.data?.messages;
         if (messagesData.success && Array.isArray(messages)) {
-          const loadedMessages = messages.map((msg: any) => ({
-            id: msg.id,
-            content: msg.content,
-            role: msg.role.toLowerCase() as "user" | "assistant",
-            timestamp: new Date(msg.createdAt),
-          }));
+          const loadedMessages = messages.map((msg: any) => {
+            const role = msg.role.toLowerCase() as "user" | "assistant";
+            if (role === "assistant") {
+              const { reasoning, finalAnswer } = splitReasoningFromContent(
+                msg.content || ""
+              );
+              return {
+                id: msg.id,
+                content: finalAnswer,
+                role,
+                timestamp: new Date(msg.createdAt),
+                reasoning,
+              } as Message;
+            }
+            return {
+              id: msg.id,
+              content: msg.content,
+              role,
+              timestamp: new Date(msg.createdAt),
+            } as Message;
+          });
           setMessages(loadedMessages);
         } else {
           console.warn(
@@ -414,6 +500,20 @@ export default function WizardPage() {
                       );
                     }
 
+                    // Parse reasoning vs final answer on completion
+                    setMessages(prev =>
+                      prev.map(msg => {
+                        if (msg.id !== assistantMessage.id) return msg;
+                        const { reasoning, finalAnswer } =
+                          splitReasoningFromContent(msg.content || "");
+                        return {
+                          ...msg,
+                          content: finalAnswer,
+                          reasoning,
+                        };
+                      })
+                    );
+
                     // Refetch balance to update sidebar (tokens consumed in backend)
                     refetchBalance();
                   } else if (data.type === "error") {
@@ -455,6 +555,77 @@ export default function WizardPage() {
     tokenCost,
     refetchBalance,
   ]);
+
+  // Split reasoning (thinking) from final answer based on headings from the prompt
+  function splitReasoningFromContent(markdown: string): {
+    reasoning?: string;
+    finalAnswer: string;
+  } {
+    if (!markdown) return { finalAnswer: "" };
+    // Look for "## Final Answer" heading (case-insensitive, allow leading/trailing spaces)
+    const finalAnswerRegex = /^##\s*Final\s+Answer\s*$/gim;
+    const matches = [...markdown.matchAll(finalAnswerRegex)];
+    if (matches.length > 0) {
+      const match = matches[0];
+      const startIndex = match.index ?? -1;
+      if (startIndex >= 0) {
+        const before = markdown.slice(0, startIndex).trim();
+        let after = markdown.slice(startIndex).trim();
+        // Remove the "## Final Answer" heading itself from the displayed answer
+        after = after.replace(/^##\s*Final\s+Answer\s*[\r\n]*/i, "");
+        // Strip any disclaimer section
+        const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(after);
+        if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+          after = after.slice(0, disclaimerMatch.index).trim();
+        }
+        return {
+          reasoning: before.length > 0 ? before : undefined,
+          finalAnswer: after.length > 0 ? after : markdown,
+        };
+      }
+    }
+    // Try a softer split if exact heading missing
+    const softMarkers = [
+      /^##\s*Conclusion\s*$/gim,
+      /^##\s*Answer\s*$/gim,
+      /^###\s*Final\s*$/gim,
+    ];
+    for (const rx of softMarkers) {
+      const soft = [...markdown.matchAll(rx)];
+      if (soft.length > 0) {
+        const match = soft[0];
+        const idx = match.index ?? -1;
+        if (idx >= 0) {
+          const before = markdown.slice(0, idx).trim();
+          let after = markdown.slice(idx).trim();
+          // Remove a possible heading label for the answer
+          after = after.replace(
+            /^#+\s*(Final\s*Answer|Answer|Conclusion)\s*[\r\n]*/i,
+            ""
+          );
+          // Strip disclaimer section
+          const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(after);
+          if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+            after = after.slice(0, disclaimerMatch.index).trim();
+          }
+          return {
+            reasoning: before.length > 0 ? before : undefined,
+            finalAnswer: after.length > 0 ? after : markdown,
+          };
+        }
+      }
+    }
+    // Fallback: no split found
+    // Also apply disclaimer stripping in fallback
+    let cleaned = markdown;
+    const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(cleaned);
+    if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+      cleaned = cleaned.slice(0, disclaimerMatch.index).trim();
+    }
+    // Remove a possible leading "Final Answer" heading label if present
+    cleaned = cleaned.replace(/^##\s*Final\s+Answer\s*[\r\n]*/i, "");
+    return { finalAnswer: cleaned };
+  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -521,7 +692,51 @@ export default function WizardPage() {
                 {message.content}
               </div>
             ) : (
-              <MarkdownRenderer content={message.content} />
+              <>
+                <MarkdownRenderer content={message.content} />
+                {message.reasoning && (
+                  <div className="mt-2">
+                    <Collapsible
+                      open={!!openReasoning[message.id]}
+                      onOpenChange={open =>
+                        setOpenReasoning(prev => ({
+                          ...prev,
+                          [message.id]: open,
+                        }))
+                      }
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          onClick={e => e.preventDefault()}
+                          aria-expanded={!!openReasoning[message.id]}
+                          aria-controls={`reasoning-${message.id}`}
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-between p-0 h-auto text-xs font-semibold text-foreground"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Brain className="w-3 h-3" />
+                            {openReasoning[message.id]
+                              ? "Hide reasoning"
+                              : "Show reasoning"}
+                          </span>
+                          {openReasoning[message.id] ? (
+                            <ChevronUp className="w-3 h-3" />
+                          ) : (
+                            <ChevronDown className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-2 transition-all">
+                        <div className="p-2 bg-muted rounded-lg border border-border">
+                          <MarkdownRenderer content={message.reasoning} />
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div

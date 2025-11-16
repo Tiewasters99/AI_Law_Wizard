@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -39,6 +39,17 @@ export function TokenUsageChart() {
     fetchData();
   }, [fetchData]);
 
+  const ranges = useMemo(() => ["7d", "30d", "90d", "1y"] as const, []);
+
+  const purchasedTotal = useMemo(
+    () => data.reduce((sum, d) => sum + d.purchased, 0),
+    [data]
+  );
+  const consumedTotal = useMemo(
+    () => data.reduce((sum, d) => sum + d.consumed, 0),
+    [data]
+  );
+
   if (loading) {
     return (
       <div className="h-64 flex items-center justify-center">
@@ -51,7 +62,7 @@ export function TokenUsageChart() {
     <div className="space-y-4">
       {/* Time Range Selector */}
       <div className="flex space-x-2">
-        {(["7d", "30d", "90d", "1y"] as const).map(range => (
+        {ranges.map(range => (
           <Button
             key={range}
             variant={timeRange === range ? "default" : "outline"}
@@ -86,13 +97,13 @@ export function TokenUsageChart() {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="text-center p-3 bg-green-50 rounded-lg">
             <div className="font-semibold text-green-800">
-              {data.reduce((sum, d) => sum + d.purchased, 0).toLocaleString()}
+              {purchasedTotal.toLocaleString()}
             </div>
             <div className="text-green-600">Tokens Purchased</div>
           </div>
           <div className="text-center p-3 bg-red-50 rounded-lg">
             <div className="font-semibold text-red-800">
-              {data.reduce((sum, d) => sum + d.consumed, 0).toLocaleString()}
+              {consumedTotal.toLocaleString()}
             </div>
             <div className="text-red-600">Tokens Consumed</div>
           </div>

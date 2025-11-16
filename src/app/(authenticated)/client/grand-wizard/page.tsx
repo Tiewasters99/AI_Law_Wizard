@@ -19,6 +19,8 @@ import {
   Crown,
   Brain,
   Plus,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +30,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 // Message type definition
 interface Message {
@@ -35,6 +42,7 @@ interface Message {
   content: string;
   role: "user" | "assistant";
   timestamp: Date;
+  reasoning?: string;
 }
 
 // Token Guard Component (inline)
@@ -134,6 +142,9 @@ export default function GrandWizardPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showReasoning, setShowReasoning] = useState(false);
+  const [openReasoning, setOpenReasoning] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -247,12 +258,27 @@ export default function GrandWizardPage() {
         // API returns { success: true, messages: [...], session: {...} } - check both structures for compatibility
         const messages = messagesData.messages || messagesData.data?.messages;
         if (messagesData.success && Array.isArray(messages)) {
-          const loadedMessages = messages.map((msg: any) => ({
-            id: msg.id,
-            content: msg.content,
-            role: msg.role.toLowerCase() as "user" | "assistant",
-            timestamp: new Date(msg.createdAt),
-          }));
+          const loadedMessages = messages.map((msg: any) => {
+            const role = msg.role.toLowerCase() as "user" | "assistant";
+            if (role === "assistant") {
+              const { reasoning, finalAnswer } = splitReasoningFromContent(
+                msg.content || ""
+              );
+              return {
+                id: msg.id,
+                content: finalAnswer,
+                role,
+                timestamp: new Date(msg.createdAt),
+                reasoning,
+              } as Message;
+            }
+            return {
+              id: msg.id,
+              content: msg.content,
+              role,
+              timestamp: new Date(msg.createdAt),
+            } as Message;
+          });
           setMessages(loadedMessages);
         } else {
           console.warn(
@@ -410,6 +436,20 @@ export default function GrandWizardPage() {
                     );
                   }
 
+                  // Parse reasoning vs final answer on completion
+                  setMessages(prev =>
+                    prev.map(msg => {
+                      if (msg.id !== assistantMessage.id) return msg;
+                      const { reasoning, finalAnswer } =
+                        splitReasoningFromContent(msg.content || "");
+                      return {
+                        ...msg,
+                        content: finalAnswer,
+                        reasoning,
+                      };
+                    })
+                  );
+
                   // Refetch balance to update sidebar (tokens consumed in backend)
                   refetchBalance();
                 } else if (data.type === "error") {
@@ -469,6 +509,73 @@ export default function GrandWizardPage() {
     }
   };
 
+  // Split reasoning (thinking) from final answer based on headings from the prompt
+  function splitReasoningFromContent(markdown: string): {
+    reasoning?: string;
+    finalAnswer: string;
+  } {
+    if (!markdown) return { finalAnswer: "" };
+    const finalAnswerRegex = /^##\s*Final\s+Answer\s*$/gim;
+    const matches = [...markdown.matchAll(finalAnswerRegex)];
+    if (matches.length > 0) {
+      const match = matches[0];
+      const startIndex = match.index ?? -1;
+      if (startIndex >= 0) {
+        const before = markdown.slice(0, startIndex).trim();
+        let after = markdown.slice(startIndex).trim();
+        // Remove the "## Final Answer" heading itself from the displayed answer
+        after = after.replace(/^##\s*Final\s+Answer\s*[\r\n]*/i, "");
+        // Strip any disclaimer section
+        const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(after);
+        if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+          after = after.slice(0, disclaimerMatch.index).trim();
+        }
+        return {
+          reasoning: before.length > 0 ? before : undefined,
+          finalAnswer: after.length > 0 ? after : markdown,
+        };
+      }
+    }
+    const softMarkers = [
+      /^##\s*Conclusion\s*$/gim,
+      /^##\s*Answer\s*$/gim,
+      /^###\s*Final\s*$/gim,
+    ];
+    for (const rx of softMarkers) {
+      const soft = [...markdown.matchAll(rx)];
+      if (soft.length > 0) {
+        const match = soft[0];
+        const idx = match.index ?? -1;
+        if (idx >= 0) {
+          const before = markdown.slice(0, idx).trim();
+          let after = markdown.slice(idx).trim();
+          // Remove a possible heading label for the answer
+          after = after.replace(
+            /^#+\s*(Final\s*Answer|Answer|Conclusion)\s*[\r\n]*/i,
+            ""
+          );
+          // Strip disclaimer section
+          const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(after);
+          if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+            after = after.slice(0, disclaimerMatch.index).trim();
+          }
+          return {
+            reasoning: before.length > 0 ? before : undefined,
+            finalAnswer: after.length > 0 ? after : markdown,
+          };
+        }
+      }
+    }
+    // Fallback: no split found; still strip disclaimer and heading label
+    let cleaned = markdown;
+    const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(cleaned);
+    if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+      cleaned = cleaned.slice(0, disclaimerMatch.index).trim();
+    }
+    cleaned = cleaned.replace(/^##\s*Final\s+Answer\s*[\r\n]*/i, "");
+    return { finalAnswer: cleaned };
+  }
+
   const startNewChat = () => {
     setMessages([]);
     setSessionId(null);
@@ -525,7 +632,51 @@ export default function GrandWizardPage() {
                 {message.content}
               </div>
             ) : (
-              <MarkdownRenderer content={message.content} />
+              <>
+                <MarkdownRenderer content={message.content} />
+                {message.reasoning && (
+                  <div className="mt-2">
+                    <Collapsible
+                      open={!!openReasoning[message.id]}
+                      onOpenChange={open =>
+                        setOpenReasoning(prev => ({
+                          ...prev,
+                          [message.id]: open,
+                        }))
+                      }
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          onClick={e => e.preventDefault()}
+                          aria-expanded={!!openReasoning[message.id]}
+                          aria-controls={`reasoning-${message.id}`}
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-between p-0 h-auto text-xs font-semibold text-foreground"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Brain className="w-3 h-3" />
+                            {openReasoning[message.id]
+                              ? "Hide reasoning"
+                              : "Show reasoning"}
+                          </span>
+                          {openReasoning[message.id] ? (
+                            <ChevronUp className="w-3 h-3" />
+                          ) : (
+                            <ChevronDown className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-2 transition-all">
+                        <div className="p-2 bg-muted rounded-lg border border-border">
+                          <MarkdownRenderer content={message.reasoning} />
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div

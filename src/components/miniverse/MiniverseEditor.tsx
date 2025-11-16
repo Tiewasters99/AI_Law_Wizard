@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import { useMiniverseStore } from "@/stores/miniverseStore";
 import { ColorPicker } from "./ColorPicker";
 import { PositionControls } from "./PositionControls";
@@ -90,12 +90,16 @@ export const MiniverseEditor: React.FC = () => {
     }
   }, [resetConfig]);
 
-  const tabs = [
-    { id: "scene", label: "Scene", icon: "🏠" },
-    { id: "objects", label: "Objects", icon: "🪑" },
-    { id: "panels", label: "Panels", icon: "📋" },
-    { id: "export", label: "Export", icon: "💾" },
-  ] as const;
+  const tabs = useMemo(
+    () =>
+      [
+        { id: "scene", label: "Scene", icon: "🏠" },
+        { id: "objects", label: "Objects", icon: "🪑" },
+        { id: "panels", label: "Panels", icon: "📋" },
+        { id: "export", label: "Export", icon: "💾" },
+      ] as const,
+    []
+  );
 
   return (
     <div className="fixed top-0 right-0 w-80 h-full bg-gradient-to-br from-slate-800/60 via-slate-900/50 to-slate-950/60 backdrop-blur-xl border-l border-slate-400/40 shadow-2xl z-50">

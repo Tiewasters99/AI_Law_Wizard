@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   FileText,
@@ -40,41 +40,48 @@ export function DocumentManager({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const router = useRouter();
 
-  const toggleSelect = (docId: string) => {
+  const toggleSelect = useCallback((docId: string) => {
     setSelectedDocs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(docId)) {
-        newSet.delete(docId);
+      const next = new Set(prev);
+      if (next.has(docId)) {
+        next.delete(docId);
       } else {
-        newSet.add(docId);
+        next.add(docId);
       }
-      return newSet;
+      return next;
     });
-  };
+  }, []);
 
-  const selectAll = () => {
-    if (selectedDocs.size === documents.length) {
-      setSelectedDocs(new Set());
-    } else {
-      setSelectedDocs(new Set(documents.map(d => d.id)));
-    }
-  };
+  const selectAll = useCallback(() => {
+    setSelectedDocs(prev => {
+      if (prev.size === documents.length) {
+        return new Set();
+      }
+      return new Set(documents.map(d => d.id));
+    });
+  }, [documents]);
 
-  const deleteSelected = () => {
+  const deleteSelected = useCallback(() => {
     if (confirm(`Delete ${selectedDocs.size} selected documents?`)) {
       selectedDocs.forEach(docId => onDelete(docId));
       setSelectedDocs(new Set());
     }
-  };
+  }, [onDelete, selectedDocs]);
 
-  const analyzeDocument = (doc: DownloadedDocument) => {
-    // Navigate to Document Analysis with pre-loaded document
-    router.push(
-      `/attorney/wizard?document=${encodeURIComponent(doc.fileName)}`
-    );
-  };
+  const analyzeDocument = useCallback(
+    (doc: DownloadedDocument) => {
+      // Navigate to Document Analysis with pre-loaded document
+      router.push(
+        `/attorney/wizard?document=${encodeURIComponent(doc.fileName)}`
+      );
+    },
+    [router]
+  );
 
-  const totalCost = documents.reduce((sum, doc) => sum + doc.cost, 0);
+  const totalCost = useMemo(
+    () => documents.reduce((sum, doc) => sum + doc.cost, 0),
+    [documents]
+  );
 
   if (documents.length === 0) {
     return (

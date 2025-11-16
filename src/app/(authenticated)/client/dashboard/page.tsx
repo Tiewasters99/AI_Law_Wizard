@@ -39,7 +39,7 @@ export default function ClientDashboard() {
       try {
         // Call the legal analysis API endpoint
         // Get existing sessionId from localStorage if available
-        const existingSessionId = localStorage.getItem("legalChatSessionId");
+        const existingSessionId = null;
 
         const response = await fetch("/api/client/legal-research", {
           method: "POST",
@@ -74,7 +74,7 @@ export default function ClientDashboard() {
           "legalChatMessages",
           JSON.stringify([userMessage, assistantMessage])
         );
-        router.push("/client/wizard");
+        // Keep user on dashboard during streaming; redirect after session is created
 
         // Process the stream
         const reader = response.body?.getReader();
@@ -107,8 +107,14 @@ export default function ClientDashboard() {
                     // Trigger a custom event to update the chat page
                     window.dispatchEvent(new CustomEvent("chat-update"));
                   } else if (data.type === "done") {
-                    // Streaming complete
-                    console.log("Streaming complete");
+                    // Streaming complete; redirect to wizard with sessionId
+                    if (data.sessionId) {
+                      localStorage.removeItem("legalChatMessages");
+                      router.replace(`/client/wizard?sessionId=${data.sessionId}`);
+                    } else {
+                      // Fallback: go to wizard without session (should rarely happen)
+                      router.replace("/client/wizard");
+                    }
                   } else if (data.type === "error") {
                     throw new Error(data.error);
                   }

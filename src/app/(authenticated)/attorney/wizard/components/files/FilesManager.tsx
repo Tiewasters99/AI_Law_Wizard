@@ -41,17 +41,22 @@ interface FilesManagerProps {
 }
 
 const getFileIcon = (fileType: string, isFolder: boolean = false) => {
-  if (isFolder) return <FileText className="w-5 h-5 text-blue-500" aria-label="Folder" />;
+  if (isFolder)
+    return <FileText className="w-5 h-5 text-blue-500" aria-label="Folder" />;
   if (fileType.includes("pdf"))
     return <FileText className="w-5 h-5 text-red-500" aria-label="PDF file" />;
   if (fileType.includes("image"))
     return <Image className="w-5 h-5 text-blue-500" aria-label="Image file" />;
   if (fileType.includes("video"))
-    return <Video className="w-5 h-5 text-purple-500" aria-label="Video file" />;
+    return (
+      <Video className="w-5 h-5 text-purple-500" aria-label="Video file" />
+    );
   if (fileType.includes("audio"))
     return <Music className="w-5 h-5 text-green-500" aria-label="Audio file" />;
   if (fileType.includes("zip") || fileType.includes("rar"))
-    return <Archive className="w-5 h-5 text-orange-500" aria-label="Archive file" />;
+    return (
+      <Archive className="w-5 h-5 text-orange-500" aria-label="Archive file" />
+    );
   return <FileText className="w-5 h-5 text-gray-500" aria-label="File" />;
 };
 
@@ -100,6 +105,33 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ className }) => {
 
   const MAX_SELECTION_LIMIT = 40;
 
+  // Check sync status for files
+  const checkSyncStatus = useCallback(async (fileList: OneDriveFileInfo[]) => {
+    try {
+      const fileIds = fileList
+        .filter(file => !file.isFolder)
+        .map(file => file.id);
+
+      if (fileIds.length === 0) return;
+
+      const response = await fetch("/api/embedding/synced-files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileIds }),
+      });
+
+      const data = await response.json();
+      if (data.success && data.syncedFiles) {
+        const syncedIds = new Set<string>(
+          data.syncedFiles.map((file: any) => file.oneDriveId as string)
+        );
+        setSyncedFiles(syncedIds);
+      }
+    } catch (error) {
+      console.error("Error checking sync status:", error);
+    }
+  }, []);
+
   // Load files from OneDrive
   const loadFiles = useCallback(
     async (folderId: string = currentFolder) => {
@@ -140,33 +172,6 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ className }) => {
     },
     [isAuthenticated, currentFolder, searchTerm, checkSyncStatus]
   );
-
-  // Check sync status for files
-  const checkSyncStatus = useCallback(async (fileList: OneDriveFileInfo[]) => {
-    try {
-      const fileIds = fileList
-        .filter(file => !file.isFolder)
-        .map(file => file.id);
-
-      if (fileIds.length === 0) return;
-
-      const response = await fetch("/api/embedding/synced-files", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileIds }),
-      });
-
-      const data = await response.json();
-      if (data.success && data.syncedFiles) {
-        const syncedIds = new Set<string>(
-          data.syncedFiles.map((file: any) => file.oneDriveId as string)
-        );
-        setSyncedFiles(syncedIds);
-      }
-    } catch (error) {
-      console.error("Error checking sync status:", error);
-    }
-  }, []);
 
   // Check authentication status
   useEffect(() => {

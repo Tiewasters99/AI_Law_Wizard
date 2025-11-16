@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 interface TokenBalance {
   balance: number;
@@ -11,6 +12,7 @@ interface TokenBalance {
 
 export function useTokenBalance() {
   const { data: session } = useSession();
+  const pathname = usePathname?.() as string | undefined;
   const [tokenData, setTokenData] = useState<TokenBalance>({
     balance: 0,
     totalPurchased: 0,
@@ -62,6 +64,35 @@ export function useTokenBalance() {
   useEffect(() => {
     fetchBalance();
   }, [fetchBalance]);
+
+  // Listen for global tokens updates and refetch when page becomes visible or route changes
+  useEffect(() => {
+    const handleUpdated = () => {
+      fetchBalance();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchBalance();
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("tokens:updated", handleUpdated);
+      document.addEventListener("visibilitychange", handleVisibility);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("tokens:updated", handleUpdated);
+        document.removeEventListener("visibilitychange", handleVisibility);
+      }
+    };
+  }, [fetchBalance]);
+
+  // Refetch on route changes where the balance is displayed
+  useEffect(() => {
+    if (pathname) {
+      fetchBalance();
+    }
+  }, [pathname, fetchBalance]);
 
   return {
     balance: tokenData.balance,

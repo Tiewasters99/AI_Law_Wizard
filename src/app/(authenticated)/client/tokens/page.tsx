@@ -139,6 +139,8 @@ export default function TokensPage() {
     loadFeaturePricing();
   }, []);
 
+  // Detect Stripe return with payment success and trigger global refresh + toast
+
   useEffect(() => {
     // Get primary color from theme on mount and theme changes
     setPrimaryColorHex(getPrimaryColorHex());
@@ -369,6 +371,21 @@ export default function TokensPage() {
     }
   }, [session?.user?.id, fetchTokenData]);
 
+  // Detect Stripe return with payment success and trigger global refresh + toast
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const paymentStatus = url.searchParams.get("payment");
+    if (paymentStatus === "success") {
+      window.dispatchEvent(new CustomEvent("tokens:updated"));
+      url.searchParams.delete("payment");
+      window.history.replaceState({}, "", url.toString());
+      setSuccess("Payment successful — credits added.");
+      refetchBalance();
+      fetchTokenData();
+    }
+  }, [refetchBalance, fetchTokenData]);
+
   const handlePurchasePackage = useCallback(
     async (pkg: TokenPackage) => {
       // Find the corresponding Stripe package
@@ -414,6 +431,10 @@ export default function TokensPage() {
       // Refetch balance and transactions
       await refetchBalance();
       await fetchTokenData();
+      // Dispatch global event so other parts of the app update immediately
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("tokens:updated"));
+      }
 
       setSuccess(`Successfully purchased ${tokens} tokens!`);
       setTimeout(() => setSuccess(null), 5000);

@@ -45,7 +45,7 @@ const CollapsibleTrigger = React.forwardRef<
   HTMLButtonElement,
   CollapsibleTriggerProps
 >(({ asChild, children, className, ...props }, ref) => {
-  const { open, onOpenChange } = (props as any) || {};
+  const { open, onOpenChange, ...rest } = (props as any) || {};
 
   const handleClick = () => {
     onOpenChange?.(!open);
@@ -65,7 +65,6 @@ const CollapsibleTrigger = React.forwardRef<
       type="button"
       onClick={handleClick}
       className={cn("", className)}
-      {...props}
     >
       {children}
     </button>
@@ -79,7 +78,7 @@ const CollapsibleContent = React.forwardRef<
   CollapsibleContentProps
 >(({ children, className, ...props }, ref) => {
   // Extract open from props (passed from Collapsible parent)
-  const { open, ...restProps } = (props as any) || {};
+  const { open, onOpenChange: _ignored, ...restProps } = (props as any) || {};
 
   if (!open) return null;
 
