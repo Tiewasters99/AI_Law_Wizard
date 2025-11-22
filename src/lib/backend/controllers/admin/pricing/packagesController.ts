@@ -30,17 +30,31 @@ export async function handleListPackages(request: NextRequest) {
  */
 export async function handleCreatePackage(request: NextRequest) {
   try {
-    await requireAdminAuth(request);
+    const admin = await requireAdminAuth(request);
 
     const body = await request.json();
-    const { name, tokens, description, isActive } = body;
-
-    const newPackage = await createPackage({
+    const {
       name,
       tokens,
       description,
       isActive,
-    });
+      attorneyPriceInCents,
+      clientPriceInCents,
+    } = body;
+
+    const newPackage = await createPackage(
+      {
+        name,
+        tokens,
+        description,
+        isActive,
+        attorneyPriceInCents:
+          attorneyPriceInCents !== undefined ? attorneyPriceInCents : null,
+        clientPriceInCents:
+          clientPriceInCents !== undefined ? clientPriceInCents : null,
+      },
+      admin.id
+    );
 
     return successResponse(newPackage, 201);
   } catch (error) {

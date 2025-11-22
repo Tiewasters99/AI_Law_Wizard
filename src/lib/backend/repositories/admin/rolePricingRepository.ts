@@ -66,6 +66,34 @@ export async function findRolePricingByPackageAndRole(
 }
 
 /**
+ * Create role pricing
+ */
+export async function createRolePricing(
+  packageId: string,
+  role: "ATTORNEY" | "CUSTOMER",
+  priceInCents: number,
+  isActive: boolean = true
+): Promise<RolePricingWithPackage> {
+  return await prisma.rolePricing.create({
+    data: {
+      packageId,
+      role,
+      priceInCents,
+      isActive,
+    },
+    include: {
+      package: {
+        select: {
+          id: true,
+          name: true,
+          tokens: true,
+        },
+      },
+    },
+  });
+}
+
+/**
  * Update role pricing
  */
 export async function updateRolePricing(

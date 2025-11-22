@@ -8,6 +8,7 @@ import {
   updateConsultationRequestStatus,
   createConsultationRequest,
   markConsultationRequestAsViewedByClient,
+  updateConsultationRequestFields,
 } from "../../../repositories/attorney/consultationRequestRepository";
 import { findConversationById } from "../../../repositories/attorney/conversationRepository";
 import { createMessage } from "../../../repositories/attorney/messageRepository";
@@ -61,67 +62,27 @@ export async function createClientConsultationRequest(
     );
   }
 
-  // Create consultation request and conversation in a transaction
-  const result = await prisma.$transaction(async tx => {
-    // Create consultation request
-    const consultationRequest = await createConsultationRequest({
-      clientId,
-      attorneyId: data.attorneyId,
-      caseType: data.caseType,
-      urgency: data.urgency,
-      description: data.description,
-      documents: data.attachmentUrls || [],
-    });
+  // Create consultation request only (no conversation until attorney accepts)
+  const consultationRequest = await createConsultationRequest({
+    clientId,
+    attorneyId: data.attorneyId,
+    caseType: data.caseType,
+    urgency: data.urgency,
+    description: data.description,
+    documents: data.attachmentUrls || [],
+  });
 
-    // Create conversation
-    const conversation = await tx.conversation.create({
-      data: {
-        clientId,
-        attorneyId: data.attorneyId,
-        consultationRequestId: consultationRequest.id,
-        unreadByClient: 0,
-        unreadByAttorney: 1,
-      },
-    });
-
-    // Create initial message from client
-    const initialMessage = await tx.message.create({
-      data: {
-        conversationId: conversation.id,
-        senderId: clientId,
-        content: `Consultation Request: ${data.caseType}\n\nDescription: ${data.description.trim()}\n\nUrgency: ${data.urgency}`,
-        attachments: data.attachmentUrls || undefined,
-      },
-    });
-
-    // Update conversation with last message
-    await tx.conversation.update({
-      where: { id: conversation.id },
-      data: {
-        lastMessageAt: initialMessage.createdAt,
-      },
-    });
-
-    // Create notification for attorney
-    await createNotification({
-      userId: data.attorneyId,
-      type: "NEW_REQUEST",
-      title: "New Consultation Request",
-      message: `You have a new ${data.urgency} priority consultation request from ${clientName}`,
-      relatedId: conversation.id,
-    });
-
-    return {
-      consultationRequest,
-      conversation,
-      message: initialMessage,
-    };
+  // Create notification for attorney
+  await createNotification({
+    userId: data.attorneyId,
+    type: "NEW_REQUEST",
+    title: "New Consultation Request",
+    message: `You have a new ${data.urgency} priority consultation request from ${clientName}`,
+    relatedId: consultationRequest.id,
   });
 
   return {
-    consultationRequest: result.consultationRequest,
-    conversation: result.conversation,
-    initialMessage: result.message,
+    consultationRequest,
     tokenBalance: tokenResult.newBalance,
   };
 }
@@ -247,4 +208,89 @@ export async function markRequestAsViewed(requestId: string, clientId: string) {
   }
 
   return { success: true };
+}
+
+export interface UpdateConsultationRequestFieldsData {
+  caseType?: string;
+  urgency?: string;
+  description?: string;
+  attachmentUrls?: string[];
+}
+
+/**
+ * Update consultation request fields (caseType, urgency, description, attachments)
+ * Cannot update if status is ACCEPTED
+ */
+export async function updateClientConsultationRequestFields(
+  requestId: string,
+  clientId: string,
+  data: UpdateConsultationRequestFieldsData
+) {
+  // Verify consultation request belongs to user
+  const consultationRequest = await prisma.consultationRequest.findFirst({
+    where: {
+      id: requestId,
+      clientId,
+    },
+  });
+
+  if (!consultationRequest) {
+    throw new NotFoundError("Consultation request not found");
+  }
+
+  // Cannot edit if status is ACCEPTED
+  if (consultationRequest.status === "ACCEPTED") {
+    throw new ValidationError(
+      "Cannot edit consultation request that has been accepted"
+    );
+  }
+
+  // Validate required fields if provided
+  if (data.caseType !== undefined && !data.caseType.trim()) {
+    throw new ValidationError("Case type is required");
+  }
+
+  if (data.description !== undefined && !data.description.trim()) {
+    throw new ValidationError("Description is required");
+  }
+
+  // Validate urgency if provided
+  if (data.urgency !== undefined) {
+    const validUrgencies = ["low", "medium", "high", "urgent"];
+    if (!validUrgencies.includes(data.urgency.toLowerCase())) {
+      throw new ValidationError("Invalid urgency level");
+    }
+  }
+
+  // Prepare update data
+  const updateData: {
+    caseType?: string;
+    urgency?: string;
+    description?: string;
+    documents?: string[];
+  } = {};
+
+  if (data.caseType !== undefined) {
+    updateData.caseType = data.caseType.trim();
+  }
+
+  if (data.urgency !== undefined) {
+    updateData.urgency = data.urgency;
+  }
+
+  if (data.description !== undefined) {
+    updateData.description = data.description.trim();
+  }
+
+  if (data.attachmentUrls !== undefined) {
+    updateData.documents = data.attachmentUrls;
+  }
+
+  // Update consultation request
+  const updatedRequest = await updateConsultationRequestFields(
+    requestId,
+    updateData
+  );
+
+  return { request: updatedRequest };
 }

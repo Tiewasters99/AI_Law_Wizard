@@ -1,24 +1,18 @@
 // Repository for lawyer profile database operations
 
 import { prisma } from "../../prisma";
+import { LawyerProfile as PrismaLawyerProfile } from "@prisma/client";
 
-export interface LawyerProfile {
-  id: string;
-  userId: string;
-  specialty: string | null;
-  barLicense: string | null;
-  bio: string | null;
-  yearsOfExperience: number | null;
-  firmName: string | null;
-  verified: boolean;
-}
+export type LawyerProfile = PrismaLawyerProfile;
 
 export interface UpdateLawyerProfileData {
   specialty?: string;
   barLicense?: string;
+  barNumber?: string;
   bio?: string;
   yearsOfExperience?: number;
   firmName?: string;
+  location?: string;
 }
 
 /**
@@ -44,21 +38,25 @@ export async function upsertLawyerProfile(
     update: {
       specialty: data.specialty ?? undefined,
       barLicense: data.barLicense ?? undefined,
+      barNumber: data.barNumber ?? undefined,
       bio: data.bio ?? undefined,
       yearsOfExperience: data.yearsOfExperience
         ? parseInt(String(data.yearsOfExperience))
         : undefined,
       firmName: data.firmName ?? undefined,
+      location: data.location ?? undefined,
     },
     create: {
       userId,
       specialty: data.specialty ?? "",
       barLicense: data.barLicense ?? "",
+      barNumber: data.barNumber ?? "",
       bio: data.bio ?? "",
       yearsOfExperience: data.yearsOfExperience
         ? parseInt(String(data.yearsOfExperience))
         : 0,
       firmName: data.firmName ?? "",
+      location: data.location ?? "",
     },
   });
 }

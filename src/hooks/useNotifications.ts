@@ -22,7 +22,7 @@ export function useNotifications() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchCounts = useCallback(async () => {
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session?.user?.role) {
       setLoading(false);
       return;
     }
@@ -31,7 +31,12 @@ export function useNotifications() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/client/notifications/unread-count", {
+      // Use role-specific endpoint
+      const endpoint = session.user.role === "ATTORNEY" 
+        ? "/api/attorney/notifications/unread-count"
+        : "/api/client/notifications/unread-count";
+
+      const response = await fetch(endpoint, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -77,12 +82,23 @@ export function useNotifications() {
 
       // Handle response data
       if (data.success) {
-        setCounts({
-          notifications: data.notifications || 0,
-          messages: data.messages || 0,
-          pendingRequests: data.pendingRequests || 0,
-          total: data.total || 0,
-        });
+        // Attorney endpoint returns { count, success: true }
+        // Client endpoint returns { notifications, messages, pendingRequests, total, success: true }
+        if (session?.user?.role === "ATTORNEY") {
+          setCounts({
+            notifications: data.count || 0,
+            messages: 0, // Attorney messages are handled separately
+            pendingRequests: 0, // Attorney requests are handled separately
+            total: data.count || 0,
+          });
+        } else {
+          setCounts({
+            notifications: data.notifications || 0,
+            messages: data.messages || 0,
+            pendingRequests: data.pendingRequests || 0,
+            total: data.total || 0,
+          });
+        }
         setError(null); // Clear any previous errors on success
       } else {
         // API returned success: false
@@ -115,7 +131,7 @@ export function useNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, session?.user?.role]);
 
   // Fetch counts on mount and when session changes
   useEffect(() => {

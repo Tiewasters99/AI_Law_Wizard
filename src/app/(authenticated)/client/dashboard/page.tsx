@@ -228,7 +228,7 @@ export default function ClientDashboard() {
   );
 
   return (
-    <div className="bg-background flex flex-col items-center pt-8 sm:pt-16 md:pt-24 lg:pt-40">
+    <div className="bg-background flex flex-col items-center pt-8 sm:pt-16 md:pt-24 lg:pt-40" data-tour="dashboard">
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6">
         {/* Main Heading */}
         <div className="text-center mb-4 sm:mb-6">

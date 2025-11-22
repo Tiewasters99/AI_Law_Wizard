@@ -4,6 +4,9 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AttorneyLayout } from "@/components/attorney/layout/AttorneyLayout";
+import { FeatureTour } from "@/components/tour/FeatureTour";
+import { attorneyTourSteps } from "@/lib/frontend/tours/attorneyTourConfig";
+import { clientTourSteps } from "@/lib/frontend/tours/clientTourConfig";
 
 export default function AuthenticatedLayout({
   children,
@@ -13,6 +16,7 @@ export default function AuthenticatedLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -21,6 +25,29 @@ export default function AuthenticatedLayout({
       router.push("/auth/login");
     }
   }, [session, status, router]);
+
+  // Check if tour should be shown
+  useEffect(() => {
+    if (status === "loading" || !session?.user?.id) return;
+
+    const role = session.user.role as string | undefined;
+    if (!role || (role !== "ATTORNEY" && role !== "CUSTOMER")) return;
+
+    try {
+      const storageKey = `tour-completed-${role}-${session.user.id}`;
+      const completed = localStorage.getItem(storageKey) === "true";
+      
+      if (!completed) {
+        // Wait a bit for the page to render before showing tour
+        const timeout = setTimeout(() => {
+          setShowTour(true);
+        }, 500);
+        return () => clearTimeout(timeout);
+      }
+    } catch (error) {
+      console.error("Error checking tour status:", error);
+    }
+  }, [session, status]);
 
   // Fetch unread count for attorneys
   useEffect(() => {
@@ -63,16 +90,45 @@ export default function AuthenticatedLayout({
   // Role-aware layout wrapper
   const role = session.user?.role as string | undefined;
 
+  // Get appropriate tour steps
+  const getTourSteps = () => {
+    if (role === "ATTORNEY") return attorneyTourSteps;
+    if (role === "CUSTOMER") return clientTourSteps;
+    return [];
+  };
+
   // Attorney/Lawyer layout
   if (role === "ATTORNEY") {
     return (
-      <AttorneyLayout unreadCount={unreadCount}>{children}</AttorneyLayout>
+      <>
+        <AttorneyLayout unreadCount={unreadCount}>{children}</AttorneyLayout>
+        {showTour && role && (
+          <FeatureTour
+            steps={getTourSteps()}
+            role={role}
+            isOpen={showTour}
+            onClose={() => setShowTour(false)}
+          />
+        )}
+      </>
     );
   }
 
   // Client layout (TODO: Create ClientLayout)
   if (role === "CUSTOMER") {
-    return <>{children}</>; // Temporary - will create ClientLayout
+    return (
+      <>
+        {children}
+        {showTour && role && (
+          <FeatureTour
+            steps={getTourSteps()}
+            role={role}
+            isOpen={showTour}
+            onClose={() => setShowTour(false)}
+          />
+        )}
+      </>
+    );
   }
 
   // Admin layout (TODO: Create AdminLayout)

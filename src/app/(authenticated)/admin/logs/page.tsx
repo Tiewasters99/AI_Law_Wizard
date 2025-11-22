@@ -114,11 +114,14 @@ export default function AdminLogsPage() {
     try {
       const response = await fetch("/api/admin/admins");
       if (response.ok) {
-        const data = await response.json();
-        setAdmins(data);
+        const result = await response.json();
+        // Handle both response formats: { success: true, data: [...] } or direct array
+        const adminsData = Array.isArray(result) ? result : (result.data || []);
+        setAdmins(Array.isArray(adminsData) ? adminsData : []);
       }
     } catch (error) {
       console.error("Failed to fetch admins:", error);
+      setAdmins([]); // Ensure admins is always an array
     }
   };
 
@@ -391,7 +394,7 @@ export default function AdminLogsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All admins</SelectItem>
-                  {admins.map(admin => (
+                  {Array.isArray(admins) && admins.map(admin => (
                     <SelectItem key={admin.id} value={admin.id}>
                       {admin.name || admin.email}
                     </SelectItem>

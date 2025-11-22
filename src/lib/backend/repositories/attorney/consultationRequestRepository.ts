@@ -128,6 +128,55 @@ export async function findConsultationRequestByIdForClient(
 }
 
 /**
+ * Find consultation request by ID for attorney
+ */
+export async function findConsultationRequestByIdForAttorney(
+  requestId: string,
+  attorneyId: string
+) {
+  return await prisma.consultationRequest.findFirst({
+    where: {
+      id: requestId,
+      attorneyId,
+    },
+    select: {
+      id: true,
+      caseType: true,
+      description: true,
+      urgency: true,
+      status: true,
+      createdAt: true,
+      client: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          customerProfile: {
+            select: {
+              companyName: true,
+            },
+          },
+        },
+      },
+      conversation: {
+        select: {
+          id: true,
+          lastMessageAt: true,
+          unreadByAttorney: true,
+        },
+      },
+      proposals: {
+        select: {
+          id: true,
+          status: true,
+          proposedFee: true,
+        },
+      },
+    },
+  });
+}
+
+/**
  * Update consultation request status
  */
 export async function updateConsultationRequestStatus(
@@ -227,6 +276,68 @@ export async function markConsultationRequestAsViewedByClient(
     },
     data: {
       viewedByClient: true,
+    },
+  });
+}
+
+/**
+ * Update consultation request fields (caseType, urgency, description, documents)
+ */
+export async function updateConsultationRequestFields(
+  requestId: string,
+  data: {
+    caseType?: string;
+    urgency?: string;
+    description?: string;
+    documents?: string[];
+  }
+) {
+  const updateData: any = {};
+
+  if (data.caseType !== undefined) {
+    updateData.caseType = data.caseType;
+  }
+
+  if (data.urgency !== undefined) {
+    updateData.urgency = data.urgency.toUpperCase() as
+      | "LOW"
+      | "MEDIUM"
+      | "HIGH"
+      | "URGENT";
+  }
+
+  if (data.description !== undefined) {
+    updateData.description = data.description.trim();
+  }
+
+  if (data.documents !== undefined) {
+    updateData.documents = data.documents;
+  }
+
+  return await prisma.consultationRequest.update({
+    where: { id: requestId },
+    data: updateData,
+    include: {
+      attorney: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          lawyerProfile: {
+            select: {
+              practiceAreas: true,
+              firmName: true,
+            },
+          },
+        },
+      },
+      conversation: {
+        select: {
+          id: true,
+          lastMessageAt: true,
+          unreadByClient: true,
+        },
+      },
     },
   });
 }

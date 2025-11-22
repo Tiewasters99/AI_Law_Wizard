@@ -55,8 +55,6 @@ export async function handleCreateConsultationRequest(
     return successResponse({
       success: true,
       consultationRequest: result.consultationRequest,
-      conversation: result.conversation,
-      initialMessage: result.initialMessage,
       tokenBalance: result.tokenBalance,
       message: "Consultation request sent successfully",
     });

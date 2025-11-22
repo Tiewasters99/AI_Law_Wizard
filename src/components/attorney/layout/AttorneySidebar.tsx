@@ -228,6 +228,7 @@ export function AttorneySidebar({
       animate={{ width: isCollapsed ? 72 : 280 }}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className="relative h-full flex flex-col border-r border-sidebar-border bg-sidebar shadow-sm"
+      data-tour="sidebar"
     >
       {/* Toggle Button */}
       <button
@@ -267,10 +268,36 @@ export function AttorneySidebar({
                     !hasViewedInboxPage;
                   const badgeCount = unreadCount;
 
+                  // Map href to tour data attribute
+                  const tourAttribute = item.href.includes("directory")
+                    ? "directory"
+                    : item.href.includes("inbox")
+                      ? "inbox"
+                      : item.href.includes("wizard") && !item.href.includes("grand")
+                        ? "wizard"
+                        : item.href.includes("grand-wizard")
+                          ? "grand-wizard"
+                          : item.href.includes("query-history")
+                            ? "query-history"
+                            : item.href.includes("docket-genie")
+                              ? "docket-genie"
+                              : item.href.includes("blog")
+                                ? "blog"
+                                : item.href.includes("miniverse")
+                                  ? "miniverse"
+                                  : item.href.includes("integrations")
+                                    ? "integrations"
+                                    : item.href.includes("profile")
+                                      ? "profile"
+                                      : item.href.includes("tokens")
+                                        ? "tokens"
+                                        : null;
+
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      data-tour={tourAttribute}
                       onMouseEnter={() => handleMouseEnter(item.href)}
                       onMouseLeave={handleMouseLeave}
                       className={`relative flex items-center rounded-lg transition-all group ${
@@ -342,7 +369,7 @@ export function AttorneySidebar({
       {/* Bottom Stats Widget */}
       {!isCollapsed && (
         <div className="p-4 border-t border-sidebar-border">
-          <div className="p-3 rounded-lg bg-accent/50 border border-primary/20">
+          <div className="p-3 rounded-lg bg-accent/50 border border-primary/20" data-tour="tokens">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-primary">
                 Service Credits

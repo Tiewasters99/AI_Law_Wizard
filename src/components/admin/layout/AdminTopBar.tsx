@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, LogOut, Settings, User, Shield } from "lucide-react";
+import { ChevronDown, LogOut, Settings, Shield, User } from "lucide-react";
 
 interface AdminTopBarProps {
   admin: {
@@ -28,8 +29,14 @@ interface AdminTopBarProps {
 }
 
 export function AdminTopBar({ admin }: AdminTopBarProps) {
+  const router = useRouter();
+
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/admin/login" });
+  };
+
+  const handleSettingsClick = () => {
+    router.push("/admin/settings");
   };
 
   return (
@@ -95,11 +102,10 @@ export function AdminTopBar({ admin }: AdminTopBarProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-slate-700" />
-            <DropdownMenuItem className="text-slate-300 hover:bg-slate-700 hover:text-white">
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-slate-300 hover:bg-slate-700 hover:text-white">
+            <DropdownMenuItem
+              onClick={handleSettingsClick}
+              className="text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer"
+            >
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>

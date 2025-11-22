@@ -233,6 +233,10 @@ enum TransactionType {
   CONSUMPTION
   REFUND
   ADMIN_ADJUSTMENT
+  CONSULTATION_REQUEST
+  PROPOSAL_ACCEPTANCE
+  MILESTONE_COMPLETION
+  PROJECT_COMPLETION
 }
 
 enum PurchaseStatus {
@@ -328,6 +332,12 @@ model User {
   notifications                Notification[]
   tokenTransactions            TokenTransaction[]        @relation("UserTokenTransactions")
   embeddingJobs                EmbeddingJob[]
+  attorneyProposals            Proposal[]                @relation("AttorneyProposals")
+  clientProposals              Proposal[]                @relation("ClientProposals")
+  clientProjects               Project[]                 @relation("ClientProjects")
+  attorneyProjects             Project[]                 @relation("AttorneyProjects")
+  reviewerReviews              Review[]                  @relation("ReviewerReviews")
+  revieweeReviews              Review[]                  @relation("RevieweeReviews")
 
   @@map("users")
 }
@@ -442,15 +452,21 @@ model TokenTransaction {
   amount      Int // Positive for purchase, negative for consumption
   description String?
   reference   String? // Payment intent ID or operation reference
+  projectId   String? // Link to project for milestone/project payments
+  milestoneId String? // Link to milestone for milestone payments
   metadata    Json? // Additional metadata (operation details, sessionId, etc.)
   createdAt   DateTime        @default(now())
 
   // Relations
-  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  user   User   @relation("UserTokenTransactions", fields: [userId], references: [id], onDelete: Cascade)
+  wallet    Wallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user      User       @relation("UserTokenTransactions", fields: [userId], references: [id], onDelete: Cascade)
+  project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
 
   @@index([feature])
   @@index([userId, feature])
+  @@index([projectId])
+  @@index([milestoneId])
   @@map("token_transactions")
 }
 
@@ -505,13 +521,17 @@ model ConsultationRequest {
   documents        Json? // Optional document references
   viewedByClient   Boolean        @default(false) // Track if client has viewed this request
   viewedByAttorney Boolean        @default(false) // Track if attorney has viewed this request
+  proposalId       String?        @unique // Link to accepted proposal (one-to-one)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   // Relations
-  client       User          @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)
-  attorney     User          @relation("AttorneyRequests", fields: [attorneyId], references: [id], onDelete: Cascade)
-  conversation Conversation?
+  client           User          @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)
+  attorney         User          @relation("AttorneyRequests", fields: [attorneyId], references: [id], onDelete: Cascade)
+  conversation     Conversation?
+  acceptedProposal Proposal?     @relation("AcceptedProposal", fields: [proposalId], references: [id], onDelete: SetNull)
+  proposals        Proposal[]    @relation("RequestProposals") // All proposals for this request
+  projects         Project[]     @relation("RequestProjects") // Projects created from this request
 
   @@map("consultation_requests")
 }
@@ -522,6 +542,7 @@ model Conversation {
   consultationRequestId String   @unique
   clientId              String
   attorneyId            String
+  projectId             String?  @unique // Link to project if created from proposal (one-to-one)
   lastMessageAt         DateTime @default(now())
   unreadByClient        Int      @default(0)
   unreadByAttorney      Int      @default(0)
@@ -532,6 +553,7 @@ model Conversation {
   consultationRequest ConsultationRequest @relation(fields: [consultationRequestId], references: [id], onDelete: Cascade)
   client              User                @relation("ClientConversations", fields: [clientId], references: [id], onDelete: Cascade)
   attorney            User                @relation("AttorneyConversations", fields: [attorneyId], references: [id], onDelete: Cascade)
+  project             Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
   messages            Message[]
 
   @@map("conversations")
@@ -594,6 +616,12 @@ enum NotificationType {
   REQUEST_ACCEPTED
   REQUEST_REJECTED
   REQUEST_CANCELLED
+  PROPOSAL_RECEIVED
+  PROPOSAL_ACCEPTED
+  PROPOSAL_REJECTED
+  MILESTONE_COMPLETED
+  MILESTONE_APPROVED
+  PROJECT_COMPLETED
 }
 
 model Admin {
@@ -726,4 +754,171 @@ model FeaturePricing {
   @@index([feature])
   @@index([role])
   @@map("feature_pricing")
+}
+
+// Marketplace Models
+
+// Proposal from attorney to client
+model Proposal {
+  id                    String         @id @default(cuid())
+  consultationRequestId String
+  attorneyId            String
+  clientId              String
+  proposedFee           Int // Fee in tokens
+  proposedTimeline      String // Timeline description (e.g., "2-3 weeks")
+  description           String         @db.Text
+  terms                 String?        @db.Text // Terms and conditions
+  status                ProposalStatus @default(DRAFT)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  // Relations
+  consultationRequest ConsultationRequest  @relation("RequestProposals", fields: [consultationRequestId], references: [id], onDelete: Cascade)
+  acceptedProposal    ConsultationRequest? @relation("AcceptedProposal") // Accepted proposal relation
+  attorney            User                 @relation("AttorneyProposals", fields: [attorneyId], references: [id], onDelete: Cascade)
+  client              User                 @relation("ClientProposals", fields: [clientId], references: [id], onDelete: Cascade)
+  project             Project?
+
+  @@index([consultationRequestId])
+  @@index([attorneyId])
+  @@index([clientId])
+  @@index([status])
+  @@map("proposals")
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+// Project created from accepted proposal
+model Project {
+  id                    String        @id @default(cuid())
+  consultationRequestId String
+  proposalId            String        @unique
+  clientId              String
+  attorneyId            String
+  title                 String
+  description           String        @db.Text
+  totalAmount           Int // Total tokens for the project
+  status                ProjectStatus @default(ACTIVE)
+  startDate             DateTime      @default(now())
+  endDate               DateTime?
+  contractUrl           String? // Optional contract document URL
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  consultationRequest ConsultationRequest @relation("RequestProjects", fields: [consultationRequestId], references: [id], onDelete: Cascade)
+  proposal            Proposal            @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  client              User                @relation("ClientProjects", fields: [clientId], references: [id], onDelete: Cascade)
+  attorney            User                @relation("AttorneyProjects", fields: [attorneyId], references: [id], onDelete: Cascade)
+  conversation        Conversation?
+  milestones          Milestone[]
+  reviews             Review[]
+  disputes            Dispute[]
+  tokenTransactions   TokenTransaction[]
+
+  @@index([clientId])
+  @@index([attorneyId])
+  @@index([status])
+  @@index([consultationRequestId])
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+// Milestone within a project
+model Milestone {
+  id            String          @id @default(cuid())
+  projectId     String
+  title         String
+  description   String          @db.Text
+  amount        Int // Tokens for this milestone
+  status        MilestoneStatus @default(PENDING)
+  dueDate       DateTime?
+  completedDate DateTime?
+  approvedDate  DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  disputes          Dispute[]
+  tokenTransactions TokenTransaction[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("milestones")
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  DISPUTED
+}
+
+// Review for completed project
+model Review {
+  id         String   @id @default(cuid())
+  projectId  String
+  reviewerId String // User who wrote the review
+  revieweeId String // User being reviewed (attorney or client)
+  rating     Int // 1-5 rating
+  comment    String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reviewer User    @relation("ReviewerReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewee User    @relation("RevieweeReviews", fields: [revieweeId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, reviewerId]) // One review per reviewer per project
+  @@index([projectId])
+  @@index([revieweeId])
+  @@index([rating])
+  @@map("reviews")
+}
+
+// Dispute for project or milestone
+model Dispute {
+  id          String        @id @default(cuid())
+  projectId   String
+  milestoneId String? // Optional: dispute specific milestone
+  raisedBy    String // User ID who raised the dispute
+  reason      String        @db.Text
+  status      DisputeStatus @default(OPEN)
+  resolution  String?       @db.Text
+  resolvedBy  String? // Admin ID who resolved
+  resolvedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([status])
+  @@index([raisedBy])
+  @@map("disputes")
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
 }

@@ -13,7 +13,7 @@ import Link from "next/link";
 
 export default function AttorneyDashboard() {
   return (
-    <div className="p-8">
+    <div className="p-8" data-tour="dashboard">
       {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">

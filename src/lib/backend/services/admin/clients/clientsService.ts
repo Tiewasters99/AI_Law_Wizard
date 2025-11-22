@@ -32,6 +32,8 @@ export interface ClientsListResult {
     phone: string | null;
     company: string | null;
     industry: string | null;
+    location: string | null;
+    bio: string | null;
     createdAt: Date;
     tokenBalance: number;
     purchaseCount: number;
@@ -128,27 +130,54 @@ export async function updateClientDetails(
     throw new NotFoundError("Client");
   }
 
-  // Separate user and profile data
+  // Separate user and customer profile data
+  // User model fields: name, email, phone, company, industry, location, bio
+  // CustomerProfile fields: companyName, address, needs
   const { companyName, address, needs, ...userData } = data;
 
-  // Update user
-  await updateClient(id, userData);
+  // Build user update data - only include fields that are explicitly provided
+  const userUpdateData: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    company?: string | null;
+    industry?: string | null;
+    location?: string | null;
+    bio?: string | null;
+  } = {};
 
-  // Update customer profile if profile data provided
-  if (
-    companyName !== undefined ||
-    address !== undefined ||
-    needs !== undefined ||
-    data.industry !== undefined ||
-    data.phone !== undefined
-  ) {
-    await updateCustomerProfile(id, {
-      companyName: companyName || data.company,
-      address,
-      industry: data.industry,
-      phone: data.phone,
-      needs,
-    });
+  // Only add fields that are explicitly provided (including null values)
+  if ("name" in data) userUpdateData.name = userData.name ?? null;
+  if ("email" in data) userUpdateData.email = userData.email ?? null;
+  if ("phone" in data) userUpdateData.phone = userData.phone ?? null;
+  if ("company" in data) userUpdateData.company = userData.company ?? null;
+  if ("industry" in data) userUpdateData.industry = userData.industry ?? null;
+  if ("location" in data) userUpdateData.location = userData.location ?? null;
+  if ("bio" in data) userUpdateData.bio = userData.bio ?? null;
+
+  // Update user model
+  await updateClient(id, userUpdateData);
+
+  // Update customer profile only if profile-specific fields are provided
+  if (companyName !== undefined || address !== undefined || needs !== undefined) {
+    const profileUpdateData: {
+      companyName?: string;
+      address?: string;
+      needs?: string;
+    } = {};
+
+    // Convert null to undefined to match repository function signature
+    if (companyName !== undefined) {
+      profileUpdateData.companyName = companyName === null ? undefined : companyName;
+    }
+    if (address !== undefined) {
+      profileUpdateData.address = address === null ? undefined : address;
+    }
+    if (needs !== undefined) {
+      profileUpdateData.needs = needs === null ? undefined : needs;
+    }
+
+    await updateCustomerProfile(id, profileUpdateData);
   }
 
   return await findClientById(id);

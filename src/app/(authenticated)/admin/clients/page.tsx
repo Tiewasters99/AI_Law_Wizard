@@ -106,6 +106,7 @@ export default function ClientsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const fetchClients = useCallback(async () => {
     try {
@@ -170,24 +171,75 @@ export default function ClientsPage() {
     setCurrentPage(1);
   };
 
-  const handleEdit = (client: Client) => {
-    setEditingClient(client);
-    setEditFormData({
-      name: client.name || "",
-      email: client.email || "",
-      phone: client.phone || "",
-      company: client.company || "",
-      industry: client.industry || "",
-      location: "",
-      bio: "",
-      tokenBalance: client.tokenBalance,
-    });
-    setTokenAdjustment({ amount: 0, reason: "" });
-    setIsEditDialogOpen(true);
+  const handleEdit = async (client: Client) => {
+    // Fetch full client details
+    try {
+      setLoadingDetails(true);
+      const response = await fetch(`/api/admin/clients/${client.id}`);
+      if (response.ok) {
+        const result = await response.json();
+        const fullClient = result.data?.client || result.client;
+
+        // Extract customerProfile data if available
+        const customerProfile = fullClient.customerProfile || {};
+
+        setEditingClient(client);
+        setEditFormData({
+          name: fullClient.name || client.name || "",
+          email: fullClient.email || client.email || "",
+          phone: fullClient.phone || client.phone || "",
+          company: fullClient.company || client.company || "",
+          industry: fullClient.industry || client.industry || "",
+          location: fullClient.location || "",
+          bio: fullClient.bio || "",
+          tokenBalance: client.tokenBalance,
+        });
+        setTokenAdjustment({ amount: 0, reason: "" });
+        setIsEditDialogOpen(true);
+      } else {
+        const error = await response.json();
+        const errorMessage =
+          error.error || error.message || "Failed to load client details";
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error("Failed to fetch client details:", error);
+      toast.error("Failed to load client details");
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const handleSaveEdit = async () => {
     if (!editingClient) return;
+
+    // Form validation
+    if (!editFormData.name || editFormData.name.trim() === "") {
+      toast.error("Name is required");
+      return;
+    }
+
+    if (!editFormData.email || editFormData.email.trim() === "") {
+      toast.error("Email is required");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editFormData.email.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    // Validate token adjustment BEFORE making any API calls
+    const tokenAmount = Number(tokenAdjustment.amount);
+    if (
+      tokenAmount !== 0 &&
+      (!tokenAdjustment.reason || !tokenAdjustment.reason.trim())
+    ) {
+      toast.error("Reason is required when adjusting tokens");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -199,43 +251,62 @@ export default function ClientsPage() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: editFormData.name || null,
-            email: editFormData.email || null,
-            phone: editFormData.phone || null,
-            company: editFormData.company || null,
-            industry: editFormData.industry || null,
-            location: editFormData.location || null,
-            bio: editFormData.bio || null,
+            name: editFormData.name.trim() || null,
+            email: editFormData.email.trim() || null,
+            phone: editFormData.phone?.trim() || null,
+            company: editFormData.company?.trim() || null,
+            industry: editFormData.industry?.trim() || null,
+            location: editFormData.location?.trim() || null,
+            bio: editFormData.bio?.trim() || null,
           }),
         }
       );
 
       if (!updateResponse.ok) {
-        throw new Error("Failed to update client");
+        const error = await updateResponse.json();
+        const errorMessage =
+          error.error || error.message || "Failed to update client";
+        throw new Error(errorMessage);
       }
 
       // Adjust tokens if amount is provided
-      if (tokenAdjustment.amount !== 0 && tokenAdjustment.reason.trim()) {
+      if (tokenAmount !== 0) {
+        console.log("Making token adjustment API call:", {
+          url: `/api/admin/clients/${editingClient.id}/tokens`,
+          amount: tokenAmount,
+          reason: tokenAdjustment.reason.trim(),
+        });
+
         const tokenResponse = await fetch(
           `/api/admin/clients/${editingClient.id}/tokens`,
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              amount: tokenAdjustment.amount,
-              reason: tokenAdjustment.reason,
+              amount: tokenAmount,
+              reason: tokenAdjustment.reason.trim(),
             }),
           }
         );
 
+        console.log("Token adjustment response:", {
+          ok: tokenResponse.ok,
+          status: tokenResponse.status,
+        });
+
         if (!tokenResponse.ok) {
-          throw new Error("Failed to adjust tokens");
+          const error = await tokenResponse.json();
+          const errorMessage =
+            error.error || error.message || "Failed to adjust tokens";
+          throw new Error(errorMessage);
         }
       }
 
+      // Success - close dialog, refresh list, and reset form
       toast.success("Client updated successfully");
       setIsEditDialogOpen(false);
-      fetchClients();
+      setTokenAdjustment({ amount: 0, reason: "" });
+      await fetchClients();
     } catch (error) {
       console.error("Update error:", error);
       toast.error(
@@ -266,11 +337,16 @@ export default function ClientsPage() {
         setDeletingClientId(null);
         fetchClients();
       } else {
-        throw new Error("Failed to delete client");
+        const error = await response.json();
+        const errorMessage =
+          error.error || error.message || "Failed to delete client";
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("Delete error:", error);
-      toast.error("Failed to delete client");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete client"
+      );
     } finally {
       setSaving(false);
     }
@@ -557,8 +633,13 @@ export default function ClientsPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleEdit(client)}
+                              disabled={loadingDetails}
                             >
-                              <Edit className="h-4 w-4" />
+                              {loadingDetails ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Edit className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button
                               variant="outline"
@@ -648,7 +729,17 @@ export default function ClientsPage() {
       </Card>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={open => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            // Reset form when dialog closes
+            setTokenAdjustment({ amount: 0, reason: "" });
+            setEditingClient(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Client</DialogTitle>
@@ -754,19 +845,49 @@ export default function ClientsPage() {
                   <Input
                     id="token-amount"
                     type="number"
-                    value={tokenAdjustment.amount || ""}
-                    onChange={e =>
-                      setTokenAdjustment({
-                        ...tokenAdjustment,
-                        amount: parseInt(e.target.value) || 0,
-                      })
+                    value={
+                      tokenAdjustment.amount === 0 ? "" : tokenAdjustment.amount
                     }
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (value === "" || value === "-") {
+                        setTokenAdjustment({
+                          ...tokenAdjustment,
+                          amount: 0,
+                        });
+                      } else {
+                        const numValue = parseInt(value, 10);
+                        if (!isNaN(numValue)) {
+                          setTokenAdjustment({
+                            ...tokenAdjustment,
+                            amount: numValue,
+                          });
+                        }
+                      }
+                    }}
                     placeholder="0"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Current balance:{" "}
                     {editingClient?.tokenBalance.toLocaleString() || 0} tokens
+                    {tokenAdjustment.amount !== 0 && (
+                      <span className="ml-2 text-primary">
+                        → New balance:{" "}
+                        {(
+                          (editingClient?.tokenBalance || 0) +
+                          tokenAdjustment.amount
+                        ).toLocaleString()}{" "}
+                        tokens
+                      </span>
+                    )}
                   </p>
+                  {process.env.NODE_ENV === "development" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Debug: amount={tokenAdjustment.amount} (type:{" "}
+                      {typeof tokenAdjustment.amount}), reason=
+                      {tokenAdjustment.reason ? "provided" : "empty"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="token-reason">Reason for Adjustment *</Label>

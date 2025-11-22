@@ -10,10 +10,17 @@ export interface ClientListItem {
   phone: string | null;
   company: string | null;
   industry: string | null;
+  location: string | null;
+  bio: string | null;
   createdAt: Date;
   tokenBalance: number;
   purchaseCount: number;
   totalSpent: number;
+  customerProfile?: {
+    companyName: string | null;
+    address: string | null;
+    needs: string | null;
+  } | null;
 }
 
 type SortField =
@@ -119,6 +126,8 @@ export async function findAllClients(
     phone: client.phone,
     company: client.company,
     industry: client.industry,
+    location: client.location,
+    bio: client.bio,
     createdAt: client.createdAt,
     tokenBalance: client.wallet?.balance || 0,
     purchaseCount: client.purchases.length,
@@ -186,10 +195,19 @@ export async function findClientById(
     phone: client.phone,
     company: client.company,
     industry: client.industry,
+    location: client.location,
+    bio: client.bio,
     createdAt: client.createdAt,
     tokenBalance: client.wallet?.balance || 0,
     purchaseCount: client.purchases.length,
     totalSpent: client.purchases.reduce((sum, p) => sum + p.amountPaid, 0),
+    customerProfile: client.customerProfile
+      ? {
+          companyName: client.customerProfile.companyName,
+          address: client.customerProfile.address,
+          needs: client.customerProfile.needs,
+        }
+      : null,
   };
 }
 
@@ -199,21 +217,32 @@ export async function findClientById(
 export async function updateClient(
   id: string,
   data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    company?: string;
-    industry?: string;
-    location?: string;
-    bio?: string;
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    company?: string | null;
+    industry?: string | null;
+    location?: string | null;
+    bio?: string | null;
   }
 ) {
+  // Build update data object, only including fields that are explicitly provided
+  const updateData: any = {
+    updatedAt: new Date(),
+  };
+
+  // Only include fields that are in the data object (including null values)
+  if ("name" in data) updateData.name = data.name;
+  if ("email" in data) updateData.email = data.email;
+  if ("phone" in data) updateData.phone = data.phone;
+  if ("company" in data) updateData.company = data.company;
+  if ("industry" in data) updateData.industry = data.industry;
+  if ("location" in data) updateData.location = data.location;
+  if ("bio" in data) updateData.bio = data.bio;
+
   return await prisma.user.update({
     where: { id },
-    data: {
-      ...data,
-      updatedAt: new Date(),
-    },
+    data: updateData,
     include: {
       wallet: true,
       customerProfile: true,

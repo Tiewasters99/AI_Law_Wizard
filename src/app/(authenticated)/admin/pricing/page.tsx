@@ -112,9 +112,17 @@ export default function PricingManagementPage() {
       const response = await fetch("/api/admin/pricing/packages");
       if (response.ok) {
         const data = await response.json();
-        // Handle response structure: { success: true, data: [...] } or direct array
-        const packagesArray = Array.isArray(data) ? data : data.data || [];
+        // Handle response structure: { success: true, data: [...] }
+        const packagesArray =
+          data.success && data.data
+            ? data.data
+            : Array.isArray(data)
+              ? data
+              : [];
         setPackages(packagesArray);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.error || "Failed to load pricing packages");
       }
     } catch (error) {
       console.error("Failed to fetch packages:", error);
@@ -129,12 +137,24 @@ export default function PricingManagementPage() {
       const response = await fetch("/api/admin/pricing/feature-pricing");
       if (response.ok) {
         const data = await response.json();
-        const pricingArray = Array.isArray(data.pricing)
-          ? data.pricing
-          : Array.isArray(data.data?.pricing)
+        // Handle response structure: { success: true, data: { pricing: [...] } }
+        const pricingArray =
+          data.success && data.data?.pricing
             ? data.data.pricing
-            : [];
+            : Array.isArray(data.pricing)
+              ? data.pricing
+              : Array.isArray(data.data?.pricing)
+                ? data.data.pricing
+                : Array.isArray(data.data)
+                  ? data.data
+                  : [];
         setFeaturePricing(pricingArray);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(
+          "Failed to fetch feature pricing:",
+          errorData.error || "Unknown error"
+        );
       }
     } catch (error) {
       console.error("Failed to fetch feature pricing:", error);
@@ -153,17 +173,20 @@ export default function PricingManagementPage() {
       if (response.ok) {
         toast.success("Package created successfully");
         setShowCreateDialog(false);
+        setEditingPackage(null);
         setFormData({
           name: "",
           tokens: 0,
           description: "",
           isActive: true,
-          attorneyPriceInCents: 0,
-          clientPriceInCents: 0,
+          attorneyPriceInCents: null,
+          clientPriceInCents: null,
         });
         fetchPackages();
       } else {
-        throw new Error("Failed to create package");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to create package";
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Create package error:", error);
@@ -216,7 +239,8 @@ export default function PricingManagementPage() {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to update package");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update package");
       }
 
       // Update role pricing if values have changed and entries exist
@@ -261,6 +285,7 @@ export default function PricingManagementPage() {
 
       toast.success("Package and pricing updated successfully");
       setEditingPackage(null);
+      setShowCreateDialog(false);
       setFormData({
         name: "",
         tokens: 0,
@@ -272,7 +297,11 @@ export default function PricingManagementPage() {
       fetchPackages();
     } catch (error) {
       console.error("Update package error:", error);
-      toast.error("Failed to update package or pricing");
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to update package or pricing";
+      toast.error(errorMessage);
     }
   };
 
@@ -334,6 +363,7 @@ export default function PricingManagementPage() {
       if (response.ok) {
         toast.success("Feature pricing created successfully");
         setShowFeatureDialog(false);
+        setEditingFeature(null);
         setFeatureFormData({
           feature: "",
           displayName: "",
@@ -344,7 +374,10 @@ export default function PricingManagementPage() {
         });
         fetchFeaturePricing();
       } else {
-        throw new Error("Failed to create feature pricing");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error || "Failed to create feature pricing";
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Create feature pricing error:", error);
@@ -366,6 +399,7 @@ export default function PricingManagementPage() {
       );
 
       if (response.ok) {
+        const data = await response.json();
         toast.success("Feature pricing updated successfully");
         setEditingFeature(null);
         setShowFeatureDialog(false);
@@ -379,11 +413,18 @@ export default function PricingManagementPage() {
         });
         fetchFeaturePricing();
       } else {
-        throw new Error("Failed to update feature pricing");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error || "Failed to update feature pricing";
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Update feature pricing error:", error);
-      toast.error("Failed to update feature pricing");
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to update feature pricing";
+      toast.error(errorMessage);
     }
   };
 
@@ -400,11 +441,18 @@ export default function PricingManagementPage() {
         toast.success("Feature pricing deleted successfully");
         fetchFeaturePricing();
       } else {
-        throw new Error("Failed to delete feature pricing");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error || "Failed to delete feature pricing";
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Delete feature pricing error:", error);
-      toast.error("Failed to delete feature pricing");
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to delete feature pricing";
+      toast.error(errorMessage);
     }
   };
 
@@ -613,6 +661,7 @@ export default function PricingManagementPage() {
                                     attorneyPriceInCents: attorneyPrice,
                                     clientPriceInCents: clientPrice,
                                   });
+                                  setShowCreateDialog(true);
                                 }}
                               >
                                 <Edit className="h-4 w-4" />

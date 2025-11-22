@@ -16,6 +16,7 @@
     "lint:fix": "next lint --fix"
   },
   "dependencies": {
+    "@google/genai": "^1.30.0",
     "@heroicons/react": "^2.2.0",
     "@langchain/community": "^0.3.50",
     "@langchain/core": "^0.3.70",

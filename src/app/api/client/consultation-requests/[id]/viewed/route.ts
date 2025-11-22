@@ -8,9 +8,9 @@ import { handleMarkRequestAsViewed } from "@/lib/backend/controllers/client/cons
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ requestId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  const { requestId } = await params;
-  return handleMarkRequestAsViewed(request, requestId, session?.user?.id || "");
+  const { id } = await params;
+  return handleMarkRequestAsViewed(request, id, session?.user?.id || "");
 }

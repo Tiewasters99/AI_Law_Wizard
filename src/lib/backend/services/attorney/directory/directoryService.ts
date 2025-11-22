@@ -47,14 +47,42 @@ export async function getClientDirectory(attorneyId: string) {
     },
   });
 
-  // Attach consultation request info to each user
+  // Get proposals for each consultation request
+  const consultationRequestIds = consultationRequests.map(req => req.id);
+  const proposals = await prisma.proposal.findMany({
+    where: {
+      consultationRequestId: {
+        in: consultationRequestIds,
+      },
+    },
+    select: {
+      id: true,
+      consultationRequestId: true,
+      status: true,
+    },
+  });
+
+  // Attach consultation request info and proposal counts to each user
   return users.map(user => {
     const userRequests = consultationRequests.filter(
       req => req.clientId === user.id
     );
+    
+    // Count proposals for each request
+    const requestsWithProposals = userRequests.map(req => {
+      const requestProposals = proposals.filter(
+        p => p.consultationRequestId === req.id
+      );
+      return {
+        ...req,
+        proposalCount: requestProposals.length,
+        hasProposal: requestProposals.some(p => p.status === "SENT" || p.status === "ACCEPTED"),
+      };
+    });
+
     return {
       ...user,
-      consultationRequests: userRequests,
+      consultationRequests: requestsWithProposals,
     };
   });
 }

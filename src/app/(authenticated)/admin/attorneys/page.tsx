@@ -117,6 +117,7 @@ export default function AttorneysPage() {
     null
   );
   const [saving, setSaving] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const fetchAttorneys = useCallback(async () => {
     try {
@@ -184,38 +185,84 @@ export default function AttorneysPage() {
   const handleEdit = async (attorney: Attorney) => {
     // Fetch full attorney details
     try {
+      setLoadingDetails(true);
       const response = await fetch(`/api/admin/attorneys/${attorney.id}`);
       if (response.ok) {
-        const data = await response.json();
-        const fullAttorney = data.attorney;
+        const result = await response.json();
+        const fullAttorney = result.data?.attorney || result.attorney;
+
+        // Extract lawyerProfile data
+        const lawyerProfile = fullAttorney.lawyerProfile || {};
+
         setEditingAttorney(attorney);
         setEditFormData({
-          name: attorney.name || "",
-          email: attorney.email || "",
-          phone: attorney.phone || "",
-          company: attorney.company || "",
-          location: attorney.location || "",
-          bio: "",
-          specialty: attorney.specialty || "",
-          firmName: attorney.firmName || "",
-          barLicense: "",
-          barNumber: "",
-          yearsOfExperience: 0,
-          hourlyRate: 0,
-          practiceAreas: "",
+          name: fullAttorney.name || attorney.name || "",
+          email: fullAttorney.email || attorney.email || "",
+          phone: fullAttorney.phone || attorney.phone || "",
+          company: fullAttorney.company || attorney.company || "",
+          location:
+            fullAttorney.location ||
+            lawyerProfile.location ||
+            attorney.location ||
+            "",
+          bio: fullAttorney.bio || lawyerProfile.bio || "",
+          specialty: lawyerProfile.specialty || attorney.specialty || "",
+          firmName: lawyerProfile.firmName || attorney.firmName || "",
+          barLicense: lawyerProfile.barLicense || "",
+          barNumber: lawyerProfile.barNumber || "",
+          yearsOfExperience: lawyerProfile.yearsOfExperience || 0,
+          hourlyRate: lawyerProfile.hourlyRate || 0,
+          practiceAreas: Array.isArray(lawyerProfile.practiceAreas)
+            ? lawyerProfile.practiceAreas.join(", ")
+            : "",
           tokenBalance: attorney.tokenBalance,
         });
         setTokenAdjustment({ amount: 0, reason: "" });
         setIsEditDialogOpen(true);
+      } else {
+        const error = await response.json();
+        const errorMessage =
+          error.error || error.message || "Failed to load attorney details";
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Failed to fetch attorney details:", error);
       toast.error("Failed to load attorney details");
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
   const handleSaveEdit = async () => {
     if (!editingAttorney) return;
+
+    // Form validation
+    if (!editFormData.name || editFormData.name.trim() === "") {
+      toast.error("Name is required");
+      return;
+    }
+
+    if (!editFormData.email || editFormData.email.trim() === "") {
+      toast.error("Email is required");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editFormData.email.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    // Validate token adjustment BEFORE making any API calls
+    const tokenAmount = Number(tokenAdjustment.amount);
+    if (
+      tokenAmount !== 0 &&
+      (!tokenAdjustment.reason || !tokenAdjustment.reason.trim())
+    ) {
+      toast.error("Reason is required when adjusting tokens");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -227,51 +274,73 @@ export default function AttorneysPage() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: editFormData.name || null,
-            email: editFormData.email || null,
-            phone: editFormData.phone || null,
-            company: editFormData.company || null,
-            location: editFormData.location || null,
-            bio: editFormData.bio || null,
-            specialty: editFormData.specialty || null,
-            firmName: editFormData.firmName || null,
-            barLicense: editFormData.barLicense || null,
-            barNumber: editFormData.barNumber || null,
+            name: editFormData.name.trim() || null,
+            email: editFormData.email.trim() || null,
+            phone: editFormData.phone?.trim() || null,
+            company: editFormData.company?.trim() || null,
+            location: editFormData.location?.trim() || null,
+            bio: editFormData.bio?.trim() || null,
+            specialty: editFormData.specialty?.trim() || null,
+            firmName: editFormData.firmName?.trim() || null,
+            barLicense: editFormData.barLicense?.trim() || null,
+            barNumber: editFormData.barNumber?.trim() || null,
             yearsOfExperience: editFormData.yearsOfExperience || null,
             hourlyRate: editFormData.hourlyRate || null,
             practiceAreas: editFormData.practiceAreas
-              ? editFormData.practiceAreas.split(",").map(s => s.trim())
+              ? editFormData.practiceAreas
+                  .split(",")
+                  .map(s => s.trim())
+                  .filter(s => s.length > 0)
               : [],
           }),
         }
       );
 
       if (!updateResponse.ok) {
-        throw new Error("Failed to update attorney");
+        const error = await updateResponse.json();
+        const errorMessage =
+          error.error || error.message || "Failed to update attorney";
+        throw new Error(errorMessage);
       }
 
       // Adjust tokens if amount is provided
-      if (tokenAdjustment.amount !== 0 && tokenAdjustment.reason.trim()) {
+      if (tokenAmount !== 0) {
+        console.log("Making token adjustment API call:", {
+          url: `/api/admin/attorneys/${editingAttorney.id}/tokens`,
+          amount: tokenAmount,
+          reason: tokenAdjustment.reason.trim(),
+        });
+
         const tokenResponse = await fetch(
           `/api/admin/attorneys/${editingAttorney.id}/tokens`,
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              amount: tokenAdjustment.amount,
-              reason: tokenAdjustment.reason,
+              amount: tokenAmount,
+              reason: tokenAdjustment.reason.trim(),
             }),
           }
         );
 
+        console.log("Token adjustment response:", {
+          ok: tokenResponse.ok,
+          status: tokenResponse.status,
+        });
+
         if (!tokenResponse.ok) {
-          throw new Error("Failed to adjust tokens");
+          const error = await tokenResponse.json();
+          const errorMessage =
+            error.error || error.message || "Failed to adjust tokens";
+          throw new Error(errorMessage);
         }
       }
 
+      // Success - close dialog, refresh list, and reset form
       toast.success("Attorney updated successfully");
       setIsEditDialogOpen(false);
-      fetchAttorneys();
+      setTokenAdjustment({ amount: 0, reason: "" });
+      await fetchAttorneys();
     } catch (error) {
       console.error("Update error:", error);
       toast.error(
@@ -305,11 +374,16 @@ export default function AttorneysPage() {
         setDeletingAttorneyId(null);
         fetchAttorneys();
       } else {
-        throw new Error("Failed to delete attorney");
+        const error = await response.json();
+        const errorMessage =
+          error.error || error.message || "Failed to delete attorney";
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("Delete error:", error);
-      toast.error("Failed to delete attorney");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete attorney"
+      );
     } finally {
       setSaving(false);
     }
@@ -619,8 +693,13 @@ export default function AttorneysPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleEdit(attorney)}
+                              disabled={loadingDetails}
                             >
-                              <Edit className="h-4 w-4" />
+                              {loadingDetails ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Edit className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button
                               variant="outline"
@@ -711,7 +790,17 @@ export default function AttorneysPage() {
       </Card>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={open => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            // Reset form when dialog closes
+            setTokenAdjustment({ amount: 0, reason: "" });
+            setEditingAttorney(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Attorney</DialogTitle>
@@ -908,19 +997,49 @@ export default function AttorneysPage() {
                   <Input
                     id="token-amount"
                     type="number"
-                    value={tokenAdjustment.amount || ""}
-                    onChange={e =>
-                      setTokenAdjustment({
-                        ...tokenAdjustment,
-                        amount: parseInt(e.target.value) || 0,
-                      })
+                    value={
+                      tokenAdjustment.amount === 0 ? "" : tokenAdjustment.amount
                     }
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (value === "" || value === "-") {
+                        setTokenAdjustment({
+                          ...tokenAdjustment,
+                          amount: 0,
+                        });
+                      } else {
+                        const numValue = parseInt(value, 10);
+                        if (!isNaN(numValue)) {
+                          setTokenAdjustment({
+                            ...tokenAdjustment,
+                            amount: numValue,
+                          });
+                        }
+                      }
+                    }}
                     placeholder="0"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Current balance:{" "}
                     {editingAttorney?.tokenBalance.toLocaleString() || 0} tokens
+                    {tokenAdjustment.amount !== 0 && (
+                      <span className="ml-2 text-primary">
+                        → New balance:{" "}
+                        {(
+                          (editingAttorney?.tokenBalance || 0) +
+                          tokenAdjustment.amount
+                        ).toLocaleString()}{" "}
+                        tokens
+                      </span>
+                    )}
                   </p>
+                  {process.env.NODE_ENV === "development" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Debug: amount={tokenAdjustment.amount} (type:{" "}
+                      {typeof tokenAdjustment.amount}), reason=
+                      {tokenAdjustment.reason ? "provided" : "empty"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="token-reason">Reason for Adjustment *</Label>

@@ -149,6 +149,79 @@ export default function GrandWizardPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Split reasoning (thinking) from final answer based on headings from the prompt
+  // Pure function with no dependencies - memoized for consistency
+  const splitReasoningFromContent = useCallback(
+    (
+      markdown: string
+    ): {
+      reasoning?: string;
+      finalAnswer: string;
+    } => {
+      if (!markdown) return { finalAnswer: "" };
+      const finalAnswerRegex = /^##\s*Final\s+Answer\s*$/gim;
+      const matches = [...markdown.matchAll(finalAnswerRegex)];
+      if (matches.length > 0) {
+        const match = matches[0];
+        const startIndex = match.index ?? -1;
+        if (startIndex >= 0) {
+          const before = markdown.slice(0, startIndex).trim();
+          let after = markdown.slice(startIndex).trim();
+          // Remove the "## Final Answer" heading itself from the displayed answer
+          after = after.replace(/^##\s*Final\s+Answer\s*[\r\n]*/i, "");
+          // Strip any disclaimer section
+          const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(after);
+          if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+            after = after.slice(0, disclaimerMatch.index).trim();
+          }
+          return {
+            reasoning: before.length > 0 ? before : undefined,
+            finalAnswer: after.length > 0 ? after : markdown,
+          };
+        }
+      }
+      const softMarkers = [
+        /^##\s*Conclusion\s*$/gim,
+        /^##\s*Answer\s*$/gim,
+        /^###\s*Final\s*$/gim,
+      ];
+      for (const rx of softMarkers) {
+        const soft = [...markdown.matchAll(rx)];
+        if (soft.length > 0) {
+          const match = soft[0];
+          const idx = match.index ?? -1;
+          if (idx >= 0) {
+            const before = markdown.slice(0, idx).trim();
+            let after = markdown.slice(idx).trim();
+            // Remove a possible heading label for the answer
+            after = after.replace(
+              /^#+\s*(Final\s*Answer|Answer|Conclusion)\s*[\r\n]*/i,
+              ""
+            );
+            // Strip disclaimer section
+            const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(after);
+            if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+              after = after.slice(0, disclaimerMatch.index).trim();
+            }
+            return {
+              reasoning: before.length > 0 ? before : undefined,
+              finalAnswer: after.length > 0 ? after : markdown,
+            };
+          }
+        }
+      }
+      // Fallback: no split found; still strip disclaimer and heading label
+      let cleaned = markdown;
+      const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(cleaned);
+      if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
+        cleaned = cleaned.slice(0, disclaimerMatch.index).trim();
+      }
+      cleaned = cleaned.replace(/^##\s*Final\s+Answer\s*[\r\n]*/i, "");
+      return { finalAnswer: cleaned };
+    },
+    []
+  );
+
   // Fetch token cost from database
   useEffect(() => {
     const fetchTokenCost = async () => {
@@ -303,11 +376,17 @@ export default function GrandWizardPage() {
     if (sessionIdParam && session?.user?.id) {
       loadSessionFromDatabase(sessionIdParam);
     }
-  }, [session?.user?.id, searchParams]);
+  }, [session?.user?.id, searchParams, splitReasoningFromContent]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Memoized computed values
+  const hasInsufficientBalance = useMemo(
+    () => balance < tokenCost,
+    [balance, tokenCost]
+  );
 
   const handlePurchaseCredits = useCallback(() => {
     router.push("/client/tokens");
@@ -320,7 +399,7 @@ export default function GrandWizardPage() {
     if (!userId) return;
 
     // Check if user has sufficient balance
-    if (balance < tokenCost) {
+    if (hasInsufficientBalance) {
       setShowInsufficientCreditsModal(true);
       return;
     }
@@ -497,199 +576,159 @@ export default function GrandWizardPage() {
     sessionId,
     showReasoning,
     isLoading,
-    balance,
-    tokenCost,
+    hasInsufficientBalance,
     refetchBalance,
+    splitReasoningFromContent,
   ]);
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Split reasoning (thinking) from final answer based on headings from the prompt
-  function splitReasoningFromContent(markdown: string): {
-    reasoning?: string;
-    finalAnswer: string;
-  } {
-    if (!markdown) return { finalAnswer: "" };
-    const finalAnswerRegex = /^##\s*Final\s+Answer\s*$/gim;
-    const matches = [...markdown.matchAll(finalAnswerRegex)];
-    if (matches.length > 0) {
-      const match = matches[0];
-      const startIndex = match.index ?? -1;
-      if (startIndex >= 0) {
-        const before = markdown.slice(0, startIndex).trim();
-        let after = markdown.slice(startIndex).trim();
-        // Remove the "## Final Answer" heading itself from the displayed answer
-        after = after.replace(/^##\s*Final\s+Answer\s*[\r\n]*/i, "");
-        // Strip any disclaimer section
-        const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(after);
-        if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
-          after = after.slice(0, disclaimerMatch.index).trim();
-        }
-        return {
-          reasoning: before.length > 0 ? before : undefined,
-          finalAnswer: after.length > 0 ? after : markdown,
-        };
-      }
-    }
-    const softMarkers = [
-      /^##\s*Conclusion\s*$/gim,
-      /^##\s*Answer\s*$/gim,
-      /^###\s*Final\s*$/gim,
-    ];
-    for (const rx of softMarkers) {
-      const soft = [...markdown.matchAll(rx)];
-      if (soft.length > 0) {
-        const match = soft[0];
-        const idx = match.index ?? -1;
-        if (idx >= 0) {
-          const before = markdown.slice(0, idx).trim();
-          let after = markdown.slice(idx).trim();
-          // Remove a possible heading label for the answer
-          after = after.replace(
-            /^#+\s*(Final\s*Answer|Answer|Conclusion)\s*[\r\n]*/i,
-            ""
-          );
-          // Strip disclaimer section
-          const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(after);
-          if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
-            after = after.slice(0, disclaimerMatch.index).trim();
-          }
-          return {
-            reasoning: before.length > 0 ? before : undefined,
-            finalAnswer: after.length > 0 ? after : markdown,
-          };
-        }
-      }
-    }
-    // Fallback: no split found; still strip disclaimer and heading label
-    let cleaned = markdown;
-    const disclaimerMatch = /(^|\n)##\s*Disclaimer\s*$/im.exec(cleaned);
-    if (disclaimerMatch && typeof disclaimerMatch.index === "number") {
-      cleaned = cleaned.slice(0, disclaimerMatch.index).trim();
-    }
-    cleaned = cleaned.replace(/^##\s*Final\s+Answer\s*[\r\n]*/i, "");
-    return { finalAnswer: cleaned };
-  }
-
-  const startNewChat = () => {
+  const startNewChat = useCallback(() => {
     setMessages([]);
     setSessionId(null);
     setError(null);
     setInputValue("");
     // Navigate to clean URL without sessionId
     window.history.replaceState({}, "", "/client/grand-wizard");
-  };
+  }, []);
 
-  const formatTime = (timestamp: Date | string) => {
+  const formatTime = useCallback((timestamp: Date | string) => {
     const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     if (isNaN(date.getTime())) return "Invalid date";
     return new Intl.DateTimeFormat("en-US", {
       hour: "2-digit",
       minute: "2-digit",
     }).format(date);
-  };
+  }, []);
 
-  const renderMessage = (message: Message) => {
-    const isUser = message.role === "user";
-    const Icon = isUser ? User : Crown;
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    },
+    [handleSendMessage]
+  );
 
-    return (
-      <motion.div
-        key={message.id}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`flex gap-3 mb-6 ${
-          isUser ? "flex-row-reverse" : "flex-row"
-        }`}
-      >
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            isUser
-              ? "bg-primary text-white"
-              : "bg-gradient-to-br from-yellow-400 to-orange-500 text-white"
+  const handleCloseModal = useCallback(() => {
+    setShowInsufficientCreditsModal(false);
+  }, []);
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setInputValue(e.target.value);
+    },
+    []
+  );
+
+  const canSendMessage = useMemo(
+    () => inputValue.trim().length > 0 && !isLoading,
+    [inputValue, isLoading]
+  );
+
+  const tokenCostDisplay = useMemo(
+    () => `${tokenCost} tokens per message`,
+    [tokenCost]
+  );
+
+  const renderMessage = useCallback(
+    (message: Message) => {
+      const isUser = message.role === "user";
+      const Icon = isUser ? User : Crown;
+
+      return (
+        <motion.div
+          key={message.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`flex gap-3 mb-6 ${
+            isUser ? "flex-row-reverse" : "flex-row"
           }`}
         >
-          <Icon className="w-4 h-4" />
-        </div>
-
-        <div
-          className={`flex-1 max-w-[85%] sm:max-w-xs lg:max-w-3xl ${isUser ? "text-right" : "text-left"}`}
-        >
           <div
-            className={`inline-block p-3 sm:p-4 rounded-xl ${
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${
               isUser
-                ? "bg-primary text-primary-foreground"
-                : "bg-card border border-border shadow-sm"
+                ? "bg-primary text-white"
+                : "bg-gradient-to-br from-yellow-400 to-orange-500 text-white"
             }`}
           >
-            {isUser ? (
-              <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">
-                {message.content}
-              </div>
-            ) : (
-              <>
-                <MarkdownRenderer content={message.content} />
-                {message.reasoning && (
-                  <div className="mt-2">
-                    <Collapsible
-                      open={!!openReasoning[message.id]}
-                      onOpenChange={open =>
-                        setOpenReasoning(prev => ({
-                          ...prev,
-                          [message.id]: open,
-                        }))
-                      }
-                    >
-                      <CollapsibleTrigger asChild>
-                        <Button
-                          type="button"
-                          onClick={e => e.preventDefault()}
-                          aria-expanded={!!openReasoning[message.id]}
-                          aria-controls={`reasoning-${message.id}`}
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-between p-0 h-auto text-xs font-semibold text-foreground"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Brain className="w-3 h-3" />
-                            {openReasoning[message.id]
-                              ? "Hide reasoning"
-                              : "Show reasoning"}
-                          </span>
-                          {openReasoning[message.id] ? (
-                            <ChevronUp className="w-3 h-3" />
-                          ) : (
-                            <ChevronDown className="w-3 h-3" />
-                          )}
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-2 transition-all">
-                        <div className="p-2 bg-muted rounded-lg border border-border">
-                          <MarkdownRenderer content={message.reasoning} />
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-                )}
-              </>
-            )}
+            <Icon className="w-4 h-4" />
           </div>
+
           <div
-            className={`text-xs text-muted-foreground mt-1 ${
-              isUser ? "text-right" : "text-left"
-            }`}
+            className={`flex-1 max-w-[85%] sm:max-w-xs lg:max-w-3xl ${isUser ? "text-right" : "text-left"}`}
           >
-            {formatTime(message.timestamp)}
+            <div
+              className={`inline-block p-3 sm:p-4 rounded-xl ${
+                isUser
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card border border-border shadow-sm"
+              }`}
+            >
+              {isUser ? (
+                <div className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">
+                  {message.content}
+                </div>
+              ) : (
+                <>
+                  <MarkdownRenderer content={message.content} />
+                  {message.reasoning && (
+                    <div className="mt-2">
+                      <Collapsible
+                        open={!!openReasoning[message.id]}
+                        onOpenChange={open =>
+                          setOpenReasoning(prev => ({
+                            ...prev,
+                            [message.id]: open,
+                          }))
+                        }
+                      >
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            type="button"
+                            onClick={e => e.preventDefault()}
+                            aria-expanded={!!openReasoning[message.id]}
+                            aria-controls={`reasoning-${message.id}`}
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-between p-0 h-auto text-xs font-semibold text-foreground"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Brain className="w-3 h-3" />
+                              {openReasoning[message.id]
+                                ? "Hide reasoning"
+                                : "Show reasoning"}
+                            </span>
+                            {openReasoning[message.id] ? (
+                              <ChevronUp className="w-3 h-3" />
+                            ) : (
+                              <ChevronDown className="w-3 h-3" />
+                            )}
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 transition-all">
+                          <div className="p-2 bg-muted rounded-lg border border-border">
+                            <MarkdownRenderer content={message.reasoning} />
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div
+              className={`text-xs text-muted-foreground mt-1 ${
+                isUser ? "text-right" : "text-left"
+              }`}
+            >
+              {formatTime(message.timestamp)}
+            </div>
           </div>
-        </div>
-      </motion.div>
-    );
-  };
+        </motion.div>
+      );
+    },
+    [openReasoning, formatTime]
+  );
 
   if (balanceLoading) {
     return (
@@ -732,7 +771,7 @@ export default function GrandWizardPage() {
                   </Badge>
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  Master AI Legal Assistant • 5 tokens per message
+                  Master AI Legal Assistant • {tokenCostDisplay}
                 </p>
               </div>
             </div>
@@ -800,9 +839,7 @@ export default function GrandWizardPage() {
                 <Textarea
                   ref={textareaRef}
                   value={inputValue}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setInputValue(e.target.value)
-                  }
+                  onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask your master-level legal question..."
                   className="flex-1 min-h-[44px] max-h-32 resize-none text-sm sm:text-base"
@@ -832,7 +869,7 @@ export default function GrandWizardPage() {
               </div>
               <Button
                 onClick={handleSendMessage}
-                disabled={!inputValue.trim() || isLoading}
+                disabled={!canSendMessage}
                 className="px-3 sm:px-4 h-11 sm:h-10 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
               >
                 {isLoading ? (
@@ -843,14 +880,14 @@ export default function GrandWizardPage() {
               </Button>
             </div>
             <div className="flex justify-end mt-1 text-xs text-muted-foreground">
-              <span>5 tokens per message</span>
+              <span>{tokenCostDisplay}</span>
             </div>
           </div>
         </div>
 
         <InsufficientCreditsModal
           isOpen={showInsufficientCreditsModal}
-          onClose={() => setShowInsufficientCreditsModal(false)}
+          onClose={handleCloseModal}
           onPurchase={handlePurchaseCredits}
           balance={balance}
           required={tokenCost}
