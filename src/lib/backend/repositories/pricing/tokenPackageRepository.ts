@@ -87,14 +87,21 @@ export async function findActivePackagesByRole(
 }
 
 /**
- * Find all token packages (admin use - includes inactive)
+ * Find all token packages (admin use - only active packages)
  */
 export async function findAllPackages(): Promise<
   TokenPackageWithRolePricing[]
 > {
   return await prisma.tokenPackage.findMany({
+    where: {
+      isActive: true,
+    },
     include: {
-      RolePricing: true,
+      RolePricing: {
+        where: {
+          isActive: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",

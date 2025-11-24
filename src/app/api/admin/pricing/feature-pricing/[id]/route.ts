@@ -8,6 +8,10 @@ import {
   handleDeleteFeaturePricing,
 } from "@/lib/backend/controllers/admin/pricing/featurePricingController";
 
+// Disable caching - admin pricing data must be fresh
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

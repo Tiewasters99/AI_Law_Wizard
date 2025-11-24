@@ -501,12 +501,7 @@ export default function PricingManagementPage() {
             <div className="text-2xl font-bold">
               {Array.isArray(packages) ? packages.length : 0}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {Array.isArray(packages)
-                ? packages.filter(p => p.isActive).length
-                : 0}{" "}
-              active
-            </p>
+            <p className="text-xs text-muted-foreground">Active packages</p>
           </CardContent>
         </Card>
 
@@ -566,7 +561,7 @@ export default function PricingManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">{featurePricing.length}</div>
             <p className="text-xs text-muted-foreground">
-              {featurePricing.filter(fp => fp.isActive).length} active
+              Active feature pricing
             </p>
           </CardContent>
         </Card>
