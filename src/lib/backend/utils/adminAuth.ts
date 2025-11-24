@@ -13,12 +13,24 @@ import { prisma } from "../prisma";
 export async function requireAdminAuth(request: NextRequest): Promise<Admin> {
   const session = await getServerSession(authOptions);
 
-  if (!session?.isAdmin || !session?.user?.email) {
+  // Check if session exists
+  if (!session) {
+    throw new AuthenticationError("No active session found");
+  }
+
+  // Check if user has admin privileges
+  if (!session.isAdmin) {
     throw new AuthenticationError("Admin privileges required");
   }
 
+  // Check if user email exists (should always exist for authenticated users)
+  const email = session.user?.email;
+  if (!email) {
+    throw new AuthenticationError("User email not found in session");
+  }
+
   const admin = await prisma.admin.findUnique({
-    where: { email: session.user.email },
+    where: { email },
   });
 
   if (!admin) {

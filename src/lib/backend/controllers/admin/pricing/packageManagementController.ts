@@ -7,7 +7,7 @@ import {
   deletePackage as deletePackageService,
 } from "../../../services/admin/pricing/packageManagementService";
 import { successResponse, errorResponse } from "../../../utils/response";
-import { AppError } from "../../../utils/errors";
+import { AppError, ValidationError } from "../../../utils/errors";
 
 /**
  * Handle PUT update package request
@@ -17,9 +17,20 @@ export async function handleUpdatePackage(
   packageId: string
 ) {
   try {
+    // Authenticate first
     await requireAdminAuth(request);
 
-    const body = await request.json();
+    // Parse request body
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return errorResponse(
+        new ValidationError("Invalid JSON in request body"),
+        "Failed to parse request body"
+      );
+    }
+
     const { name, tokens, description, isActive } = body;
 
     const updatedPackage = await updatePackage(packageId, {
