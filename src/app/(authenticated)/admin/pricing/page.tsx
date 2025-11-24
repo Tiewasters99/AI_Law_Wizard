@@ -109,7 +109,9 @@ export default function PricingManagementPage() {
 
   const fetchPackages = async () => {
     try {
-      const response = await fetch("/api/admin/pricing/packages");
+      const response = await fetch("/api/admin/pricing/packages", {
+        cache: "no-store",
+      });
       if (response.ok) {
         const data = await response.json();
         // Handle response structure: { success: true, data: [...] }
@@ -134,7 +136,9 @@ export default function PricingManagementPage() {
 
   const fetchFeaturePricing = async () => {
     try {
-      const response = await fetch("/api/admin/pricing/feature-pricing");
+      const response = await fetch("/api/admin/pricing/feature-pricing", {
+        cache: "no-store",
+      });
       if (response.ok) {
         const data = await response.json();
         // Handle response structure: { success: true, data: { pricing: [...] } }

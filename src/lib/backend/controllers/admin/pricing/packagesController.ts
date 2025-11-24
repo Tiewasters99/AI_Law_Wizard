@@ -16,7 +16,14 @@ export async function handleListPackages(request: NextRequest) {
   try {
     await requireAdminAuth(request);
     const packages = await listPackages();
-    return successResponse(packages);
+    return successResponse(packages, 200, {
+      headers: {
+        "Cache-Control":
+          "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
   } catch (error) {
     if (error instanceof AppError) {
       return errorResponse(error);

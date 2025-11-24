@@ -27,7 +27,13 @@ export async function handleListFeaturePricing(request: NextRequest) {
 
     const pricing = await getAllFeaturePricing(role || undefined);
 
-    return successResponse({ pricing });
+    return successResponse({ pricing }, 200, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+    });
   } catch (error) {
     if (error instanceof AppError) {
       return errorResponse(error);
