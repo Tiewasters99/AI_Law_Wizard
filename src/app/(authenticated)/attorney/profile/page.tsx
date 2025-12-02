@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { User, Save, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import {
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { RoleSwitcher } from "@/components/user/RoleSwitcher";
 
 interface ProfileData {
   id: string;
@@ -174,6 +175,24 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Role Switcher Card */}
+      {session?.user?.role && session?.user?.id && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Role</CardTitle>
+            <CardDescription>
+              Switch between Client and Attorney roles
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RoleSwitcher
+              currentRole={session.user.role}
+              userId={session.user.id}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Basic Information Card */}
       <Card>

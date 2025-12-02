@@ -3,6 +3,20 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Simple configuration for Vercel Blob storage
 
+  // Image configuration for OAuth provider profile images
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+      // Add other OAuth provider image domains if needed
+      // Facebook: "platform-lookaside.fbsbx.com"
+      // Apple: "appleid.cdn-apple.com"
+    ],
+  },
+
   // Exclude archive-src folder from build
   webpack: (config, { isServer }) => {
     config.module.rules.push({

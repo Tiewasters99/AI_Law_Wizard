@@ -17,7 +17,7 @@ export async function handleRegister(request: NextRequest) {
       email,
       password,
       name,
-      role,
+      ...(role && { role }), // Only include role if provided
     });
 
     return successResponse(

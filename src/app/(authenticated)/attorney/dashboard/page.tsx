@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -12,6 +15,16 @@ import { Users, MessageSquare, FileText, History } from "lucide-react";
 import Link from "next/link";
 
 export default function AttorneyDashboard() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // Check if user has role set, redirect to role-selection if not
+  useEffect(() => {
+    if (status === "loading") return;
+    if (session && !session.user?.role) {
+      router.push("/auth/role-selection");
+    }
+  }, [session, status, router]);
   return (
     <div className="p-8" data-tour="dashboard">
       {/* Welcome Section */}

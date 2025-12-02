@@ -18,11 +18,19 @@ import { motion } from "framer-motion";
 
 export default function ClientDashboard() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [issue, setIssue] = useState("");
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Check if user has role set, redirect to role-selection if not
+  useEffect(() => {
+    if (status === "loading") return;
+    if (session && !session.user?.role) {
+      router.push("/auth/role-selection");
+    }
+  }, [session, status, router]);
 
   const handleSubmitIssue = useCallback(
     async (userIssue: string) => {
@@ -228,7 +236,10 @@ export default function ClientDashboard() {
   );
 
   return (
-    <div className="bg-background flex flex-col items-center pt-8 sm:pt-16 md:pt-24 lg:pt-40" data-tour="dashboard">
+    <div
+      className="bg-background flex flex-col items-center pt-8 sm:pt-16 md:pt-24 lg:pt-40"
+      data-tour="dashboard"
+    >
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6">
         {/* Main Heading */}
         <div className="text-center mb-4 sm:mb-6">

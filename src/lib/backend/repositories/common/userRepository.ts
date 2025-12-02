@@ -102,9 +102,10 @@ export interface CreateUserData {
   email: string;
   password: string;
   name: string;
-  role: "CUSTOMER" | "ATTORNEY";
+  role?: "CUSTOMER" | "ATTORNEY";
   phone?: string;
   company?: string;
+  profileComplete?: boolean;
 }
 
 /**
@@ -116,8 +117,8 @@ export async function createUser(data: CreateUserData) {
       email: data.email,
       password: data.password,
       name: data.name,
-      role: data.role,
-      profileComplete: true,
+      role: data.role ?? null, // Explicitly set to null if not provided
+      profileComplete: data.profileComplete ?? false,
       phone: data.phone,
       company: data.company,
     },

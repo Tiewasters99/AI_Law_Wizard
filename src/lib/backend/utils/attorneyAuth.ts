@@ -22,9 +22,9 @@ export async function verifyAttorneyAccess(
     throw new AuthenticationError("User not found");
   }
 
-  if (user.role !== "ATTORNEY") {
+  if (!user.role || user.role !== "ATTORNEY") {
     throw new AuthorizationError("Attorney access required");
   }
 
-  return user;
+  return { id: user.id, role: user.role };
 }

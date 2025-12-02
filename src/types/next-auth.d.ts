@@ -1,7 +1,7 @@
 import { DefaultSession, DefaultUser } from "next-auth";
 import { JWT, DefaultJWT } from "next-auth/jwt";
 
-export type UserRole = "ATTORNEY" | "CUSTOMER";
+export type UserRole = "ATTORNEY" | "CUSTOMER" | null;
 
 declare module "next-auth" {
   interface Session {

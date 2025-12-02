@@ -4,7 +4,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { TokenTracker } from "../lib/frontend/tokenTracker";
 
-export type UserRole = "ATTORNEY" | "CUSTOMER" | "ADMIN";
+export type UserRole = "ATTORNEY" | "CUSTOMER" | "ADMIN" | null;
 
 // Helper function to get role display name
 export function getRoleDisplayName(role: UserRole | null | undefined): string {
@@ -158,6 +158,9 @@ export const useAuthStore = create<AuthState>()(
 
       // Role management
       updateUserRole: async role => {
+        if (!role) {
+          return { success: false, error: "Role cannot be null" };
+        }
         try {
           const response = await fetch("/api/auth/update-role", {
             method: "POST",
@@ -191,7 +194,13 @@ export const useAuthStore = create<AuthState>()(
 
       // Navigation
       redirectAfterRoleSelection: role => {
-        window.location.href = "/";
+        if (role === "ATTORNEY") {
+          window.location.href = "/attorney/dashboard";
+        } else if (role === "CUSTOMER") {
+          window.location.href = "/client/dashboard";
+        } else {
+          window.location.href = "/";
+        }
       },
 
       // Role Helpers
@@ -270,22 +279,26 @@ export const useAuthStore = create<AuthState>()(
           const response = await fetch("/api/auth/session");
           if (response.ok) {
             const session = await response.json();
-            if (session.user) {
+            if (session?.user) {
               get().setAuthUser({
                 id: session.user.id,
                 name: session.user.name,
                 email: session.user.email,
                 image: session.user.image,
-                role: session.user.role,
-                profileComplete: session.user.profileComplete,
+                role: session.user.role || null,
+                profileComplete: session.user.profileComplete || false,
               });
             } else {
               get().clearAuthUser();
             }
+          } else {
+            get().clearAuthUser();
           }
         } catch (error) {
           console.error("Auth status check error:", error);
           get().clearAuthUser();
+        } finally {
+          set({ isLoading: false });
         }
       },
     }),

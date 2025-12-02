@@ -42,36 +42,64 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    // Check if the current path requires authentication
-    const route = Object.keys(protectedRoutes).find(route =>
-      pathname.startsWith(route)
-    );
-
-    if (route) {
-      const requiredRoles =
-        protectedRoutes[route as keyof typeof protectedRoutes];
-
-      // User must be authenticated
-      if (!token) {
-        return NextResponse.redirect(new URL("/auth/login", req.url));
-      }
-
-      // Check if user has required role
-      const userRole = token.role as "ATTORNEY" | "CUSTOMER";
+    // Handle authenticated users
+    if (token) {
+      const userRole = token.role as "ATTORNEY" | "CUSTOMER" | null | undefined;
       const isAdmin = token.isAdmin as boolean;
 
-      // For admin routes, check admin authentication
-      if (pathname.startsWith("/admin")) {
-        if (!token || !token.isAdmin) {
-          return NextResponse.redirect(new URL("/admin/login", req.url));
+      // For authenticated users with null role: force role selection
+      if (userRole === null || userRole === undefined) {
+        // Allow access to role-selection page
+        if (pathname === "/auth/role-selection") {
+          return NextResponse.next();
         }
-      } else if (!requiredRoles.includes(userRole)) {
-        // Redirect based on user's actual role
+        // Redirect ALL other routes to role-selection
+        return NextResponse.redirect(new URL("/auth/role-selection", req.url));
+      }
+
+      // For authenticated users with role set
+      // Redirect away from role-selection to their dashboard
+      if (pathname === "/auth/role-selection") {
         if (userRole === "ATTORNEY") {
           return NextResponse.redirect(new URL("/attorney/dashboard", req.url));
         } else {
           return NextResponse.redirect(new URL("/client/dashboard", req.url));
         }
+      }
+
+      // For admin routes, check admin authentication
+      if (pathname.startsWith("/admin")) {
+        if (!isAdmin) {
+          return NextResponse.redirect(new URL("/admin/login", req.url));
+        }
+        return NextResponse.next();
+      }
+
+      // Check if the current path requires authentication and specific role
+      const route = Object.keys(protectedRoutes).find(route =>
+        pathname.startsWith(route)
+      );
+
+      if (route) {
+        const requiredRoles =
+          protectedRoutes[route as keyof typeof protectedRoutes];
+
+        // User must have the required role
+        if (!requiredRoles.includes(userRole)) {
+          // Redirect based on user's actual role
+          if (userRole === "ATTORNEY") {
+            return NextResponse.redirect(
+              new URL("/attorney/dashboard", req.url)
+            );
+          } else {
+            return NextResponse.redirect(new URL("/client/dashboard", req.url));
+          }
+        }
+      }
+    } else {
+      // Not authenticated - redirect to login
+      if (pathname !== "/auth/role-selection") {
+        return NextResponse.redirect(new URL("/auth/login", req.url));
       }
     }
 
@@ -98,6 +126,11 @@ export default withAuth(
 
         if (publicRoutes.some(route => pathname.startsWith(route))) {
           return true;
+        }
+
+        // Allow access to role-selection page for authenticated users (even with null role)
+        if (pathname === "/auth/role-selection") {
+          return !!token;
         }
 
         // For all other routes, require authentication

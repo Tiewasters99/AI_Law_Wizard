@@ -22,11 +22,19 @@ export async function verifyClientAccess(
     throw new AuthenticationError("User not found");
   }
 
+  if (!user.role) {
+    throw new AuthorizationError("Client access required");
+  }
+
   if (user.role !== "CUSTOMER") {
     throw new AuthorizationError("Client access required");
   }
 
-  return user;
+  // At this point, we've verified user.role is "CUSTOMER"
+  return {
+    id: user.id,
+    role: "CUSTOMER",
+  };
 }
 
 /**

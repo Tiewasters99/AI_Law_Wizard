@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import {
   User,
@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { RoleSwitcher } from "@/components/user/RoleSwitcher";
 
 interface UserProfile {
   id: string;
@@ -108,7 +109,7 @@ export default function ProfilePage() {
     }
   }, [session]);
 
-  const handleEdit = () => {
+  const handleEdit = useCallback(() => {
     setEditData({
       name: profile?.name,
       phone: profile?.phone,
@@ -118,9 +119,9 @@ export default function ProfilePage() {
       bio: profile?.bio,
     });
     setIsEditing(true);
-  };
+  }, [profile]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!profile) return;
 
     setIsSaving(true);
@@ -152,16 +153,19 @@ export default function ProfilePage() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [profile, editData]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setEditData({});
     setIsEditing(false);
-  };
+  }, []);
 
-  const handleInputChange = (field: keyof UserProfile, value: string) => {
-    setEditData(prev => ({ ...prev, [field]: value }));
-  };
+  const handleInputChange = useCallback(
+    (field: keyof UserProfile, value: string) => {
+      setEditData(prev => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -532,6 +536,15 @@ export default function ProfilePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Role Switcher */}
+                {session?.user?.role && session?.user?.id && (
+                  <div className="pt-2 pb-4 border-b border-border">
+                    <RoleSwitcher
+                      currentRole={session.user.role}
+                      userId={session.user.id}
+                    />
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs sm:text-sm text-muted-foreground">
                     Status

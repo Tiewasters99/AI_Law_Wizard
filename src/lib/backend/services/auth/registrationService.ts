@@ -18,14 +18,14 @@ export interface RegistrationData {
   email: string;
   password: string;
   name: string;
-  role: "CUSTOMER" | "ATTORNEY";
+  role?: "CUSTOMER" | "ATTORNEY";
 }
 
 export interface RegisteredUser {
   id: string;
   email: string;
   name: string | null;
-  role: string;
+  role: string | null;
 }
 
 /**
@@ -38,7 +38,6 @@ export async function registerUser(
   const email = validateRequired(data.email, "Email");
   const password = validateRequired(data.password, "Password");
   const name = validateRequired(data.name, "Name");
-  const role = validateRequired(data.role, "Role");
 
   // Validate email format
   validateEmail(email, "Email");
@@ -51,8 +50,11 @@ export async function registerUser(
   // Validate name is not empty
   validateNonEmptyString(name, "Name");
 
-  // Validate role
-  const validRole = validateEnum(role, ["CUSTOMER", "ATTORNEY"], "Role");
+  // Role is optional - user will select role on role-selection page
+  // Don't set role during registration (will be null)
+  const validRole = data.role
+    ? validateEnum(data.role, ["CUSTOMER", "ATTORNEY"], "Role")
+    : undefined;
 
   // Check if user already exists
   const existingUser = await findUserByEmail(email);
@@ -63,12 +65,13 @@ export async function registerUser(
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create user
+  // Create user with role: null (user will select role on role-selection page)
   const user = await createUser({
     email,
     password: hashedPassword,
     name: name.trim(),
-    role: validRole,
+    role: validRole, // undefined means null in database
+    profileComplete: false,
   });
 
   // Create wallet with starter tokens (non-blocking - don't fail registration if this errors)
