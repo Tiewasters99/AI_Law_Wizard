@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession, signOut, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,16 +61,185 @@ export default function RoleSelectionPage() {
     phone: "",
   });
 
-  // Redirect if user already has a role
+  // Track redirect state to prevent infinite loops
+  const redirectInitiated = useRef(false);
+
+  // All hooks must be called before any early returns
+  const handleRoleSelect = useCallback((role: "ATTORNEY" | "CUSTOMER") => {
+    setSelectedRole(role);
+    setError("");
+  }, []);
+
+  const handleAttorneyFormChange = useCallback(
+    (field: keyof AttorneyFormData, value: string | number | undefined) => {
+      setAttorneyFormData(prev => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  const handleClientFormChange = useCallback(
+    (field: keyof ClientFormData, value: string) => {
+      setClientFormData(prev => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  const validateAttorneyForm = useCallback((): boolean => {
+    if (!attorneyFormData.barLicense.trim()) {
+      setError("Bar license is required");
+      return false;
+    }
+    return true;
+  }, [attorneyFormData.barLicense]);
+
+  const validateClientForm = useCallback((): boolean => {
+    // Client form has no required fields, all optional
+    return true;
+  }, []);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError("");
+
+      if (!selectedRole) {
+        setError("Please select a role");
+        return;
+      }
+
+      if (selectedRole === "ATTORNEY" && !validateAttorneyForm()) {
+        return;
+      }
+
+      if (selectedRole === "CUSTOMER" && !validateClientForm()) {
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      try {
+        const profileData =
+          selectedRole === "ATTORNEY"
+            ? {
+                barLicense: attorneyFormData.barLicense.trim(),
+                specialty: attorneyFormData.specialty?.trim() || undefined,
+                yearsOfExperience: attorneyFormData.yearsOfExperience
+                  ? parseInt(attorneyFormData.yearsOfExperience.toString())
+                  : undefined,
+                bio: attorneyFormData.bio?.trim() || undefined,
+                location: attorneyFormData.location?.trim() || undefined,
+              }
+            : {
+                companyName: clientFormData.companyName?.trim() || undefined,
+                industry: clientFormData.industry?.trim() || undefined,
+                location: clientFormData.location?.trim() || undefined,
+                phone: clientFormData.phone?.trim() || undefined,
+              };
+
+        const response = await fetch("/api/user/role/profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            role: selectedRole,
+            profileData,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          // Check if error is about user already having a role
+          const errorMessage = data.error || "Failed to create profile";
+          if (
+            errorMessage.includes("already has a role") ||
+            errorMessage.includes("User already has a role")
+          ) {
+            // User already has a role - refresh session and redirect
+            const freshSession = await getSession();
+            if (freshSession?.user?.role) {
+              if (freshSession.user.role === "ATTORNEY") {
+                router.push("/attorney/dashboard");
+              } else if (freshSession.user.role === "CUSTOMER") {
+                router.push("/client/dashboard");
+              }
+              return;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+
+        toast.success("Profile created successfully!");
+
+        // Refresh session to get updated role
+        await getSession();
+
+        // Redirect to appropriate dashboard
+        if (selectedRole === "ATTORNEY") {
+          router.push("/attorney/dashboard");
+        } else {
+          router.push("/client/dashboard");
+        }
+      } catch (error) {
+        console.error("Profile creation error:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to create profile"
+        );
+        toast.error("Failed to create profile");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [
+      selectedRole,
+      attorneyFormData,
+      clientFormData,
+      validateAttorneyForm,
+      validateClientForm,
+      router,
+    ]
+  );
+
+  const handleLogout = useCallback(async () => {
+    await signOut({ callbackUrl: "/auth/login" });
+  }, []);
+
+  // Memoized callbacks for inline functions
+  const handleBackToSelection = useCallback(() => {
+    setSelectedRole(null);
+  }, []);
+
+  const handleSelectAttorney = useCallback(() => {
+    handleRoleSelect("ATTORNEY");
+  }, [handleRoleSelect]);
+
+  const handleSelectCustomer = useCallback(() => {
+    handleRoleSelect("CUSTOMER");
+  }, [handleRoleSelect]);
+
+  // Redirect if user already has a role or not authenticated
   // Refresh session to ensure we have the latest role data from database
   useEffect(() => {
+    // Prevent multiple redirect attempts
+    if (redirectInitiated.current) {
+      return;
+    }
+
     const checkUserRole = async () => {
+      if (status === "unauthenticated") {
+        redirectInitiated.current = true;
+        router.push("/auth/login");
+        return;
+      }
+
       if (status === "authenticated") {
         // Refresh session to get latest role from database
         const freshSession = await getSession();
-        
+
         if (freshSession?.user?.role) {
           // User already has a role set - redirect to appropriate dashboard
+          redirectInitiated.current = true;
           if (freshSession.user.role === "ATTORNEY") {
             router.push("/attorney/dashboard");
           } else if (freshSession.user.role === "CUSTOMER") {
@@ -92,142 +261,6 @@ export default function RoleSelectionPage() {
       </div>
     );
   }
-
-  // Redirect if not authenticated
-  if (status === "unauthenticated") {
-    router.push("/auth/login");
-    return null;
-  }
-
-  const handleRoleSelect = (role: "ATTORNEY" | "CUSTOMER") => {
-    setSelectedRole(role);
-    setError("");
-  };
-
-  const handleAttorneyFormChange = (
-    field: keyof AttorneyFormData,
-    value: string | number | undefined
-  ) => {
-    setAttorneyFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleClientFormChange = (
-    field: keyof ClientFormData,
-    value: string
-  ) => {
-    setClientFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const validateAttorneyForm = (): boolean => {
-    if (!attorneyFormData.barLicense.trim()) {
-      setError("Bar license is required");
-      return false;
-    }
-    return true;
-  };
-
-  const validateClientForm = (): boolean => {
-    // Client form has no required fields, all optional
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (!selectedRole) {
-      setError("Please select a role");
-      return;
-    }
-
-    if (selectedRole === "ATTORNEY" && !validateAttorneyForm()) {
-      return;
-    }
-
-    if (selectedRole === "CUSTOMER" && !validateClientForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const profileData =
-        selectedRole === "ATTORNEY"
-          ? {
-              barLicense: attorneyFormData.barLicense.trim(),
-              specialty: attorneyFormData.specialty?.trim() || undefined,
-              yearsOfExperience: attorneyFormData.yearsOfExperience
-                ? parseInt(attorneyFormData.yearsOfExperience.toString())
-                : undefined,
-              bio: attorneyFormData.bio?.trim() || undefined,
-              location: attorneyFormData.location?.trim() || undefined,
-            }
-          : {
-              companyName: clientFormData.companyName?.trim() || undefined,
-              industry: clientFormData.industry?.trim() || undefined,
-              location: clientFormData.location?.trim() || undefined,
-              phone: clientFormData.phone?.trim() || undefined,
-            };
-
-      const response = await fetch("/api/user/role/profile", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          role: selectedRole,
-          profileData,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Check if error is about user already having a role
-        const errorMessage = data.error || "Failed to create profile";
-        if (
-          errorMessage.includes("already has a role") ||
-          errorMessage.includes("User already has a role")
-        ) {
-          // User already has a role - refresh session and redirect
-          const freshSession = await getSession();
-          if (freshSession?.user?.role) {
-            if (freshSession.user.role === "ATTORNEY") {
-              router.push("/attorney/dashboard");
-            } else if (freshSession.user.role === "CUSTOMER") {
-              router.push("/client/dashboard");
-            }
-            return;
-          }
-        }
-        throw new Error(errorMessage);
-      }
-
-      toast.success("Profile created successfully!");
-
-      // Refresh session to get updated role
-      await getSession();
-
-      // Redirect to appropriate dashboard
-      if (selectedRole === "ATTORNEY") {
-        router.push("/attorney/dashboard");
-      } else {
-        router.push("/client/dashboard");
-      }
-    } catch (error) {
-      console.error("Profile creation error:", error);
-      setError(
-        error instanceof Error ? error.message : "Failed to create profile"
-      );
-      toast.error("Failed to create profile");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: "/auth/login" });
-  };
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
@@ -279,7 +312,7 @@ export default function RoleSelectionPage() {
             >
               <Card
                 className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary"
-                onClick={() => handleRoleSelect("ATTORNEY")}
+                onClick={handleSelectAttorney}
               >
                 <CardHeader>
                   <div className="flex items-center gap-3 mb-2">
@@ -318,7 +351,7 @@ export default function RoleSelectionPage() {
             >
               <Card
                 className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary"
-                onClick={() => handleRoleSelect("CUSTOMER")}
+                onClick={handleSelectCustomer}
               >
                 <CardHeader>
                   <div className="flex items-center gap-3 mb-2">
@@ -374,7 +407,7 @@ export default function RoleSelectionPage() {
                     </div>
                     <Button
                       variant="ghost"
-                      onClick={() => setSelectedRole(null)}
+                      onClick={handleBackToSelection}
                       className="text-muted-foreground"
                     >
                       Back
@@ -476,7 +509,7 @@ export default function RoleSelectionPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setSelectedRole(null)}
+                        onClick={handleBackToSelection}
                         className="flex-1"
                       >
                         Cancel
@@ -523,7 +556,7 @@ export default function RoleSelectionPage() {
                     </div>
                     <Button
                       variant="ghost"
-                      onClick={() => setSelectedRole(null)}
+                      onClick={handleBackToSelection}
                       className="text-muted-foreground"
                     >
                       Back
@@ -598,7 +631,7 @@ export default function RoleSelectionPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setSelectedRole(null)}
+                        onClick={handleBackToSelection}
                         className="flex-1"
                       >
                         Cancel
@@ -628,5 +661,3 @@ export default function RoleSelectionPage() {
     </div>
   );
 }
-
-
