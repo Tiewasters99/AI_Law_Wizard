@@ -166,7 +166,7 @@ function LoginForm() {
       if (result?.ok) {
         // Poll for session with exponential backoff
         // The OAuth callback may take several seconds to complete
-        const session = await pollForSession(20, 300);
+        const session = await pollForSession(20, 500);
         
         if (session) {
           handleSessionRedirect(session);

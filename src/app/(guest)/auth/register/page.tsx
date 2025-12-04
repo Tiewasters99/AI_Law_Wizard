@@ -1,15 +1,40 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { UserPlus, User, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 
-export default function RegisterPage() {
+// Helper function to poll for session with exponential backoff
+async function pollForSession(
+  maxAttempts: number = 20,
+  initialDelay: number = 300
+): Promise<Awaited<ReturnType<typeof getSession>> | null> {
+  let delay = initialDelay;
+  const maxDelay = 2000;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const session = await getSession();
+    if (session) {
+      return session;
+    }
+
+    // Wait before next attempt with exponential backoff
+    if (attempt < maxAttempts - 1) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay = Math.min(delay * 2, maxDelay);
+    }
+  }
+
+  return null;
+}
+
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -21,6 +46,94 @@ export default function RegisterPage() {
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Helper function to handle session-based redirect
+  const handleSessionRedirect = useCallback(
+    (session: Awaited<ReturnType<typeof getSession>>) => {
+      if (!session) {
+        setError("Session not available. Please try again.");
+        setIsOAuthLoading(false);
+        return;
+      }
+
+      if (session.user?.role === null || session.user?.role === undefined) {
+        router.push("/auth/role-selection");
+      } else {
+        const dashboard =
+          session.user.role === "ATTORNEY"
+            ? "/attorney/dashboard"
+            : "/client/dashboard";
+        router.push(dashboard);
+      }
+    },
+    [router]
+  );
+
+  // Check for OAuth errors in URL and handle callback completion
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      setIsOAuthLoading(false);
+      // Handle different error types with more specific messages
+      switch (errorParam) {
+        case "OAuthAccountNotLinked":
+          setError(
+            "This Google account is not linked to an existing account. Please sign up first or use email/password to login."
+          );
+          break;
+        case "AccessDenied":
+          setError("Access denied. Please try again or contact support.");
+          break;
+        case "OAuthSignin":
+          setError(
+            "Error occurred during Google sign in. Please try again or use email/password."
+          );
+          break;
+        case "OAuthCallback":
+          setError(
+            "Error occurred during authentication callback. Please try again."
+          );
+          break;
+        case "OAuthCreateAccount":
+          setError(
+            "Could not create account. Please try again or use email/password to sign up."
+          );
+          break;
+        case "Configuration":
+          setError(
+            "Authentication configuration error. Please contact support."
+          );
+          break;
+        case "Verification":
+          setError("Verification failed. Please try again.");
+          break;
+        default:
+          setError(
+            `Authentication error: ${errorParam}. Please try again or contact support.`
+          );
+      }
+      // Clean up URL after a delay to allow user to see the error
+      const timer = setTimeout(() => {
+        router.replace("/auth/register");
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      // Check if user has a session (might be returning from OAuth callback)
+      // This handles cases where NextAuth redirects back to register page
+      const checkForSession = async () => {
+        const session = await getSession();
+        if (session && !isOAuthLoading && !error) {
+          // User has session but is on register page - likely returning from OAuth
+          setIsOAuthLoading(true);
+          handleSessionRedirect(session);
+        }
+      };
+
+      // Small delay to allow callback to process
+      const timer = setTimeout(checkForSession, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, router, isOAuthLoading, error, handleSessionRedirect]);
 
   const updateFormData = useCallback(
     (field: keyof typeof formData, value: string) => {
@@ -40,17 +153,59 @@ export default function RegisterPage() {
 
   const handleGoogleSignUp = useCallback(async () => {
     setIsOAuthLoading(true);
+    setError("");
     try {
-      // OAuth will create user with role: null, middleware will redirect to role-selection
-      await signIn("google", {
-        redirect: true,
+      // OAuth callback and middleware will handle redirect based on role
+      const result = await signIn("google", {
+        redirect: false,
+        callbackUrl: "/auth/role-selection",
       });
+
+      if (result?.error) {
+        // Handle specific OAuth errors
+        const errorMessage = result.error;
+        if (errorMessage === "OAuthAccountNotLinked") {
+          setError(
+            "This Google account is not linked. Please sign up first or use email/password."
+          );
+        } else if (errorMessage === "AccessDenied") {
+          setError("Access denied. Please try again.");
+        } else {
+          setError(`Google sign up failed: ${errorMessage}`);
+        }
+        setIsOAuthLoading(false);
+        return;
+      }
+
+      if (result?.ok) {
+        // Poll for session with exponential backoff
+        // The OAuth callback may take several seconds to complete
+        const session = await pollForSession(20, 500);
+
+        if (session) {
+          handleSessionRedirect(session);
+        } else {
+          // Session not available after polling - timeout occurred
+          setError(
+            "Authentication is taking longer than expected. Please wait a moment and try again."
+          );
+          setIsOAuthLoading(false);
+        }
+      } else {
+        // signIn returned but result.ok is false
+        setError("Google sign up failed. Please try again.");
+        setIsOAuthLoading(false);
+      }
     } catch (error) {
       console.error("Google sign up error:", error);
-      setError("Failed to sign up with Google");
+      setError(
+        error instanceof Error
+          ? `Failed to sign up with Google: ${error.message}`
+          : "Failed to sign up with Google. Please try again."
+      );
       setIsOAuthLoading(false);
     }
-  }, []);
+  }, [handleSessionRedirect]);
 
   const validateForm = useCallback(() => {
     setError("");
@@ -440,5 +595,29 @@ export default function RegisterPage() {
         </Link>
       </motion.p>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-md mx-auto space-y-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-foreground mb-2">
+              Create Your Account
+            </h2>
+            <p className="text-muted-foreground">
+              Join us and get started today
+            </p>
+          </div>
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        </div>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }
