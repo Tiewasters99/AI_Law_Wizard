@@ -350,18 +350,19 @@ model User {
 
 // Account model for next-auth
 model Account {
-  id                String  @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?   @db.Text
+  access_token      String?   @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?   @db.Text
   session_state     String?
+  deletedAt         DateTime? // Soft delete timestamp for OAuth accounts
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -953,90 +954,90 @@ enum InvitationStatus {
 }
 
 model Community {
-  id             String              @id @default(cuid())
-  name           String
-  description    String?             @db.Text
-  visibility     CommunityVisibility
-  allowClientPosts Boolean            @default(false)
-  createdBy      String
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  
-  owner          User                @relation("CommunityOwner", fields: [createdBy], references: [id], onDelete: Cascade)
-  members        CommunityMember[]
-  posts          CommunityPost[]
-  invitations    CommunityInvitation[]
-  
+  id               String              @id @default(cuid())
+  name             String
+  description      String?             @db.Text
+  visibility       CommunityVisibility
+  allowClientPosts Boolean             @default(false)
+  createdBy        String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  owner       User                  @relation("CommunityOwner", fields: [createdBy], references: [id], onDelete: Cascade)
+  members     CommunityMember[]
+  posts       CommunityPost[]
+  invitations CommunityInvitation[]
+
   @@map("communities")
 }
 
 model CommunityMember {
-  id          String            @id @default(cuid())
+  id          String       @id @default(cuid())
   communityId String
   userId      String
-  role        MemberRole        @default(MEMBER)
-  status      MemberStatus      @default(ACTIVE)
-  joinedAt    DateTime          @default(now())
-  
-  community   Community         @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  role        MemberRole   @default(MEMBER)
+  status      MemberStatus @default(ACTIVE)
+  joinedAt    DateTime     @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([communityId, userId])
   @@map("community_members")
 }
 
 model CommunityPost {
-  id          String              @id @default(cuid())
+  id          String    @id @default(cuid())
   communityId String
   authorId    String
   title       String
-  content     String              @db.Text
+  content     String    @db.Text
   attachments Json?
-  isPinned    Boolean             @default(false)
-  isDeleted   Boolean             @default(false)
+  isPinned    Boolean   @default(false)
+  isDeleted   Boolean   @default(false)
   deletedAt   DateTime?
   deletedBy   String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  
-  community   Community           @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  author      User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  comments    CommunityComment[]
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  community Community          @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author    User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments  CommunityComment[]
+
   @@map("community_posts")
 }
 
 model CommunityComment {
-  id        String              @id @default(cuid())
+  id        String    @id @default(cuid())
   postId    String
   authorId  String
-  content   String              @db.Text
+  content   String    @db.Text
   parentId  String?
-  isDeleted Boolean             @default(false)
+  isDeleted Boolean   @default(false)
   deletedAt DateTime?
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-  
-  post      CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parent    CommunityComment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies   CommunityComment[] @relation("CommentReplies")
-  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  post    CommunityPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  CommunityComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies CommunityComment[] @relation("CommentReplies")
+
   @@map("community_comments")
 }
 
 model CommunityInvitation {
-  id            String            @id @default(cuid())
+  id            String           @id @default(cuid())
   communityId   String
   invitedUserId String
   invitedBy     String
-  status        InvitationStatus  @default(PENDING)
-  createdAt     DateTime          @default(now())
+  status        InvitationStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
   respondedAt   DateTime?
-  
-  community     Community         @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  invitedUser   User              @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: Cascade)
-  inviter       User              @relation("Inviter", fields: [invitedBy], references: [id], onDelete: Cascade)
-  
+
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  invitedUser User      @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  inviter     User      @relation("Inviter", fields: [invitedBy], references: [id], onDelete: Cascade)
+
   @@map("community_invitations")
 }

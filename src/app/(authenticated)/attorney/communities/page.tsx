@@ -4,35 +4,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/backend/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-
-async function getCommunities() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return [];
-  }
-
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/attorney/communities`, {
-      headers: {
-        Cookie: `next-auth.session-token=${session.user.id}`,
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    return data.communities || [];
-  } catch (error) {
-    console.error("Failed to fetch communities:", error);
-    return [];
-  }
-}
+import { verifyAttorneyAccess } from "@/lib/backend/utils/attorneyAuth";
+import { listMyCommunities } from "@/lib/backend/services/attorney/community/communityService";
 
 export default async function AttorneyCommunitiesPage() {
   const session = await getServerSession(authOptions);
@@ -40,7 +22,14 @@ export default async function AttorneyCommunitiesPage() {
     redirect("/auth/login");
   }
 
-  const communities = await getCommunities();
+  let communities: Awaited<ReturnType<typeof listMyCommunities>> = [];
+  try {
+    const attorney = await verifyAttorneyAccess(session.user?.id);
+    communities = await listMyCommunities(attorney.id);
+  } catch (error) {
+    console.error("Failed to fetch communities:", error);
+    communities = [];
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -73,7 +62,10 @@ export default async function AttorneyCommunitiesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {communities.map((community: any) => (
-            <Card key={community.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={community.id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardHeader>
                 <CardTitle>{community.name}</CardTitle>
                 <CardDescription>
@@ -84,15 +76,21 @@ export default async function AttorneyCommunitiesPage() {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Members:</span>
-                    <span className="font-semibold">{community._count?.members || 0}</span>
+                    <span className="font-semibold">
+                      {community._count?.members || 0}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Posts:</span>
-                    <span className="font-semibold">{community._count?.posts || 0}</span>
+                    <span className="font-semibold">
+                      {community._count?.posts || 0}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Visibility:</span>
-                    <span className="font-semibold capitalize">{community.visibility.toLowerCase()}</span>
+                    <span className="font-semibold capitalize">
+                      {community.visibility.toLowerCase()}
+                    </span>
                   </div>
                 </div>
                 <Link href={`/attorney/communities/${community.id}`}>
@@ -108,15 +106,3 @@ export default async function AttorneyCommunitiesPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-

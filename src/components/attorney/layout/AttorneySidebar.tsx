@@ -69,6 +69,12 @@ const attorneyNavigation: Record<string, NavigationSection> = {
         icon: MessageSquare,
         badge: "unread",
       },
+      {
+        label: "Communities",
+        href: "/attorney/communities",
+        icon: Users,
+        badge: null,
+      },
     ],
   },
   legalTools: {
@@ -273,25 +279,28 @@ export function AttorneySidebar({
                     ? "directory"
                     : item.href.includes("inbox")
                       ? "inbox"
-                      : item.href.includes("wizard") && !item.href.includes("grand")
-                        ? "wizard"
-                        : item.href.includes("grand-wizard")
-                          ? "grand-wizard"
-                          : item.href.includes("query-history")
-                            ? "query-history"
-                            : item.href.includes("docket-genie")
-                              ? "docket-genie"
-                              : item.href.includes("blog")
-                                ? "blog"
-                                : item.href.includes("miniverse")
-                                  ? "miniverse"
-                                  : item.href.includes("integrations")
-                                    ? "integrations"
-                                    : item.href.includes("profile")
-                                      ? "profile"
-                                      : item.href.includes("tokens")
-                                        ? "tokens"
-                                        : null;
+                      : item.href.includes("communities")
+                        ? "communities"
+                        : item.href.includes("wizard") &&
+                            !item.href.includes("grand")
+                          ? "wizard"
+                          : item.href.includes("grand-wizard")
+                            ? "grand-wizard"
+                            : item.href.includes("query-history")
+                              ? "query-history"
+                              : item.href.includes("docket-genie")
+                                ? "docket-genie"
+                                : item.href.includes("blog")
+                                  ? "blog"
+                                  : item.href.includes("miniverse")
+                                    ? "miniverse"
+                                    : item.href.includes("integrations")
+                                      ? "integrations"
+                                      : item.href.includes("profile")
+                                        ? "profile"
+                                        : item.href.includes("tokens")
+                                          ? "tokens"
+                                          : null;
 
                   return (
                     <Link
@@ -369,7 +378,10 @@ export function AttorneySidebar({
       {/* Bottom Stats Widget */}
       {!isCollapsed && (
         <div className="p-4 border-t border-sidebar-border">
-          <div className="p-3 rounded-lg bg-accent/50 border border-primary/20" data-tour="tokens">
+          <div
+            className="p-3 rounded-lg bg-accent/50 border border-primary/20"
+            data-tour="tokens"
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-primary">
                 Service Credits

@@ -6,32 +6,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-async function getCommunities() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return [];
-  }
-
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/client/communities`, {
-      headers: {
-        Cookie: `next-auth.session-token=${session.user.id}`,
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    return data.communities || [];
-  } catch (error) {
-    console.error("Failed to fetch communities:", error);
-    return [];
-  }
-}
+import { verifyClientAccess } from "@/lib/backend/utils/clientAuth";
+import { listCommunities } from "@/lib/backend/services/client/community/communityService";
 
 export default async function ClientCommunitiesPage() {
   const session = await getServerSession(authOptions);
@@ -39,7 +15,14 @@ export default async function ClientCommunitiesPage() {
     redirect("/auth/login");
   }
 
-  const communities = await getCommunities();
+  let communities: Awaited<ReturnType<typeof listCommunities>> = [];
+  try {
+    const client = await verifyClientAccess(session.user?.id);
+    communities = await listCommunities(client.id);
+  } catch (error) {
+    console.error("Failed to fetch communities:", error);
+    communities = [];
+  }
   const publicCommunities = communities.filter((c: any) => !c.isMember && c.visibility === "PUBLIC");
   const joinedCommunities = communities.filter((c: any) => c.isMember);
 
@@ -132,6 +115,10 @@ export default async function ClientCommunitiesPage() {
     </div>
   );
 }
+
+
+
+
 
 
 

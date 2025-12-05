@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+import { handleDeletedUserReauthentication } from "./services/auth/authService";
 
 // Validate required environment variables
 function validateEnvVars() {
@@ -24,7 +25,10 @@ function validateEnvVars() {
 }
 
 // Validate on module load (only in production or when explicitly enabled)
-if (process.env.NODE_ENV === "production" || process.env.VALIDATE_ENV === "true") {
+if (
+  process.env.NODE_ENV === "production" ||
+  process.env.VALIDATE_ENV === "true"
+) {
   try {
     validateEnvVars();
   } catch (error) {
@@ -67,7 +71,9 @@ export const authOptions: AuthOptions = {
         return {
           id: profile.sub,
           name: profile.name,
-          email: profile.email ? profile.email.toLowerCase().trim() : profile.email,
+          email: profile.email
+            ? profile.email.toLowerCase().trim()
+            : profile.email,
           image: profile.picture,
         };
       },
@@ -109,6 +115,19 @@ export const authOptions: AuthOptions = {
             console.error("Authentication error: User not found", {
               email: normalizedEmail,
             });
+            return null;
+          }
+
+          // Check if user is deleted
+          if (user.deletedAt) {
+            console.error(
+              "Authentication error: User account has been deleted",
+              {
+                userId: user.id,
+                email: normalizedEmail,
+                deletedAt: user.deletedAt,
+              }
+            );
             return null;
           }
 
@@ -189,10 +208,13 @@ export const authOptions: AuthOptions = {
           }
 
           if (!admin.isActive) {
-            console.error("Admin authentication error: Admin account inactive", {
-              adminId: admin.id,
-              email: normalizedEmail,
-            });
+            console.error(
+              "Admin authentication error: Admin account inactive",
+              {
+                adminId: admin.id,
+                email: normalizedEmail,
+              }
+            );
             return null;
           }
 
@@ -258,22 +280,69 @@ export const authOptions: AuthOptions = {
           // Normalize email to lowercase
           const normalizedEmail = user.email.toLowerCase().trim();
 
-          // Check if user exists with this email
+          // Check if user exists with this email (including deleted users)
           const existingUser = await prisma.user.findUnique({
             where: { email: normalizedEmail },
-            include: { accounts: true },
+            include: {
+              accounts: {
+                where: { deletedAt: null }, // Only include non-deleted accounts
+              },
+            },
           });
 
           if (!existingUser) {
             // User doesn't exist - allow adapter to create user
             // We'll set role to null in jwt callback after user is created
-            console.log(`Creating new user via Google OAuth: ${normalizedEmail}`);
+            console.log(
+              `Creating new user via Google OAuth: ${normalizedEmail}`
+            );
             return true;
           }
 
-          // User exists - link Google account if not already linked
+          // Check if user is deleted
+          if (existingUser.deletedAt) {
+            // User was deleted - create new account instead of reusing old one
+            console.log(
+              `Deleted user attempting to sign in: ${normalizedEmail}. Creating new account.`
+            );
+            try {
+              await handleDeletedUserReauthentication({
+                oldUser: {
+                  id: existingUser.id,
+                  email: existingUser.email,
+                  name: existingUser.name,
+                },
+                account: {
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token,
+                  refresh_token: account.refresh_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
+                  session_state: account.session_state,
+                },
+              });
+              console.log(
+                `Created new account for previously deleted user: ${normalizedEmail}`
+              );
+              // Return true to allow sign-in with new account
+              return true;
+            } catch (error) {
+              console.error(
+                "Error handling deleted user re-authentication:",
+                error
+              );
+              return false;
+            }
+          }
+
+          // User exists and is not deleted - link Google account if not already linked
+          // Check for non-deleted Google accounts only
           const hasGoogleAccount = existingUser.accounts.some(
-            acc => acc.provider === "google"
+            acc => acc.provider === "google" && acc.deletedAt === null
           );
 
           if (!hasGoogleAccount) {
@@ -292,6 +361,7 @@ export const authOptions: AuthOptions = {
                   scope: account.scope,
                   id_token: account.id_token,
                   session_state: account.session_state,
+                  deletedAt: null, // New account is not deleted
                 },
               });
               console.log(
@@ -327,7 +397,9 @@ export const authOptions: AuthOptions = {
         if (user) {
           token.id = user.id;
           // Normalize email to lowercase
-          token.email = user.email ? user.email.toLowerCase().trim() : user.email;
+          token.email = user.email
+            ? user.email.toLowerCase().trim()
+            : user.email;
           token.role = user.role;
           token.profileComplete = user.profileComplete;
           token.isAdmin = (user as any).isAdmin;
