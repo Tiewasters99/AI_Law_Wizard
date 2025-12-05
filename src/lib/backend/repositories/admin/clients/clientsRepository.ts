@@ -277,11 +277,23 @@ export async function updateCustomerProfile(
  * Soft delete client
  */
 export async function deleteClient(id: string) {
-  return await prisma.user.update({
-    where: { id },
-    data: {
-      deletedAt: new Date(),
-      updatedAt: new Date(),
-    },
+  const deletedAt = new Date();
+
+  // Use transaction to ensure both user and accounts are marked as deleted
+  return await prisma.$transaction(async tx => {
+    // Mark all associated accounts as deleted
+    await tx.account.updateMany({
+      where: { userId: id, deletedAt: null },
+      data: { deletedAt },
+    });
+
+    // Mark user as deleted
+    return await tx.user.update({
+      where: { id },
+      data: {
+        deletedAt,
+        updatedAt: deletedAt,
+      },
+    });
   });
 }

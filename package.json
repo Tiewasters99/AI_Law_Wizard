@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node api.js && next dev",
     "build": "npx prisma generate && next build && npx prisma migrate deploy",
-    "start": "next start",
+    "start": "node api.js && next start",
     "db:migrate": "npx prisma migrate dev",
     "copy-static-assets": "if exist public\\assets xcopy /E /I public\\assets dist\\public\\assets",
     "format": "npx prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
