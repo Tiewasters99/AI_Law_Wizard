@@ -21,6 +21,7 @@ import {
   FileText,
   Globe,
   User,
+  Users,
   Coins,
   ChevronLeft,
   ChevronRight,
@@ -104,6 +105,7 @@ const clientNavigation: Record<string, NavigationSection> = {
     items: [
       { label: "Legal Blog", href: "/client/blog", icon: FileText },
       { label: "Miniverse™", href: "/client/miniverse", icon: Globe },
+      { label: "Communities", href: "/client/communities", icon: Users },
     ],
   },
   account: {
@@ -254,7 +256,9 @@ export function ClientSidebar({
                   // Map href to tour data attribute
                   const tourAttribute = item.href.includes("directory")
                     ? "directory"
-                    : item.href.includes("wizard") && !item.href.includes("grand") && !item.href.includes("document")
+                    : item.href.includes("wizard") &&
+                        !item.href.includes("grand") &&
+                        !item.href.includes("document")
                       ? "wizard"
                       : item.href.includes("grand-wizard")
                         ? "grand-wizard"
@@ -270,11 +274,13 @@ export function ClientSidebar({
                                   ? "blog"
                                   : item.href.includes("miniverse")
                                     ? "miniverse"
-                                    : item.href.includes("profile")
-                                      ? "profile"
-                                      : item.href.includes("tokens")
-                                        ? "tokens"
-                                        : null;
+                                    : item.href.includes("communities")
+                                      ? "communities"
+                                      : item.href.includes("profile")
+                                        ? "profile"
+                                        : item.href.includes("tokens")
+                                          ? "tokens"
+                                          : null;
 
                   return (
                     <Link
